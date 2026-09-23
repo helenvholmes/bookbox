@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# personal library data (database, covers, Airtable export)
+/data
+!.env.example

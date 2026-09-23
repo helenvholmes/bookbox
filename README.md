@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BookBox
 
-## Getting Started
+A personal reading log that replaces an Airtable base. It's built with Next.js and SQLite, and it fills in book details from [OpenLibrary](https://openlibrary.org).
 
-First, run the development server:
+- **Library**: search, shelves (Currently Reading, To Read, Read, …, or no shelf), year read, tag, person, rating, and owned/Kindle filters.
+- **Add a book**: search OpenLibrary by title, author or ISBN. The title, author, ISBN, description, publisher, year, pages and cover fill in automatically.
+- **Refresh from OpenLibrary** on any book: empty fields get filled, and fields that differ are shown for you to accept one at a time.
+- **People**: who recommended a book and who it's for. **Tags**: rename, merge or delete them.
+- Installs to the home screen as a standalone web app, with an icon, iOS launch screens and support for the notch and home bar.
+
+## Running it
+
+Needs **Node 22.13 or newer**, because the database uses the built-in `node:sqlite`.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+With `BOOKBOX_PASSWORD` unset there's no login, which is fine on your own machine. See `.env.example` for all the settings.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Data
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Everything lives in `DATA_DIR` (default `./data`, which git ignores):
 
-## Learn More
+| Path | What |
+|---|---|
+| `bookbox.db` | SQLite database |
+| `covers/` | Covers resized to 600px WebP; filenames include a content hash |
+| `airtable-*` | The original Airtable export, kept for reference |
 
-To learn more about Next.js, take a look at the following resources:
+Back up by copying the folder. Covers and the database are the whole app state.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Re-importing from Airtable
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run import:airtable -- --fresh
+```
 
-## Deploy on Vercel
+This rebuilds the database from `data/airtable-books.csv`, `data/airtable-people.json` and `data/airtable-covers/`. `--fresh` deletes the current database first, so anything added in BookBox since then is lost.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Home screen assets
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`npm run generate:icons` redraws the icon (defined as SVG in `scripts/generate-icons.mts`) and writes:
+
+- `public/icons/`: manifest icons (192, 512, maskable, SVG)
+- `src/app/apple-icon.png`, `src/app/icon.png`: iOS home screen icon and favicon
+- `public/splash/`: iOS launch screens; the device list is in `src/lib/splash.ts`
+
+On iPhone, open the site in Safari, tap Share, then **Add to Home Screen**. The home screen app keeps its own cookies, so you sign in once inside it.
+
+## Deploying
+
+The app needs a host with a **persistent disk** for SQLite and covers (Fly.io, Railway, Render, a VPS). Serverless platforms like Vercel won't work, because their filesystem resets.
+
+```bash
+npm run build
+cp -R .next/static .next/standalone/.next/static && cp -R public .next/standalone/public
+DATA_DIR=/path/to/data BOOKBOX_PASSWORD=… node .next/standalone/server.js
+```
+
+Copy your local `data/` folder to the server once to bring your library along. Always set `BOOKBOX_PASSWORD` on a public host.
