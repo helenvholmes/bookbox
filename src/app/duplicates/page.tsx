@@ -11,7 +11,7 @@ export default async function DuplicatesPage() {
 
   return (
     <div className="space-y-6 pb-6">
-      <Link href="/" className="font-medium text-accent">
+      <Link href="/" className="block w-fit text-muted hover:text-ink">
         ‹ Library
       </Link>
       <header>

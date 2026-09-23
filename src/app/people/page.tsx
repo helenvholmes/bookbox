@@ -6,6 +6,9 @@ import { RELATIONSHIPS } from "@/lib/constants";
 
 export const metadata = { title: "People" };
 
+// "Family" and "Other" read fine for any number; the rest take an "s".
+const groupTitle = (rel: string, count: number) => (count > 1 && rel !== "Family" && rel !== "Other" ? `${rel}s` : rel);
+
 export default async function PeoplePage() {
   const { people } = await getFacets();
   const groups = [...RELATIONSHIPS, "Other"].map((rel) => ({
@@ -24,7 +27,7 @@ export default async function PeoplePage() {
         .filter((g) => g.people.length)
         .map((g) => (
           <section key={g.rel} className="space-y-2">
-            <h2 className="section-title">{g.rel}</h2>
+            <h2 className="section-title">{groupTitle(g.rel, g.people.length)}</h2>
             <ul className="divide-y divide-line overflow-hidden card">
               {g.people.map((p) => (
                 <li key={p.id}>

@@ -75,7 +75,7 @@ export function FilterBar({ facets, sorts }: Props) {
                 selected ? "border-ink text-ink" : "border-transparent text-faint hover:text-muted"
               }`}
             >
-              {t.label} <span className="text-faint">{t.count}</span>
+              {t.label} <span className={t.count === 0 && !selected ? "text-faint/50" : "text-faint"}>{t.count}</span>
             </button>
           );
         })}
@@ -94,7 +94,7 @@ export function FilterBar({ facets, sorts }: Props) {
         <Select label="Tag" value={params.get("tag") ?? ""} onChange={(v) => update({ tag: v })}>
           <option value="">Any tag</option>
           {facets.tags
-            .filter((t) => t.count > 0)
+            .filter((t) => t.count > 0 || params.get("tag") === String(t.id))
             .map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name} ({t.count})

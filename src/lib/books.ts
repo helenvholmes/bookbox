@@ -15,6 +15,7 @@ export type BookSummary = {
   shelves: string[];
   /** Start of the description, for list rows. */
   blurb: string;
+  tagIds: number[];
 };
 
 export type Book = BookSummary & {
@@ -64,10 +65,11 @@ function summaryColumns() {
   return `b.id, b.title, b.author, b.cover, b.rating, substr(b.description, 1, 200) AS blurb,
     (SELECT group_concat(year, ',') FROM (SELECT year FROM book_years WHERE book_id = b.id ORDER BY year)) AS years,
     (SELECT group_concat(name, '|') FROM (SELECT s.name FROM book_shelves bs JOIN shelves s ON s.id = bs.shelf_id
-       WHERE bs.book_id = b.id ORDER BY s.position)) AS shelves`;
+       WHERE bs.book_id = b.id ORDER BY s.position)) AS shelves,
+    (SELECT group_concat(tag_id, ',') FROM book_tags WHERE book_id = b.id) AS tag_ids`;
 }
 
-type SummaryRow = Omit<BookSummary, "years" | "shelves"> & { years: string | null; shelves: string | null };
+type SummaryRow = Omit<BookSummary, "years" | "shelves" | "tagIds"> & { years: string | null; shelves: string | null; tag_ids: string | null };
 
 function toSummary(r: SummaryRow): BookSummary {
   return {
@@ -79,6 +81,7 @@ function toSummary(r: SummaryRow): BookSummary {
     years: r.years ? r.years.split(",").map(Number) : [],
     shelves: r.shelves ? r.shelves.split("|") : [],
     blurb: (r.blurb ?? "").replace(/\s+/g, " ").trim(),
+    tagIds: r.tag_ids ? r.tag_ids.split(",").map(Number) : [],
   };
 }
 
@@ -344,6 +347,13 @@ export function deletePerson(id: number) {
 
 // Tags
 
+/** Creates a tag, or returns null if one with this name (ignoring case) already exists. */
+export function createTag(name: string): number | null {
+  const exists = db.prepare("SELECT id FROM tags WHERE name = ?").get(name);
+  if (exists) return null;
+  return (db.prepare("INSERT INTO tags (name) VALUES (?) RETURNING id").get(name) as { id: number }).id;
+}
+
 export function renameTag(id: number, name: string, notes: string) {
   db.prepare("UPDATE tags SET name = ?, notes = ? WHERE id = ?").run(name, notes, id);
 }
@@ -421,4 +431,33 @@ export function toggleStatus(bookId: number, shelf: string): string | null {
 
 export function findBookByIsbn(isbn13: string) {
   return db.prepare("SELECT id, title FROM books WHERE isbn13 = ? ORDER BY id LIMIT 1").get(isbn13) as { id: number; title: string } | undefined;
+}
+
+/**
+ * Facet counts that respect the other active filters: shelf counts ignore the shelf filter,
+ * year counts ignore the year filter, and so on, so each control shows what picking it would give.
+ */
+export async function getContextualFacets(f: Filters, all: Facets): Promise<Facets> {
+  const [forShelves, forYears, forTags] = await Promise.all([
+    listBooks({ ...f, shelf: undefined, sort: undefined }),
+    listBooks({ ...f, year: undefined, sort: undefined }),
+    listBooks({ ...f, tag: undefined, sort: undefined }),
+  ]);
+  const tally = <K,>(books: BookSummary[], keys: (b: BookSummary) => K[]) => {
+    const m = new Map<K, number>();
+    for (const b of books) for (const k of keys(b)) m.set(k, (m.get(k) ?? 0) + 1);
+    return m;
+  };
+  const shelfCounts = tally(forShelves, (b) => b.shelves);
+  const yearCounts = tally(forYears, (b) => b.years);
+  const tagCounts = tally(forTags, (b) => b.tagIds);
+
+  return {
+    ...all,
+    total: forShelves.length,
+    noShelf: forShelves.filter((b) => b.shelves.length === 0).length,
+    shelves: all.shelves.map((s) => ({ ...s, count: shelfCounts.get(s.name) ?? 0 })),
+    years: all.years.map((y) => ({ ...y, count: yearCounts.get(y.year) ?? 0 })).filter((y) => y.count > 0 || String(y.year) === f.year),
+    tags: all.tags.map((t) => ({ ...t, count: tagCounts.get(t.id) ?? 0 })).filter((t) => t.count > 0 || String(t.id) === f.tag),
+  };
 }

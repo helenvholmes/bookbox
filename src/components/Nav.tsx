@@ -21,6 +21,15 @@ function Icon({ d, className = "size-4" }: { d: string; className?: string }) {
   );
 }
 
+/** A bookmark (the same shape as To Read's) that fills in for the selected year. */
+function YearIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M6.5 3.5h11v17l-5.5-3.8-5.5 3.8z" />
+    </svg>
+  );
+}
+
 type Props = { years: { year: number; count: number }[] };
 
 export function Nav({ years }: Props) {
@@ -72,7 +81,7 @@ export function Nav({ years }: Props) {
             <p className="px-2.5 pb-1 text-xs text-faint">Years</p>
             {years.map(({ year: y, count }) => (
               <Link key={y} href={`/?year=${y}`} className={item(year === String(y))}>
-                <span className="w-4 text-center text-faint">·</span>
+                <YearIcon filled={year === String(y)} />
                 <span className="flex-1">{y}</span>
                 <span className="text-xs text-faint">{count}</span>
               </Link>

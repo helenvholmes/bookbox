@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element -- covers are already resized WebP served from our own route */
+import { CoverImage } from "./CoverImage";
 
 const PALETTE = ["#7c3a2d", "#2f4f4f", "#5b4a7a", "#8a6a2f", "#3d5a3a", "#6b3050", "#2d4a6b"];
 
@@ -8,22 +8,23 @@ export function Cover({
   author,
   className = "",
   eager = false,
+  bleed = false,
 }: {
   cover: string | null;
   title: string;
   author?: string;
   className?: string;
   eager?: boolean;
+  /** Edge to edge inside a card: square corners (the card clips them) and always fills the frame. */
+  bleed?: boolean;
 }) {
+  const rounding = bleed ? "" : "rounded-md";
   if (cover) {
     return (
-      <img
-        src={`/covers/${cover}`}
-        alt=""
-        loading={eager ? "eager" : "lazy"}
-        decoding="async"
-        className={`aspect-[2/3] w-full rounded-md bg-line object-cover ${className}`}
-      />
+      // A fixed 2:3 frame the cover fills (see CoverImage for how odd shapes fit).
+      <div className={`aspect-[2/3] w-full overflow-hidden ${rounding} ${className}`}>
+        <CoverImage src={`/covers/${cover}`} eager={eager} alwaysFill={bleed} />
+      </div>
     );
   }
   // A generated "spine" so books without covers still look like books.
@@ -31,7 +32,7 @@ export function Cover({
   return (
     <div
       aria-hidden
-      className={`flex aspect-[2/3] w-full flex-col justify-between overflow-hidden rounded-md p-3 text-white ${className}`}
+      className={`flex aspect-[2/3] w-full flex-col justify-between overflow-hidden ${rounding} p-3 text-white ${className}`}
       style={{ background: `linear-gradient(160deg, ${color}, color-mix(in srgb, ${color} 70%, black))` }}
     >
       <span className="line-clamp-4 text-sm leading-tight font-medium">{title}</span>

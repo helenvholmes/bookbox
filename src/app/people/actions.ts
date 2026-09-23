@@ -15,12 +15,15 @@ export async function createPersonAction(fd: FormData) {
   redirect(`/people/${id}`);
 }
 
-export async function updatePersonAction(fd: FormData) {
+export type UpdatePersonState = { savedAt?: number; error?: string } | null;
+
+export async function updatePersonAction(_prev: UpdatePersonState, fd: FormData): Promise<UpdatePersonState> {
   const id = Number(fd.get("id"));
   const first = text(fd, "first");
-  if (!first) return;
+  if (!first) return { error: "A first name is required." };
   updatePerson(id, first, text(fd, "last"), relationships(fd));
   revalidatePath("/", "layout");
+  return { savedAt: Date.now() };
 }
 
 export async function deletePersonAction(fd: FormData) {

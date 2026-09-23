@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { deleteTag, mergeTag, renameTag } from "@/lib/books";
+import { createTag, deleteTag, mergeTag, renameTag } from "@/lib/books";
 
 export async function updateTagAction(fd: FormData) {
   const name = String(fd.get("name") ?? "").trim();
@@ -29,4 +29,14 @@ export async function deleteTagAction(fd: FormData) {
   deleteTag(Number(fd.get("id")));
   revalidatePath("/", "layout");
   redirect("/tags");
+}
+
+export type CreateTagState = { error?: string; createdAt?: number } | null;
+
+export async function createTagAction(_prev: CreateTagState, fd: FormData): Promise<CreateTagState> {
+  const name = String(fd.get("name") ?? "").trim().replace(/\s+/g, " ");
+  if (!name) return { error: "Give the tag a name." };
+  if (createTag(name) === null) return { error: `There's already a tag called “${name}”.` };
+  revalidatePath("/", "layout");
+  return { createdAt: Date.now() };
 }

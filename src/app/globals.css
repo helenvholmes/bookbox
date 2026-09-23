@@ -129,6 +129,19 @@ body {
   }
   .btn-danger {
     color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  }
+  .btn-danger:hover {
+    background: color-mix(in srgb, var(--danger) 10%, var(--card));
+  }
+  /* The final "Delete" in a confirmation. */
+  .btn-danger-solid {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #1a0f0e;
+  }
+  .btn-danger-solid:hover {
+    background: color-mix(in srgb, var(--danger) 85%, white);
   }
 
   .chip {

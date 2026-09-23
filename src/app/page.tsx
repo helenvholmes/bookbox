@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { BookGrid } from "@/components/BookGrid";
-import { Cover } from "@/components/Cover";
 import { FilterBar } from "@/components/FilterBar";
 import { Greeting } from "@/components/Greeting";
 import { ShelfIcon } from "@/components/ShelfIcon";
-import { countMissingCovers, getFacets, listBooks, SORTS, type Filters } from "@/lib/books";
+import { countMissingCovers, getContextualFacets, getFacets, listBooks, SORTS, type Filters } from "@/lib/books";
 import { countDuplicates } from "@/lib/duplicates";
 
 export default async function LibraryPage(props: PageProps<"/">) {
@@ -30,6 +29,9 @@ export default async function LibraryPage(props: PageProps<"/">) {
     countDuplicates(),
     countMissingCovers(),
   ]);
+
+  // The tabs and dropdowns count within the other active filters; the tiles above show library totals.
+  const filterFacets = filtered ? await getContextualFacets(filters, facets) : facets;
 
   const shelfCount = (name: string) => facets.shelves.find((s) => s.name === name)?.count ?? 0;
   const thisYear = new Date().getFullYear();
@@ -77,22 +79,12 @@ export default async function LibraryPage(props: PageProps<"/">) {
           <h2 id="reading" className="section-title">
             Currently reading
           </h2>
-          <ul className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
-            {reading.map((b) => (
-              <li key={b.id} className="w-28 shrink-0 sm:w-32">
-                <Link href={`/books/${b.id}`} className="block">
-                  <Cover cover={b.cover} title={b.title} author={b.author} eager className="rounded-sm" />
-                  <p className="mt-2 line-clamp-2 text-xs leading-snug">{b.title}</p>
-                  <p className="line-clamp-1 text-[0.6875rem] text-muted">by {b.author}</p>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <BookGrid books={reading} />
         </section>
       )}
 
       <Suspense>
-        <FilterBar facets={facets} sorts={SORTS} />
+        <FilterBar facets={filterFacets} sorts={SORTS} />
       </Suspense>
 
       <section className="space-y-3">

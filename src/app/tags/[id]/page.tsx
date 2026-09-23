@@ -12,7 +12,7 @@ export default async function TagPage(props: PageProps<"/tags/[id]">) {
 
   return (
     <div className="space-y-6 pb-6">
-      <Link href="/tags" className="font-medium text-accent">
+      <Link href="/tags" className="block w-fit text-muted hover:text-ink">
         ‹ Tags
       </Link>
       <header className="flex items-end justify-between gap-3">

@@ -137,14 +137,10 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
           <section className="space-y-3">
             <h2 className="section-title">Rating</h2>
             <div className="card space-y-3 p-4">
-              {book.rating ? (
-                <p className="flex items-center gap-2.5 text-[0.8125rem]">
-                  <Stars rating={book.rating} className="size-4" />
-                  <span className="text-muted">{book.rating} of 5</span>
-                </p>
-              ) : (
-                <p className="text-[0.8125rem] text-muted">Not rated yet</p>
-              )}
+              <p className="flex items-center gap-2.5 text-[0.8125rem]">
+                <Stars rating={book.rating} className="size-4" />
+                <span className="text-muted">{book.rating ? `${book.rating} of 5` : "Not rated yet"}</span>
+              </p>
               {years.length > 0 && (
                 <p className="text-xs text-muted">
                   {reading ? "Reading" : "Read"}{" "}
