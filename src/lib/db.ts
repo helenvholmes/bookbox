@@ -1,9 +1,15 @@
-import { DatabaseSync } from "node:sqlite";
-import fs from "node:fs";
+import { AsyncLocalStorage } from "node:async_hooks";
 import path from "node:path";
+import { createClient, type Client, type InStatement, type InValue, type Transaction } from "@libsql/client";
+
+/**
+ * One database layer for everywhere. Locally it's the SQLite file in DATA_DIR; on Vercel it's a
+ * Turso (libSQL) database set by TURSO_DATABASE_URL + TURSO_AUTH_TOKEN. Same SQL either way.
+ */
 
 export const DATA_DIR = path.resolve(/* turbopackIgnore: true */ process.env.DATA_DIR ?? "data");
 export const COVERS_DIR = path.join(DATA_DIR, "covers");
+export const IS_REMOTE_DB = !!process.env.TURSO_DATABASE_URL;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS books (
@@ -32,10 +38,31 @@ CREATE TABLE IF NOT EXISTS books (
 );
 CREATE INDEX IF NOT EXISTS books_author_sort ON books(author_sort);
 
-CREATE TABLE IF NOT EXISTS book_years (
+-- One row per time a book was read, so re-reads (even in the same year) each get their own row.
+CREATE TABLE IF NOT EXISTS book_reads (
+  id      INTEGER PRIMARY KEY,
   book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
   year    INTEGER NOT NULL,
-  PRIMARY KEY (book_id, year)
+  note    TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS book_reads_book ON book_reads(book_id);
+CREATE INDEX IF NOT EXISTS book_reads_year ON book_reads(year);
+
+-- Reading goal per year.
+CREATE TABLE IF NOT EXISTS goals (
+  year   INTEGER PRIMARY KEY,
+  target INTEGER NOT NULL
+);
+
+-- Series ("Shades of Magic"), with each book's place in it.
+CREATE TABLE IF NOT EXISTS series (
+  id   INTEGER PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE COLLATE NOCASE
+);
+CREATE TABLE IF NOT EXISTS book_series (
+  book_id   INTEGER PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+  series_id INTEGER NOT NULL REFERENCES series(id) ON DELETE CASCADE,
+  position  REAL
 );
 
 CREATE TABLE IF NOT EXISTS shelves (
@@ -79,6 +106,28 @@ CREATE TABLE IF NOT EXISTS cover_skipped (
   book_id INTEGER PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE
 );
 
+-- Public, read-only pages of a person's books, reached by an unguessable token.
+CREATE TABLE IF NOT EXISTS share_pages (
+  person_id    INTEGER PRIMARY KEY REFERENCES people(id) ON DELETE CASCADE,
+  token        TEXT NOT NULL UNIQUE,
+  enabled      INTEGER NOT NULL DEFAULT 1,
+  list         TEXT NOT NULL DEFAULT 'for' CHECK (list IN ('for', 'by')),
+  title        TEXT NOT NULL DEFAULT '',
+  message      TEXT NOT NULL DEFAULT '',
+  layout       TEXT NOT NULL DEFAULT 'grid' CHECK (layout IN ('grid', 'list')),
+  show_ratings INTEGER NOT NULL DEFAULT 1,
+  show_reviews INTEGER NOT NULL DEFAULT 0,
+  accent       TEXT NOT NULL DEFAULT '#ececed'
+);
+
+-- Differences the bulk OpenLibrary refresh found, waiting for a yes or no.
+CREATE TABLE IF NOT EXISTS refresh_suggestions (
+  book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  field   TEXT NOT NULL,
+  value   TEXT NOT NULL,
+  PRIMARY KEY (book_id, field)
+);
+
 -- Pairs marked "not duplicates" on the duplicates page. Stored with book_a < book_b.
 CREATE TABLE IF NOT EXISTS not_duplicates (
   book_a INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
@@ -87,49 +136,115 @@ CREATE TABLE IF NOT EXISTS not_duplicates (
 );
 `;
 
-function open(): DatabaseSync {
-  fs.mkdirSync(COVERS_DIR, { recursive: true });
-  const db = new DatabaseSync(path.join(DATA_DIR, "bookbox.db"));
-  db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
-  db.exec(SCHEMA);
-  return db;
+// Columns added after the first release. Added in place so existing databases keep their data.
+const ADDED_COLUMNS: [table: string, column: string, definition: string][] = [
+  ["books", "borrowed", "INTEGER NOT NULL DEFAULT 0"],
+  ["books", "library", "TEXT NOT NULL DEFAULT ''"],
+  ["books", "due_date", "TEXT"],
+  ["books", "bad_isbn", "TEXT"], // what Airtable had when it wasn't a valid ISBN
+  ["books", "isbn_skipped", "INTEGER NOT NULL DEFAULT 0"],
+  ["books", "ol_checked_at", "TEXT"], // last bulk OpenLibrary refresh
+  ["books", "author_original", "TEXT NOT NULL DEFAULT ''"], // the author's name in its original script (村上春樹)
+];
+
+async function migrate(c: Client) {
+  for (const [table, column, definition] of ADDED_COLUMNS) {
+    const cols = (await c.execute(`PRAGMA table_info(${table})`)).rows as unknown as { name: string }[];
+    if (!cols.some((col) => col.name === column)) await c.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+  // book_years (one row per book and year) became book_reads (one row per read).
+  const old = await c.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'book_years'");
+  if (old.rows.length) {
+    await c.batch(["INSERT INTO book_reads (book_id, year) SELECT book_id, year FROM book_years ORDER BY book_id, year", "DROP TABLE book_years"], "write");
+  }
 }
 
-type Param = string | number | bigint | null | Uint8Array;
-type Row = Record<string, unknown>;
-
-// node:sqlite returns null-prototype rows, which React refuses to pass to client
-// components. Copy them into plain objects here so the rest of the app doesn't care.
-function wrap(raw: DatabaseSync) {
-  return {
-    exec: (sql: string) => raw.exec(sql),
-    prepare(sql: string) {
-      const st = raw.prepare(sql);
-      return {
-        run: (...params: Param[]) => st.run(...params),
-        get: (...params: Param[]): Row | undefined => {
-          const row = st.get(...params);
-          return row ? { ...row } : undefined;
-        },
-        all: (...params: Param[]): Row[] => st.all(...params).map((row) => ({ ...row })),
-      };
-    },
-  };
+function open(): Client {
+  const url = process.env.TURSO_DATABASE_URL ?? `file:${path.join(DATA_DIR, "bookbox.db")}`;
+  return createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
 }
 
-// Reuse one connection across hot reloads in dev.
-const globalForDb = globalThis as unknown as { bookboxDb?: ReturnType<typeof wrap> };
-export const db = globalForDb.bookboxDb ?? wrap(open());
-globalForDb.bookboxDb = db;
+// Reuse one client (and one schema check) across hot reloads in dev and warm serverless invocations.
+const g = globalThis as unknown as { bookboxClient?: Client; bookboxReady?: Promise<void> };
+const client = (g.bookboxClient ??= open());
 
-export function transaction<T>(fn: () => T): T {
-  db.exec("BEGIN");
+function ready(): Promise<void> {
+  g.bookboxReady ??= (async () => {
+    if (!IS_REMOTE_DB) await client.execute("PRAGMA journal_mode = WAL");
+    await client.executeMultiple(SCHEMA);
+    await migrate(client);
+  })().catch((err) => {
+    g.bookboxReady = undefined; // retry on the next query
+    throw err;
+  });
+  return g.bookboxReady;
+}
+
+export type Param = InValue;
+export type Row = Record<string, unknown>;
+
+// Queries inside transaction(...) run on that transaction without having to pass it around.
+const currentTx = new AsyncLocalStorage<Transaction>();
+
+async function execute(stmt: InStatement) {
+  await ready();
+  const tx = currentTx.getStore();
+  return tx ? tx.execute(stmt) : client.execute(stmt);
+}
+
+// Rows are copied into plain objects: React won't pass libSQL's row objects to client components.
+const plain = (rows: unknown[]) => rows.map((r) => ({ ...(r as Row) }));
+
+export const db = {
+  prepare(sql: string) {
+    return {
+      get: async (...args: Param[]): Promise<Row | undefined> => plain((await execute({ sql, args })).rows)[0],
+      all: async (...args: Param[]): Promise<Row[]> => plain((await execute({ sql, args })).rows),
+      run: async (...args: Param[]) => {
+        const r = await execute({ sql, args });
+        return { changes: r.rowsAffected, lastInsertRowid: r.lastInsertRowid };
+      },
+    };
+  },
+  /** Several statements separated by semicolons, without parameters. */
+  async exec(sql: string) {
+    await ready();
+    const tx = currentTx.getStore();
+    if (tx) await tx.executeMultiple(sql);
+    else await client.executeMultiple(sql);
+  },
+};
+
+/** Runs fn in a write transaction; any db call inside it (however deep) joins the transaction. */
+export async function transaction<T>(fn: () => Promise<T>): Promise<T> {
+  if (currentTx.getStore()) return fn(); // already inside one
+  await ready();
+  const tx = await client.transaction("write");
   try {
-    const result = fn();
-    db.exec("COMMIT");
+    const result = await currentTx.run(tx, fn);
+    await tx.commit();
     return result;
   } catch (err) {
-    db.exec("ROLLBACK");
+    await tx.rollback().catch(() => {});
     throw err;
+  } finally {
+    tx.close();
   }
+}
+
+/** Runs many statements in one round trip, atomically. For bulk copies; app code uses transaction(). */
+export async function batch(stmts: InStatement[]) {
+  await ready();
+  return client.batch(stmts, "write");
+}
+
+// Foreign keys aren't enforced over libsql/Turso connections, so child rows are deleted explicitly.
+const BOOK_CHILDREN = ["book_reads", "book_series", "book_shelves", "book_tags", "recommendations", "cover_skipped", "refresh_suggestions"];
+
+export async function deleteBookRows(id: number) {
+  await transaction(async () => {
+    for (const table of BOOK_CHILDREN) await db.prepare(`DELETE FROM ${table} WHERE book_id = ?`).run(id);
+    await db.prepare("DELETE FROM not_duplicates WHERE book_a = ? OR book_b = ?").run(id, id);
+    await db.prepare("DELETE FROM books WHERE id = ?").run(id);
+  });
 }

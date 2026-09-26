@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { Cover } from "@/components/Cover";
 import { ExpandableText } from "@/components/ExpandableText";
+import { ReadsCard } from "@/components/ReadsCard";
 import { Stars } from "@/components/Stars";
 import { ShelfIcon, STATUS_SHELVES, shelfLabel } from "@/components/ShelfIcon";
 import { getBook, type Named } from "@/lib/books";
@@ -23,7 +24,6 @@ export async function generateMetadata(props: PageProps<"/books/[id]">): Promise
 
 export default async function BookPage(props: PageProps<"/books/[id]">) {
   const book = await load(props.params);
-  const years = [...book.years].sort((a, b) => b - a);
   const reading = book.shelves.includes("Currently Reading");
   const otherShelves = book.shelves.filter((s) => !(STATUS_SHELVES as readonly string[]).includes(s));
 
@@ -59,7 +59,21 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
               </Link>
             </p>
           )}
+          {book.author_original && (
+            <p className="text-sm text-faint" lang="und">
+              {book.author_original}
+            </p>
+          )}
           {book.additional_authors && <p className="text-xs text-faint">with {book.additional_authors}</p>}
+          {book.series && (
+            <p className="mt-1 text-xs text-muted">
+              {book.series.position !== null ? `Book ${book.series.position} of ` : "Part of "}
+              <Link href={`/series/${book.series.id}`} className="text-ink hover:underline">
+                {book.series.name}
+              </Link>
+            </p>
+          )}
+          {book.borrowed && <BorrowedNote library={book.library} due={book.due_date} />}
         </div>
         <div className="md:row-span-2">
           <Cover cover={book.cover} title={book.title} author={book.author} eager className="rounded-sm" />
@@ -141,19 +155,6 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
                 <Stars rating={book.rating} className="size-4" />
                 <span className="text-muted">{book.rating ? `${book.rating} of 5` : "Not rated yet"}</span>
               </p>
-              {years.length > 0 && (
-                <p className="text-xs text-muted">
-                  {reading ? "Reading" : "Read"}{" "}
-                  {years.map((y, i) => (
-                    <span key={y}>
-                      {i > 0 && ", "}
-                      <Link href={`/?year=${y}`} className="text-ink hover:underline">
-                        {y}
-                      </Link>
-                    </span>
-                  ))}
-                </p>
-              )}
               {(book.tags.length > 0 || otherShelves.length > 0 || book.owned || book.on_kindle) && (
                 <div className="flex flex-wrap gap-1.5">
                   {book.tags.map((t) => (
@@ -172,6 +173,8 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
               )}
             </div>
           </section>
+
+          <ReadsCard bookId={book.id} reads={book.reads} reading={reading} />
 
           {book.recommendedBy.length > 0 && <PeopleCard title="Recommended by" people={book.recommendedBy} />}
           {book.recommendedFor.length > 0 && <PeopleCard title="Recommend to" people={book.recommendedFor} />}
@@ -207,5 +210,17 @@ function TextSection({ title, text }: { title: string; text: string }) {
       <h2 className="section-title">{title}</h2>
       <ExpandableText text={text} />
     </section>
+  );
+}
+
+function BorrowedNote({ library, due }: { library: string; due: string | null }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = !!due && due < today;
+  const dueText = due ? new Date(`${due}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null;
+  return (
+    <p className={`mt-3 inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs ${overdue ? "border-danger/40 text-danger" : "border-line text-muted"}`}>
+      Borrowed{library ? ` from ${library}` : " from the library"}
+      {dueText && <span>· {overdue ? `overdue since ${dueText}` : `due ${dueText}`}</span>}
+    </p>
   );
 }

@@ -17,5 +17,5 @@ export async function loginAction(_prev: string | undefined, fd: FormData): Prom
     maxAge: SESSION_MAX_AGE,
   });
   const next = String(fd.get("next") ?? "/");
-  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  redirect(next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/");
 }

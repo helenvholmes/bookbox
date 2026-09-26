@@ -9,14 +9,14 @@ export async function applyCoverAction(bookId: number, url: string): Promise<{ e
   if (!data || !(await isUsableImage(data))) return { error: "That cover couldn't be downloaded. Try another one." };
   const name = await saveCover(bookId, data);
   if (!name) return { error: "That cover couldn't be used." };
-  const previous = getCoverName(bookId);
-  setCover(bookId, name);
-  if (previous && previous !== name) deleteCover(previous);
+  const previous = await getCoverName(bookId);
+  await setCover(bookId, name);
+  if (previous && previous !== name) await deleteCover(previous);
   revalidatePath("/", "layout");
   return {};
 }
 
 export async function skipCoverAction(bookId: number) {
-  skipCover(bookId);
+  await skipCover(bookId);
   revalidatePath("/", "layout");
 }

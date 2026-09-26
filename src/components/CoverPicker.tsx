@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- OpenLibrary thumbnails */
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { applyCoverAction, skipCoverAction } from "@/app/missing-covers/actions";
+import { applyCoverAction, skipCoverAction } from "@/app/(app)/missing-covers/actions";
 import type { CoverCandidate } from "@/lib/openlibrary";
 import { Cover } from "./Cover";
 

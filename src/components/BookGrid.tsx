@@ -5,7 +5,16 @@ import { Cover } from "./Cover";
 import { Stars } from "./Stars";
 
 /** Oku-style tiles: the cover edge to edge across the top of the card, then title, author (wrapping, never cut off) and stars. */
-export function BookGrid({ books, empty = "No books here yet." }: { books: BookSummary[]; empty?: string }) {
+export function BookGrid({
+  books,
+  empty = "No books here yet.",
+  caption,
+}: {
+  books: BookSummary[];
+  empty?: string;
+  /** An extra small line above the title, e.g. "Book 3". */
+  caption?: (b: BookSummary) => string | null;
+}) {
   if (books.length === 0) return <p className="py-16 text-center text-muted">{empty}</p>;
   return (
     // Columns follow the grid's own width (container queries), so the sidebar doesn't throw them off:
@@ -18,6 +27,7 @@ export function BookGrid({ books, empty = "No books here yet." }: { books: BookS
           <Link href={`/books/${b.id}`} className="card flex h-full flex-col overflow-hidden text-center transition hover:border-faint">
             <Cover cover={b.cover} title={b.title} author={b.author} eager={i < 8} bleed />
             <div className="flex flex-1 flex-col items-center px-3 pt-3.5 pb-2">
+              {caption?.(b) && <p className="mb-0.5 text-[0.6875rem] text-faint">{caption(b)}</p>}
               <ClampedTitle title={b.title} className="text-[0.8125rem] leading-snug" />
               {b.author && <p className="mt-0.5 text-xs text-muted">{b.author}</p>}
               {/* Pinned to the bottom so stars line up across a row, whatever the title length. */}

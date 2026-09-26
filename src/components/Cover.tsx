@@ -9,6 +9,7 @@ export function Cover({
   className = "",
   eager = false,
   bleed = false,
+  srcBase = "/covers",
 }: {
   cover: string | null;
   title: string;
@@ -17,13 +18,15 @@ export function Cover({
   eager?: boolean;
   /** Edge to edge inside a card: square corners (the card clips them) and always fills the frame. */
   bleed?: boolean;
+  /** Where cover files are served from (share pages use their own, token-checked route). */
+  srcBase?: string;
 }) {
   const rounding = bleed ? "" : "rounded-md";
   if (cover) {
     return (
       // A fixed 2:3 frame the cover fills (see CoverImage for how odd shapes fit).
       <div className={`aspect-[2/3] w-full overflow-hidden ${rounding} ${className}`}>
-        <CoverImage src={`/covers/${cover}`} eager={eager} alwaysFill={bleed} />
+        <CoverImage src={`${srcBase}/${cover}`} eager={eager} alwaysFill={bleed} />
       </div>
     );
   }

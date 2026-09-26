@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { createTagAction, type CreateTagState } from "@/app/tags/actions";
+import { createTagAction, type CreateTagState } from "@/app/(app)/tags/actions";
 
 /** "Tags" heading with an "+ Add tag" button that opens a name field underneath. */
 export function TagsHeader() {

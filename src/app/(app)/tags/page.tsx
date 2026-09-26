@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CollectionTabs } from "@/components/CollectionTabs";
 import { TagsHeader } from "@/components/TagsHeader";
 import { getFacets } from "@/lib/books";
 
@@ -8,6 +9,7 @@ export default async function TagsPage() {
   const { tags } = await getFacets();
   return (
     <div className="space-y-6 pb-6">
+      <CollectionTabs current="/tags" />
       <TagsHeader />
       <p className="text-sm text-muted">Tap a tag to see its books. You can also add tags from any book&rsquo;s edit screen.</p>
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">

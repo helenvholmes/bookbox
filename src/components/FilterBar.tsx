@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import type { Facets } from "@/lib/books";
+import { SearchBox } from "./SearchBox";
 
 type Props = {
   facets: Facets;
@@ -14,9 +15,7 @@ export function FilterBar({ facets, sorts }: Props) {
   const pathname = usePathname();
   const params = useSearchParams();
   const [pending, startTransition] = useTransition();
-  const [q, setQ] = useState(params.get("q") ?? "");
   const [moreOpen, setMoreOpen] = useState(() => !!(params.get("person") || params.get("rating") || params.get("owned")));
-  const debounce = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   function update(changes: Record<string, string | null>) {
     const next = new URLSearchParams(params);
@@ -28,33 +27,12 @@ export function FilterBar({ facets, sorts }: Props) {
     startTransition(() => router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false }));
   }
 
-  useEffect(() => () => clearTimeout(debounce.current), []);
-
   const shelf = params.get("shelf") ?? "";
   const active = ["q", "shelf", "year", "tag", "person", "rating", "owned"].some((k) => params.get(k));
 
   return (
     <div className={`space-y-3 transition-opacity ${pending ? "opacity-70" : ""}`}>
-      <div className="relative">
-        <svg viewBox="0 0 24 24" className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-        </svg>
-        <input
-          type="search"
-          inputMode="search"
-          placeholder="Search title, author, ISBN"
-          aria-label="Search books"
-          className="field pl-10"
-          value={q}
-          onChange={(e) => {
-            const value = e.target.value;
-            setQ(value);
-            clearTimeout(debounce.current);
-            debounce.current = setTimeout(() => update({ q: value.trim() || null }), 250);
-          }}
-        />
-      </div>
+      <SearchBox value={params.get("q") ?? ""} onSubmit={(q) => update({ q })} />
 
       {/* Underline tabs, like Oku's "Books | Members". */}
       <div role="tablist" aria-label="Shelves" className="no-scrollbar -mx-4 flex gap-5 overflow-x-auto border-b border-line px-4">
@@ -119,7 +97,6 @@ export function FilterBar({ facets, sorts }: Props) {
             type="button"
             className="text-faint underline hover:text-muted"
             onClick={() => {
-              setQ("");
               update({ q: null, shelf: null, year: null, tag: null, person: null, rating: null, owned: null });
             }}
           >
@@ -164,6 +141,7 @@ export function FilterBar({ facets, sorts }: Props) {
             <option value="">Any</option>
             <option value="owned">Owned</option>
             <option value="kindle">On Kindle</option>
+            <option value="borrowed">Borrowed</option>
           </Select>
         </div>
       )}

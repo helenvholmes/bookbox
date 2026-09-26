@@ -1,8 +1,39 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { del, get, put } from "@vercel/blob";
 import sharp from "sharp";
 import { COVERS_DIR } from "./db";
+
+/**
+ * Covers live in a private Vercel Blob store when BLOB_READ_WRITE_TOKEN is set (the Vercel
+ * deploy), and in data/covers otherwise. Either way the database stores only the filename and
+ * pages load them through /covers/<file>, which is behind the password.
+ */
+const USE_BLOB = !!process.env.BLOB_READ_WRITE_TOKEN;
+const blobPath = (filename: string) => `covers/${path.basename(filename)}`;
+
+async function writeCover(filename: string, data: Buffer) {
+  if (USE_BLOB) {
+    await put(blobPath(filename), data, { access: "private", contentType: "image/webp", addRandomSuffix: false, allowOverwrite: true });
+    return;
+  }
+  fs.mkdirSync(COVERS_DIR, { recursive: true });
+  fs.writeFileSync(path.join(COVERS_DIR, filename), data);
+}
+
+/** The stored cover as a body for a Response, or null when it doesn't exist. */
+export async function readCover(filename: string): Promise<BodyInit | null> {
+  if (USE_BLOB) {
+    const result = await get(blobPath(filename), { access: "private" }).catch(() => null);
+    return result?.statusCode === 200 ? result.stream : null;
+  }
+  try {
+    return new Uint8Array(await fs.promises.readFile(path.join(COVERS_DIR, path.basename(filename)))) as Uint8Array<ArrayBuffer>;
+  } catch {
+    return null;
+  }
+}
 
 const MAX_WIDTH = 600;
 
@@ -22,8 +53,7 @@ export async function saveCover(bookId: number, input: Buffer): Promise<string |
     .toBuffer();
   const hash = crypto.createHash("sha1").update(out).digest("hex").slice(0, 8);
   const filename = `${bookId}-${hash}.webp`;
-  fs.mkdirSync(COVERS_DIR, { recursive: true });
-  fs.writeFileSync(path.join(COVERS_DIR, filename), out);
+  await writeCover(filename, out);
   return filename;
 }
 
@@ -36,10 +66,10 @@ export async function isUsableImage(input: Buffer): Promise<boolean> {
   }
 }
 
-export function deleteCover(filename: string | null | undefined) {
+export async function deleteCover(filename: string | null | undefined) {
   if (!filename) return;
-  const file = path.join(COVERS_DIR, path.basename(filename));
-  fs.rmSync(file, { force: true });
+  if (USE_BLOB) await del(blobPath(filename)).catch(() => {});
+  else fs.rmSync(path.join(COVERS_DIR, path.basename(filename)), { force: true });
 }
 
 const ALLOWED_COVER_HOSTS = new Set(["covers.openlibrary.org", "archive.org"]);

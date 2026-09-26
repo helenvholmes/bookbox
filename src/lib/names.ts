@@ -5,9 +5,10 @@ const PARTICLES = new Set(["de", "da", "di", "du", "del", "della", "der", "den",
  * "Robert Jackson Bennett" -> "Bennett, Robert Jackson"
  * "Ursula K. Le Guin"      -> "Le Guin, Ursula K."
  * "Martin Luther King Jr." -> "King, Martin Luther, Jr."
+ * "Neil Gaiman & Terry Pratchett" -> "Gaiman, Neil" (sorted by the first author)
  */
 export function authorSort(name: string): string {
-  const cleaned = name.trim().replace(/\s+/g, " ");
+  const cleaned = name.trim().replace(/\s+/g, " ").split(/\s+(?:&|and)\s+/)[0];
   if (!cleaned || cleaned.includes(",")) return cleaned;
 
   const words = cleaned.split(" ");

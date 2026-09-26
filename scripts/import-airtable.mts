@@ -25,7 +25,7 @@ const { db, transaction } = await import("../src/lib/db");
 const { saveCover } = await import("../src/lib/covers");
 const { authorSort, toIsbn13 } = await import("../src/lib/names");
 
-const existing = db.prepare("SELECT count(*) AS n FROM books").get() as { n: number };
+const existing = (await db.prepare("SELECT count(*) AS n FROM books").get()) as { n: number };
 if (existing.n > 0) {
   console.error(`Database already has ${existing.n} books. Re-run with --fresh to replace it.`);
   process.exit(1);
@@ -50,9 +50,9 @@ const warnings: string[] = [];
 
 const insertBook = db.prepare(`
   INSERT INTO books (id, title, author, author_sort, additional_authors, isbn13, rating, description,
-                     review, spoiler, quotes, private_notes, on_kindle, owned)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-const insertYear = db.prepare("INSERT OR IGNORE INTO book_years (book_id, year) VALUES (?, ?)");
+                     review, spoiler, quotes, private_notes, on_kindle, owned, bad_isbn)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+const insertYear = db.prepare("INSERT INTO book_reads (book_id, year) VALUES (?, ?)");
 const upsertShelf = db.prepare("INSERT INTO shelves (name, position) VALUES (?, ?) ON CONFLICT(name) DO UPDATE SET name = name RETURNING id");
 const insertBookShelf = db.prepare("INSERT OR IGNORE INTO book_shelves (book_id, shelf_id) VALUES (?, ?)");
 const upsertTag = db.prepare("INSERT INTO tags (name) VALUES (?) ON CONFLICT(name) DO UPDATE SET name = name RETURNING id");
@@ -62,9 +62,9 @@ const insertRec = db.prepare("INSERT OR IGNORE INTO recommendations (book_id, pe
 
 const bookIds = new Set<number>();
 
-transaction(() => {
-  SHELF_ORDER.forEach((name, i) => upsertShelf.get(name, i));
-  for (const name of EXTRA_TAGS) upsertTag.get(name);
+await transaction(async () => {
+  for (const [i, name] of SHELF_ORDER.entries()) await upsertShelf.get(name, i);
+  for (const name of EXTRA_TAGS) (await upsertTag.get(name));
 
   for (const r of rows) {
     const id = Number(r["Book Id"]);
@@ -72,9 +72,10 @@ transaction(() => {
     const rawIsbn = (r["ISBN13"] ?? "").trim();
     const isbn = toIsbn13(rawIsbn);
     if (rawIsbn && !isbn) warnings.push(`#${id} "${r["Title"]}": dropped invalid ISBN "${rawIsbn}"`);
+    const badIsbn = rawIsbn && !isbn ? rawIsbn : null;
     const rating = Number(r["My Rating"]) || null;
 
-    insertBook.run(
+    (await insertBook.run(
       id,
       r["Title"].trim(),
       author,
@@ -89,27 +90,28 @@ transaction(() => {
       r["Private Notes"] ?? "",
       checked(r["On Kindle?"]),
       checked(r["Owned?"]),
-    );
+      badIsbn,
+    ));
     bookIds.add(id);
 
-    for (const y of list(r["Year Read"])) insertYear.run(id, Number(y));
+    for (const y of list(r["Year Read"])) (await insertYear.run(id, Number(y)));
     for (const s of list(r["Bookshelves"])) {
-      const { id: shelfId } = upsertShelf.get(s, SHELF_ORDER.length) as { id: number };
-      insertBookShelf.run(id, shelfId);
+      const { id: shelfId } = (await upsertShelf.get(s, SHELF_ORDER.length)) as { id: number };
+      (await insertBookShelf.run(id, shelfId));
     }
     for (const t of list(r["Tags"])) {
-      const { id: tagId } = upsertTag.get(t) as { id: number };
-      insertBookTag.run(id, tagId);
+      const { id: tagId } = (await upsertTag.get(t)) as { id: number };
+      (await insertBookTag.run(id, tagId));
     }
   }
 
   // People links come from the People table, not the CSV, because the CSV only
   // has first names and two pairs of people share one.
   for (const p of people) {
-    const { id: personId } = insertPerson.get(p.first, p.last, p.rel) as { id: number };
+    const { id: personId } = (await insertPerson.get(p.first, p.last, p.rel)) as { id: number };
     for (const [kind, ids] of [["for", p.for], ["by", p.by]] as const) {
       for (const b of list(ids).map(Number)) {
-        if (bookIds.has(b)) insertRec.run(b, personId, kind);
+        if (bookIds.has(b)) (await insertRec.run(b, personId, kind));
         else warnings.push(`${p.first} ${p.last}: linked book #${b} isn't in the CSV`);
       }
     }
@@ -127,7 +129,7 @@ for (const file of coverFiles) {
   try {
     const name = await saveCover(id, fs.readFileSync(path.join(coverDir, file)));
     if (name) {
-      setCover.run(name, id);
+      (await setCover.run(name, id));
       covers++;
     } else warnings.push(`#${id}: cover ${file} was a placeholder, skipped`);
   } catch (err) {
@@ -135,7 +137,7 @@ for (const file of coverFiles) {
   }
 }
 
-const count = (sql: string) => (db.prepare(sql).get() as { n: number }).n;
+const count = async (sql: string) => ((await db.prepare(sql).get()) as { n: number }).n;
 console.log(`Imported ${bookIds.size} books, ${covers} covers, ${count("SELECT count(*) n FROM tags")} tags, ` +
   `${count("SELECT count(*) n FROM people")} people, ${count("SELECT count(*) n FROM recommendations")} recommendations.`);
 if (warnings.length) console.log(`\n${warnings.length} warnings:\n  ` + warnings.join("\n  "));

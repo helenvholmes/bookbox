@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createPersonAction } from "@/app/people/actions";
+import { createPersonAction } from "@/app/(app)/people/actions";
 import { RelationshipChoices } from "./RelationshipChoices";
 
 /** Header button that opens the new-person form in place. */

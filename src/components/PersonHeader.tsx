@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
-import { deletePersonAction, updatePersonAction, type UpdatePersonState } from "@/app/people/actions";
+import { deletePersonAction, updatePersonAction, type UpdatePersonState } from "@/app/(app)/people/actions";
 import type { Person } from "@/lib/books";
 import { RELATIONSHIPS } from "@/lib/constants";
 import { ConfirmButton } from "./ConfirmButton";
@@ -60,6 +60,9 @@ export function PersonHeader({ person, children }: { person: Person; children: R
                 Updated
               </span>
             )}
+            <Link href={`/people/${person.id}/share`} className="btn rounded-full px-4">
+              Share
+            </Link>
             <button type="button" className="btn rounded-full px-4" onClick={() => setEditing(true)}>
               Edit
             </button>

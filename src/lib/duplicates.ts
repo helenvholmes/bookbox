@@ -43,14 +43,14 @@ function splitTitle(title: string) {
 export async function findDuplicates(): Promise<DuplicateGroup[]> {
   await connection();
   const books = (
-    db
+    (await db
       .prepare(
         `SELECT b.id, b.title, b.author, b.isbn13, b.cover, b.rating, b.created_at, b.review != '' AS hasReview,
-           (SELECT group_concat(year, ',') FROM book_years WHERE book_id = b.id) AS years,
+           (SELECT group_concat(DISTINCT year) FROM book_reads WHERE book_id = b.id) AS years,
            (SELECT group_concat(s.name, '|') FROM book_shelves bs JOIN shelves s ON s.id = bs.shelf_id WHERE bs.book_id = b.id) AS shelves
          FROM books b ORDER BY b.id`,
       )
-      .all() as (Omit<DuplicateBook, "years" | "shelves" | "hasReview"> & { years: string | null; shelves: string | null; hasReview: number })[]
+      .all()) as (Omit<DuplicateBook, "years" | "shelves" | "hasReview"> & { years: string | null; shelves: string | null; hasReview: number })[]
   ).map((r) => ({
     ...r,
     hasReview: r.hasReview === 1,
@@ -59,7 +59,7 @@ export async function findDuplicates(): Promise<DuplicateGroup[]> {
   }));
 
   const dismissed = new Set(
-    (db.prepare("SELECT book_a, book_b FROM not_duplicates").all() as { book_a: number; book_b: number }[]).map((r) => `${r.book_a}-${r.book_b}`),
+    ((await db.prepare("SELECT book_a, book_b FROM not_duplicates").all()) as { book_a: number; book_b: number }[]).map((r) => `${r.book_a}-${r.book_b}`),
   );
 
   // Union-find over book ids, remembering why each pair matched.
@@ -110,9 +110,9 @@ export async function countDuplicates() {
   return (await findDuplicates()).length;
 }
 
-export function markNotDuplicates(ids: number[]) {
+export async function markNotDuplicates(ids: number[]) {
   const insert = db.prepare("INSERT OR IGNORE INTO not_duplicates (book_a, book_b) VALUES (?, ?)");
-  transaction(() => {
-    for (const a of ids) for (const b of ids) if (a < b) insert.run(a, b);
+  await transaction(async () => {
+    for (const a of ids) for (const b of ids) if (a < b) (await insert.run(a, b));
   });
 }

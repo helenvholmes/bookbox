@@ -1,8 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Newsreader } from "next/font/google";
-import { Suspense } from "react";
-import { Nav } from "@/components/Nav";
-import { getFacets } from "@/lib/books";
 import { SPLASH_DEVICES, splashFile } from "@/lib/splash";
 import "./globals.css";
 
@@ -37,16 +34,10 @@ function splashScreens() {
   }));
 }
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const { years } = await getFacets();
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${newsreader.variable} antialiased`}>
-      <body className="min-h-dvh md:flex">
-        <Suspense>
-          <Nav years={years} />
-        </Suspense>
-        <main className="mx-auto w-full max-w-5xl min-w-0 flex-1 px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-10 md:pt-8 md:pb-12">{children}</main>
-      </body>
+      <body className="min-h-dvh">{children}</body>
     </html>
   );
 }

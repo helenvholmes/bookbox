@@ -8,9 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "import:airtable": "tsx --disable-warning=ExperimentalWarning scripts/import-airtable.mts",
-    "generate:icons": "tsx scripts/generate-icons.mts"
+    "generate:icons": "tsx scripts/generate-icons.mts",
+    "push:cloud": "tsx scripts/push-to-cloud.mts"
   },
   "dependencies": {
+    "@libsql/client": "^0.18.0",
+    "@vercel/blob": "^2.8.0",
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.21.3",
     "csv-parse": "^7.0.2",

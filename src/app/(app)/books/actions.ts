@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { deleteBook, getCoverName, saveBook, setCover, STATUS, toggleStatus, type BookInput } from "@/lib/books";
+import { addRead, deleteBook, deleteRead, getCoverName, saveBook, setCover, STATUS, toggleStatus, updateRead, type BookInput } from "@/lib/books";
 import { deleteCover, fetchCover, isUsableImage, saveCover } from "@/lib/covers";
 import { toIsbn13 } from "@/lib/names";
 
@@ -26,6 +26,7 @@ function parseBook(fd: FormData): BookInput | string {
   return {
     title,
     author: text(fd, "author").replace(/\s+/g, " "),
+    author_original: text(fd, "author_original"),
     additional_authors: text(fd, "additional_authors"),
     isbn13,
     rating: rating && rating >= 1 && rating <= 5 ? rating : null,
@@ -41,6 +42,11 @@ function parseBook(fd: FormData): BookInput | string {
     pages: int(fd, "pages"),
     ol_work: text(fd, "ol_work") || null,
     ol_edition: text(fd, "ol_edition") || null,
+    borrowed: fd.get("borrowed") === "on",
+    library: text(fd, "library"),
+    due_date: /^\d{4}-\d{2}-\d{2}$/.test(text(fd, "due_date")) ? text(fd, "due_date") : null,
+    series_name: text(fd, "series_name"),
+    series_position: Number.isFinite(parseFloat(text(fd, "series_position"))) ? parseFloat(text(fd, "series_position")) : null,
     years: [...new Set(many(fd, "years").map(Number).filter((y) => y > 1900 && y < 2200))],
     shelves: many(fd, "shelves"),
     tags: many(fd, "tags"),
@@ -70,12 +76,12 @@ async function readCoverChange(fd: FormData): Promise<CoverChange | string> {
 
 async function applyCover(bookId: number, change: CoverChange) {
   if (!change) return;
-  const previous = getCoverName(bookId);
+  const previous = await getCoverName(bookId);
   const next = "set" in change ? await saveCover(bookId, change.set) : null;
   if ("set" in change && !next) return;
   if (next === previous) return;
-  setCover(bookId, next);
-  deleteCover(previous);
+  await setCover(bookId, next);
+  await deleteCover(previous);
 }
 
 export async function saveBookAction(_prev: SaveState, fd: FormData): Promise<SaveState> {
@@ -89,7 +95,7 @@ export async function saveBookAction(_prev: SaveState, fd: FormData): Promise<Sa
 
   let bookId: number;
   try {
-    bookId = saveBook(id, parsed);
+    bookId = await saveBook(id, parsed);
   } catch (err) {
     return { error: (err as Error).message || "Couldn't save the book." };
   }
@@ -101,9 +107,9 @@ export async function saveBookAction(_prev: SaveState, fd: FormData): Promise<Sa
 
 export async function deleteBookAction(fd: FormData) {
   const id = Number(fd.get("id"));
-  const cover = getCoverName(id);
-  deleteBook(id);
-  deleteCover(cover);
+  const cover = await getCoverName(id);
+  await deleteBook(id);
+  await deleteCover(cover);
   revalidatePath("/", "layout");
   redirect("/");
 }
@@ -112,6 +118,29 @@ export async function setStatusAction(fd: FormData) {
   const id = Number(fd.get("id"));
   const shelf = String(fd.get("shelf") ?? "");
   if (!id || !STATUS.includes(shelf)) return;
-  toggleStatus(id, shelf);
+  await toggleStatus(id, shelf);
+  revalidatePath("/", "layout");
+}
+
+const validYear = (y: number) => Number.isInteger(y) && y > 1900 && y < 2200;
+
+export async function addReadAction(_prev: { error?: string; addedAt?: number } | null, fd: FormData) {
+  const bookId = Number(fd.get("id"));
+  const year = Number(text(fd, "year"));
+  if (!validYear(year)) return { error: "Enter a year like 2026." };
+  await addRead(bookId, year, text(fd, "note"));
+  revalidatePath("/", "layout");
+  return { addedAt: Date.now() };
+}
+
+export async function updateReadAction(fd: FormData) {
+  const year = Number(text(fd, "year"));
+  if (!validYear(year)) return;
+  await updateRead(Number(fd.get("read_id")), year, text(fd, "note"));
+  revalidatePath("/", "layout");
+}
+
+export async function deleteReadAction(fd: FormData) {
+  await deleteRead(Number(fd.get("read_id")));
   revalidatePath("/", "layout");
 }

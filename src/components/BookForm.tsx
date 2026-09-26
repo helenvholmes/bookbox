@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- previews of local files and OpenLibrary covers */
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { saveBookAction } from "@/app/books/actions";
+import { saveBookAction } from "@/app/(app)/books/actions";
 import type { Book } from "@/lib/books";
 import type { OLDetails } from "@/lib/openlibrary";
 import { Cover } from "./Cover";
@@ -14,6 +14,7 @@ export type FormOptions = {
   shelves: string[];
   tags: string[];
   people: Option[];
+  series: string[];
 };
 
 type Fields = {
@@ -85,6 +86,7 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
   const [recBy, setRecBy] = useState<string[]>(book?.recommendedBy.map((p) => String(p.id)) ?? []);
   const [owned, setOwned] = useState(book?.owned ?? false);
   const [kindle, setKindle] = useState(book?.on_kindle ?? false);
+  const [borrowed, setBorrowed] = useState(book?.borrowed ?? false);
 
   // Cover: the saved one, an OpenLibrary URL to fetch on save, or a picked file.
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
@@ -308,6 +310,34 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
           )}
 
           {text("additional_authors", "Additional authors", { hint: "Co-authors, translators, illustrators" })}
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium">Author in original script</span>
+            <input name="author_original" defaultValue={book?.author_original ?? ""} placeholder="e.g. 村上春樹" className="field" />
+            <span className="mt-1 block text-xs text-muted">Shown under the author&rsquo;s name, and searchable.</span>
+          </label>
+
+          <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium">Series</span>
+              <input
+                name="series_name"
+                list="series-options"
+                defaultValue={book?.series?.name ?? ""}
+                placeholder="e.g. Shades of Magic"
+                autoComplete="off"
+                className="field"
+              />
+              <datalist id="series-options">
+                {options.series.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium">Book #</span>
+              <input name="series_position" inputMode="decimal" defaultValue={book?.series?.position ?? ""} placeholder="1" className="field" />
+            </label>
+          </div>
 
           <section className="space-y-5 card p-4">
             <div>
@@ -334,6 +364,16 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
             <div className="divide-y divide-line">
               <Toggle name="owned" label="Owned" checked={owned} onChange={setOwned} />
               <Toggle name="on_kindle" label="On Kindle" checked={kindle} onChange={setKindle} />
+              <Toggle name="borrowed" label="Borrowed from the library" checked={borrowed} onChange={setBorrowed} />
+              {borrowed && (
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 py-2">
+                  <input name="library" defaultValue={book?.library ?? ""} placeholder="Which library?" aria-label="Library" className="field text-sm" />
+                  <label className="flex items-center gap-2 text-sm text-muted">
+                    Due
+                    <input type="date" name="due_date" defaultValue={book?.due_date ?? ""} aria-label="Due date" className="field w-auto text-sm" />
+                  </label>
+                </div>
+              )}
             </div>
           </section>
 

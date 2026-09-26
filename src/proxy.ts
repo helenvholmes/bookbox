@@ -14,8 +14,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except the login page and the assets the home screen needs before signing in.
+  // Everything except the login page, public share links (/s/…), the offline page and service worker (which hold no
+  // data themselves), and the assets the home screen needs before signing in.
   matcher: [
-    "/((?!login|_next/static|_next/image|manifest.webmanifest|favicon.ico|icon|apple-icon|icons/|splash/).*)",
+    "/((?!login|s/|offline|sw\\.js|_next/static|_next/image|manifest.webmanifest|favicon.ico|icon|apple-icon|icons/|splash/).*)",
   ],
 };

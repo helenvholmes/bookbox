@@ -27,6 +27,8 @@ export type OLDetails = {
   coverUrl: string | null;
   ol_work: string;
   ol_edition: string | null;
+  /** The edition's free-text series label, when OpenLibrary has one. */
+  series: string | null;
 };
 
 async function get<T>(pathAndQuery: string, attempt = 1): Promise<T | null> {
@@ -45,6 +47,9 @@ async function get<T>(pathAndQuery: string, attempt = 1): Promise<T | null> {
     throw err;
   }
 }
+
+/** OpenLibrary has placeholder page counts like 1; anything under 20 isn't a real book length. */
+const pagesOrNull = (n: number | undefined | null) => (n && n >= 20 ? n : null);
 
 const coverFromId = (id: number | undefined | null) => (id && id > 0 ? `https://covers.openlibrary.org/b/id/${id}-L.jpg` : null);
 
@@ -128,7 +133,7 @@ export async function searchOpenLibrary(query: string): Promise<OLResult[]> {
       year: d.first_publish_year ?? null,
       isbn13: isbn ?? firstIsbn13(ed?.isbn) ?? firstIsbn13(d.isbn),
       publisher: ed?.publisher?.[0] ?? d.publisher?.[0] ?? "",
-      pages: ed?.number_of_pages ?? d.number_of_pages_median ?? null,
+      pages: pagesOrNull(ed?.number_of_pages) ?? pagesOrNull(d.number_of_pages_median),
       coverUrl: coverFromId(ed?.cover_i ?? d.cover_i),
     };
   });
@@ -153,6 +158,7 @@ type Edition = {
   covers?: number[];
   description?: string | { value: string };
   works?: { key: string }[];
+  series?: string[];
 };
 
 function cleanDescription(d: Work["description"]): string {
@@ -196,10 +202,11 @@ export async function getOpenLibraryDetails(work: string, edition?: string | nul
     description: cleanDescription(w.description) || cleanDescription(e?.description),
     publisher: e?.publishers?.[0] ?? "",
     publish_year: yearFrom(e?.publish_date) ?? yearFrom(w.first_publish_date),
-    pages: e?.number_of_pages ?? null,
+    pages: pagesOrNull(e?.number_of_pages),
     coverUrl: coverFromId(e?.covers?.find((c) => c > 0) ?? w.covers?.find((c) => c > 0)),
     ol_work: workKey,
     ol_edition: editionKey,
+    series: e?.series?.[0]?.trim() || null,
   };
 }
 
@@ -245,4 +252,61 @@ export async function findCoverCandidates(book: { isbn13: string | null; title: 
     if (out.length >= 12) break;
   }
   return out.slice(0, 12);
+}
+
+export type IsbnCandidate = { isbn13: string; label: string; thumb: string | null; work: string; edition: string; english: boolean };
+
+type IsbnEdition = EditionEntry & { key: string; isbn_13?: string[]; isbn_10?: string[]; physical_format?: string; title?: string };
+
+/** ISBN prefixes for English-language publishing (978-0, 978-1, 979-8). */
+const englishIsbn = (isbn: string) => /^97(80|81|98)/.test(isbn);
+
+/**
+ * Editions with an ISBN for a book, from the best-matching works, best first: English (by
+ * language, or by an English-market ISBN when no language is recorded), then print over audio or video,
+ * then editions with a cover. Up to 12.
+ */
+export async function findIsbnCandidates(book: { title: string; author: string }): Promise<IsbnCandidate[]> {
+  const title = book.title.replace(/\([^)]*#\d+[^)]*\)/g, "").split(":")[0].trim();
+  const params = new URLSearchParams({ title, fields: "key", limit: "2" });
+  if (book.author) params.set("author", book.author);
+  const search = await get<{ docs: { key: string }[] }>(`/search.json?${params}`);
+  const lists = await Promise.all(
+    (search?.docs ?? []).map((w, rank) =>
+      get<{ entries: IsbnEdition[] }>(`${w.key}/editions.json?limit=60`)
+        .then((l) => ({ work: w.key, rank, l }))
+        .catch(() => null),
+    ),
+  );
+
+  const scored: (IsbnCandidate & { score: number })[] = [];
+  const seen = new Set<string>();
+  for (const item of lists) {
+    if (!item?.l) continue;
+    for (const e of item.l.entries) {
+      const isbn = firstIsbn13(e.isbn_13) ?? firstIsbn13(e.isbn_10);
+      if (!isbn || seen.has(isbn)) continue;
+      seen.add(isbn);
+      const langs = (e.languages ?? []).map((l) => l.key);
+      const english = langs.length ? langs.includes("/languages/eng") : englishIsbn(isbn);
+      const format = (e.physical_format ?? "").toLowerCase();
+      const audio = /audio|cd|mp3|video|dvd|vhs/.test(format);
+      const cover = e.covers?.find((c) => c > 0);
+      const score =
+        (english ? 10 : 0) + (englishIsbn(isbn) ? 2 : 0) + (audio ? -6 : 0) + (/paperback|hardcover/.test(format) ? 1 : 0) + (cover ? 1 : 0) - item.rank * 3;
+      scored.push({
+        isbn13: isbn,
+        label: [e.publishers?.[0], yearFrom(e.publish_date), e.physical_format].filter(Boolean).join(" · ") || "Edition",
+        thumb: cover ? `https://covers.openlibrary.org/b/id/${cover}-S.jpg` : null,
+        work: item.work.replace("/works/", ""),
+        edition: e.key.replace("/books/", ""),
+        english,
+        score,
+      });
+    }
+  }
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 12)
+    .map(({ score: _score, ...c }) => (void _score, c));
 }
