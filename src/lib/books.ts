@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { cache } from "react";
 import { db, deleteBookRows, transaction } from "./db";
 import { searchBooks, type SearchEntry } from "./search";
+import { TEXT_FIELDS, type TextField } from "./sync-ops";
 import { authorSort, slugify } from "./names";
 
 export type Named = { id: number; name: string };
@@ -51,7 +52,8 @@ export type Book = BookSummary & {
   series: { id: number; name: string; position: number | null } | null;
 };
 
-export type Read = { id: number; year: number; note: string };
+/** `clientId` is set for reads that were added offline (see src/lib/outbox.ts). */
+export type Read = { id: number; year: number; note: string; clientId: string | null };
 
 export type Filters = {
   q?: string;
@@ -235,7 +237,7 @@ export async function getBook(id: number): Promise<Book | null> {
     due_date: (row.due_date as string | null) ?? null,
     bad_isbn: (row.bad_isbn as string | null) ?? null,
     tags,
-    reads: (await db.prepare("SELECT id, year, note FROM book_reads WHERE book_id = ? ORDER BY year DESC, id DESC").all(id)) as Read[],
+    reads: (await db.prepare("SELECT id, year, note, client_id AS clientId FROM book_reads WHERE book_id = ? ORDER BY year DESC, id DESC").all(id)) as Read[],
     series:
       ((await db
         .prepare("SELECT s.id, s.name, bs.position FROM book_series bs JOIN series s ON s.id = bs.series_id WHERE bs.book_id = ?")
@@ -525,19 +527,14 @@ export async function getBookForCoverSearch(id: number) {
 
 export const STATUS = ["To Read", "Currently Reading", "Read", "Abandoned"];
 
-/** Sets the book's status shelf, or clears it when `shelf` is already the only status. Returns the new status. */
-export async function toggleStatus(bookId: number, shelf: string): Promise<string | null> {
-  return await transaction(async () => {
-    const current = ((await db
-      .prepare(`SELECT s.name FROM book_shelves bs JOIN shelves s ON s.id = bs.shelf_id WHERE bs.book_id = ? AND s.name IN (${STATUS.map(() => "?").join(",")})`)
-      .all(bookId, ...STATUS)) as { name: string }[]).map((r) => r.name);
-    (await db.prepare(
-      `DELETE FROM book_shelves WHERE book_id = ? AND shelf_id IN (SELECT id FROM shelves WHERE name IN (${STATUS.map(() => "?").join(",")}))`,
-    ).run(bookId, ...STATUS));
-    if (current.length === 1 && current[0] === shelf) return null;
-    (await db.prepare("INSERT OR IGNORE INTO book_shelves (book_id, shelf_id) VALUES (?, ?)").run(bookId, await findOrCreate("shelves", shelf)));
-    (await db.prepare("UPDATE books SET updated_at = datetime('now') WHERE id = ?").run(bookId));
-    return shelf;
+/** Sets the book's status shelf (To Read, Currently Reading, …), replacing any other, or clears it with null. */
+export async function setStatus(bookId: number, shelf: string | null) {
+  await transaction(async () => {
+    await db
+      .prepare(`DELETE FROM book_shelves WHERE book_id = ? AND shelf_id IN (SELECT id FROM shelves WHERE name IN (${STATUS.map(() => "?").join(",")}))`)
+      .run(bookId, ...STATUS);
+    if (shelf) await db.prepare("INSERT OR IGNORE INTO book_shelves (book_id, shelf_id) VALUES (?, ?)").run(bookId, await findOrCreate("shelves", shelf));
+    await db.prepare("UPDATE books SET updated_at = datetime('now') WHERE id = ?").run(bookId);
   });
 }
 
@@ -576,17 +573,25 @@ export async function getContextualFacets(f: Filters, all: Facets): Promise<Face
 
 // Re-reads
 
-export async function addRead(bookId: number, year: number, note: string) {
-  (await db.prepare("INSERT INTO book_reads (book_id, year, note) VALUES (?, ?, ?)").run(bookId, year, note));
-  (await db.prepare("UPDATE books SET updated_at = datetime('now') WHERE id = ?").run(bookId));
+/** Adds a read. With a `clientId`, adding the same read again does nothing. */
+export async function addRead(bookId: number, year: number, note: string, clientId: string | null = null) {
+  await db.prepare("INSERT OR IGNORE INTO book_reads (book_id, year, note, client_id) VALUES (?, ?, ?, ?)").run(bookId, year, note, clientId);
+  await db.prepare("UPDATE books SET updated_at = datetime('now') WHERE id = ?").run(bookId);
 }
 
-export async function updateRead(readId: number, year: number, note: string) {
-  (await db.prepare("UPDATE book_reads SET year = ?, note = ? WHERE id = ?").run(year, note, readId));
+/** Removes a read by id, or by the client id it was added offline with. */
+export async function deleteRead(ref: { id: number } | { clientId: string }) {
+  if ("id" in ref) await db.prepare("DELETE FROM book_reads WHERE id = ?").run(ref.id);
+  else await db.prepare("DELETE FROM book_reads WHERE client_id = ?").run(ref.clientId);
 }
 
-export async function deleteRead(readId: number) {
-  (await db.prepare("DELETE FROM book_reads WHERE id = ?").run(readId));
+export async function setRating(bookId: number, rating: number | null) {
+  await db.prepare("UPDATE books SET rating = ?, updated_at = datetime('now') WHERE id = ?").run(rating, bookId);
+}
+
+export async function setText(bookId: number, field: TextField, value: string) {
+  if (!TEXT_FIELDS.includes(field)) throw new Error(`Not an editable field: ${field}`);
+  await db.prepare(`UPDATE books SET ${field} = ?, updated_at = datetime('now') WHERE id = ?`).run(value, bookId);
 }
 
 // Series

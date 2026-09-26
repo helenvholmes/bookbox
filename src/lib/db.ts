@@ -150,6 +150,8 @@ const ADDED_COLUMNS: [table: string, column: string, definition: string][] = [
   // Share pages list the books for someone, then (when on) the books they recommended to you.
   // The older `list` column picked one or the other; it's now always 'for'.
   ["share_pages", "show_theirs", "INTEGER NOT NULL DEFAULT 1"],
+  // Set when a read is added through the offline outbox, so a retried sync never adds it twice.
+  ["book_reads", "client_id", "TEXT"],
 ];
 
 async function migrate(c: Client) {
@@ -176,6 +178,7 @@ async function migrate(c: Client) {
     await c.batch(updates, "write");
   }
   await c.execute("CREATE UNIQUE INDEX IF NOT EXISTS people_slug ON people(slug)");
+  await c.execute("CREATE UNIQUE INDEX IF NOT EXISTS book_reads_client ON book_reads(client_id)");
 }
 
 function open(): Client {

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { addRead, deleteBook, deleteRead, getCoverName, saveBook, setCover, STATUS, toggleStatus, updateRead, type BookInput } from "@/lib/books";
+import { deleteBook, getCoverName, saveBook, setCover, type BookInput } from "@/lib/books";
 import { deleteCover, fetchCover, isUsableImage, saveCover } from "@/lib/covers";
 import { toIsbn13 } from "@/lib/names";
 
@@ -112,35 +112,4 @@ export async function deleteBookAction(fd: FormData) {
   await deleteCover(cover);
   revalidatePath("/", "layout");
   redirect("/");
-}
-
-export async function setStatusAction(fd: FormData) {
-  const id = Number(fd.get("id"));
-  const shelf = String(fd.get("shelf") ?? "");
-  if (!id || !STATUS.includes(shelf)) return;
-  await toggleStatus(id, shelf);
-  revalidatePath("/", "layout");
-}
-
-const validYear = (y: number) => Number.isInteger(y) && y > 1900 && y < 2200;
-
-export async function addReadAction(_prev: { error?: string; addedAt?: number } | null, fd: FormData) {
-  const bookId = Number(fd.get("id"));
-  const year = Number(text(fd, "year"));
-  if (!validYear(year)) return { error: "Enter a year like 2026." };
-  await addRead(bookId, year, text(fd, "note"));
-  revalidatePath("/", "layout");
-  return { addedAt: Date.now() };
-}
-
-export async function updateReadAction(fd: FormData) {
-  const year = Number(text(fd, "year"));
-  if (!validYear(year)) return;
-  await updateRead(Number(fd.get("read_id")), year, text(fd, "note"));
-  revalidatePath("/", "layout");
-}
-
-export async function deleteReadAction(fd: FormData) {
-  await deleteRead(Number(fd.get("read_id")));
-  revalidatePath("/", "layout");
 }

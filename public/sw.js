@@ -111,9 +111,19 @@ async function navigate(req) {
 /* The page asks for everything to be saved for offline use once it's idle: the offline page,
  * the library index, the main pages, and every cover that isn't saved yet. */
 self.addEventListener("message", (event) => {
-  if (event.data?.type !== "warm") return;
-  event.waitUntil(warm(event.data.pages ?? [], event.data.assets ?? []));
+  if (event.data?.type === "warm") event.waitUntil(warm(event.data.pages ?? [], event.data.assets ?? []));
+  // After edits sync, re-save those pages so offline visits show the new version.
+  if (event.data?.type === "refresh") event.waitUntil(refreshPages(event.data.urls ?? []));
 });
+
+async function refreshPages(urls) {
+  const pages = await caches.open(PAGES);
+  for (const url of urls) {
+    const href = new URL(url, self.location.origin).href;
+    if (url === "/" || (await pages.match(href))) await cachePut(pages, href).catch(() => {});
+  }
+  await cachePut(await caches.open(SHELL), "/api/library").catch(() => {});
+}
 
 let warming = null;
 function warm(pages, assets) {
@@ -138,6 +148,9 @@ function warm(pages, assets) {
 
     if (!res || !res.ok) return;
     const books = await res.json();
+    // Book pages you're likely to update away from a connection: what you're reading, and the newest additions.
+    const likely = books.filter((b) => b.shelf === "Currently Reading").concat(books.slice(0, 20));
+    for (const b of new Set(likely)) await savePage(pageCache, new URL(`/books/${b.id}`, self.location.origin).href);
     const covers = await caches.open(COVERS);
     const missing = [];
     for (const b of books) if (b.cover && !(await covers.match(`/covers/${b.cover}`))) missing.push(`/covers/${b.cover}`);

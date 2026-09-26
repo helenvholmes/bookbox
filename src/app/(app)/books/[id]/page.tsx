@@ -5,10 +5,10 @@ import { Avatar } from "@/components/Avatar";
 import { Cover } from "@/components/Cover";
 import { ExpandableText } from "@/components/ExpandableText";
 import { ReadsCard } from "@/components/ReadsCard";
-import { Stars } from "@/components/Stars";
-import { ShelfIcon, STATUS_SHELVES, shelfLabel } from "@/components/ShelfIcon";
+import { BookStatus, RatingPicker } from "@/components/BookStatus";
+import { BookTexts } from "@/components/BookTexts";
+import { STATUS_SHELVES } from "@/components/ShelfIcon";
 import { getBook, type PersonLink } from "@/lib/books";
-import { setStatusAction } from "../actions";
 
 async function load(params: Promise<{ id: string }>) {
   const { id } = await params;
@@ -24,7 +24,6 @@ export async function generateMetadata(props: PageProps<"/books/[id]">): Promise
 
 export default async function BookPage(props: PageProps<"/books/[id]">) {
   const book = await load(props.params);
-  const reading = book.shelves.includes("Currently Reading");
   const otherShelves = book.shelves.filter((s) => !(STATUS_SHELVES as readonly string[]).includes(s));
 
   const details = [
@@ -80,43 +79,12 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
         </div>
 
         {/* Full width under the title and cover on phones; beside the cover on desktop. */}
-        <form action={setStatusAction} className="col-span-2 mt-6 flex gap-2.5 md:col-span-1">
-            <input type="hidden" name="id" value={book.id} />
-            {STATUS_SHELVES.map((s) => {
-              const on = book.shelves.includes(s);
-              return (
-                <div key={s} className="flex flex-col items-center gap-1.5">
-                  <button
-                    name="shelf"
-                    value={s}
-                    aria-pressed={on}
-                    aria-label={on ? `Remove from ${shelfLabel(s)}` : `Mark as ${shelfLabel(s)}`}
-                    className={`flex h-11 w-[4.25rem] items-center justify-center rounded-lg border transition sm:w-16 ${
-                      on ? "border-ink bg-ink text-paper" : "border-line text-muted hover:border-faint hover:text-ink"
-                    }`}
-                  >
-                    <ShelfIcon shelf={s} className="size-[1.125rem]" />
-                  </button>
-                  <span className={`text-[0.6875rem] ${on ? "text-ink" : "text-faint"}`}>{shelfLabel(s)}</span>
-                </div>
-              );
-            })}
-        </form>
+        <BookStatus bookId={book.id} shelves={book.shelves} />
       </header>
 
       <div className="mt-10 grid gap-10 border-t border-line pt-8 md:grid-cols-[minmax(0,1fr)_17rem]">
         <div className="space-y-9">
-          <TextSection title="My review" text={book.review} />
-          <TextSection title="Quotes" text={book.quotes} />
-          {book.spoiler && (
-            <details className="group space-y-3">
-              <summary className="section-title cursor-pointer list-none">
-                Spoilers <span className="count group-open:hidden">tap to reveal</span>
-              </summary>
-              <p className="prose-text pt-3">{book.spoiler}</p>
-            </details>
-          )}
-          <TextSection title="Private notes" text={book.private_notes} />
+          <BookTexts bookId={book.id} review={book.review} quotes={book.quotes} spoiler={book.spoiler} privateNotes={book.private_notes} />
           <TextSection title="Description" text={book.description} />
 
           {details.length > 0 && (
@@ -151,10 +119,7 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
           <section className="space-y-3">
             <h2 className="section-title">Rating</h2>
             <div className="card space-y-3 p-4">
-              <p className="flex items-center gap-2.5 text-[0.8125rem]">
-                <Stars rating={book.rating} className="size-4" />
-                <span className="text-muted">{book.rating ? `${book.rating} of 5` : "Not rated yet"}</span>
-              </p>
+              <RatingPicker bookId={book.id} rating={book.rating} />
               {(book.tags.length > 0 || otherShelves.length > 0 || book.owned || book.on_kindle) && (
                 <div className="flex flex-wrap gap-1.5">
                   {book.tags.map((t) => (
@@ -174,7 +139,7 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
             </div>
           </section>
 
-          <ReadsCard bookId={book.id} reads={book.reads} reading={reading} />
+          <ReadsCard bookId={book.id} reads={book.reads} shelves={book.shelves} />
 
           {book.recommendedBy.length > 0 && <PeopleCard title="Recommended by" people={book.recommendedBy} />}
           {book.recommendedFor.length > 0 && <PeopleCard title="Recommend to" people={book.recommendedFor} />}
