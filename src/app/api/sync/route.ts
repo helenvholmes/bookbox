@@ -1,5 +1,5 @@
 import { revalidatePath } from "next/cache";
-import { addRead, deleteRead, setRating, setStatus, setText } from "@/lib/books";
+import { addRead, deleteRead, setManualProgress, setRating, setStatus, setText } from "@/lib/books";
 import { db } from "@/lib/db";
 import { isValidOp, type SyncResult } from "@/lib/sync-ops";
 
@@ -27,6 +27,7 @@ export async function POST(req: Request) {
       else if (op.kind === "rating") await setRating(op.bookId, op.rating);
       else if (op.kind === "text") await setText(op.bookId, op.field, op.value);
       else if (op.kind === "addRead") await addRead(op.bookId, op.year, op.note, op.clientId);
+      else if (op.kind === "progress") await setManualProgress(op.bookId, op.percent, op.page);
       else if (op.kind === "deleteRead") await deleteRead(op.readId !== null ? { id: op.readId } : { clientId: op.clientId! });
     }
     result.applied.push(op.opId);

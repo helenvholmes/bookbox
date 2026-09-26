@@ -15,6 +15,8 @@ const ICONS = {
   duplicates: "M8 8h11v11H8zM5 16V5h11",
   isbn: "M4 6v12M7 6v12M10.5 6v12M13 6v12M16.5 6v12M20 6v12",
   refresh: "M20 11a8 8 0 0 0-14.5-4.5L4 8m0-4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16m0 4v-4h-4",
+  // Headphones: listening progress from Spotify.
+  spotify: "M4 15v-3a8 8 0 0 1 16 0v3M4 15a2 2 0 0 1 2-2h1v7H6a2 2 0 0 1-2-2zm16 0a2 2 0 0 0-2-2h-1v7h1a2 2 0 0 0 2-2z",
   export: "M12 4v11m0 0-4-4m4 4 4-4M5 19h14",
 };
 
@@ -113,6 +115,9 @@ export function Nav({ years }: Props) {
           </Link>
           <Link href="/refresh" className={item(pathname === "/refresh")}>
             <Icon d={ICONS.refresh} /> OpenLibrary refresh
+          </Link>
+          <Link href="/spotify" className={item(pathname === "/spotify")}>
+            <Icon d={ICONS.spotify} /> Spotify
           </Link>
           <a href="/export/books.csv" download className={item(false)}>
             <Icon d={ICONS.export} /> Export CSV

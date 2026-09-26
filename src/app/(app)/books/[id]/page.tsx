@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { Cover } from "@/components/Cover";
 import { ExpandableText } from "@/components/ExpandableText";
+import { ProgressCard } from "@/components/ProgressCard";
 import { ReadsCard } from "@/components/ReadsCard";
 import { BookStatus, RatingPicker } from "@/components/BookStatus";
 import { BookTexts } from "@/components/BookTexts";
@@ -139,6 +140,14 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
             </div>
           </section>
 
+          <ProgressCard
+            bookId={book.id}
+            pages={book.pages}
+            shelves={book.shelves}
+            reads={book.reads}
+            progress={book.progress_detail}
+            spotify={book.spotify && { name: book.spotify.name }}
+          />
           <ReadsCard bookId={book.id} reads={book.reads} shelves={book.shelves} />
 
           {book.recommendedBy.length > 0 && <PeopleCard title="Recommended by" people={book.recommendedBy} />}

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Nav } from "@/components/Nav";
 import { OfflineSupport } from "@/components/OfflineSupport";
+import { SpotifySync } from "@/components/SpotifySync";
 import { getFacets } from "@/lib/books";
 
 /** The signed-in app: sidebar (or bottom tabs on phones) around every page. */
@@ -9,6 +10,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="min-h-dvh md:flex">
       <OfflineSupport />
+      <SpotifySync />
       <Suspense>
         <Nav years={years} />
       </Suspense>

@@ -26,6 +26,11 @@ export function BookGrid({
         <li key={b.id} className="[contain-intrinsic-size:auto_25rem] [content-visibility:auto]">
           <Link href={`/books/${b.id}`} className="card flex h-full flex-col overflow-hidden text-center transition hover:border-faint">
             <Cover cover={b.cover} title={b.title} author={b.author} eager={i < 8} bleed />
+            {b.progress !== null && b.shelves.includes("Currently Reading") && (
+              <div className="h-1.5 bg-line" role="progressbar" aria-label="Progress" aria-valuenow={Math.round(b.progress)} aria-valuemin={0} aria-valuemax={100}>
+                <div className="h-full bg-ink" style={{ width: `${b.progress}%` }} />
+              </div>
+            )}
             <div className="flex flex-1 flex-col items-center px-3 pt-3.5 pb-2">
               {caption?.(b) && <p className="mb-0.5 text-[0.6875rem] text-faint">{caption(b)}</p>}
               <ClampedTitle title={b.title} className="text-[0.8125rem] leading-snug" />

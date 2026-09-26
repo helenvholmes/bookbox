@@ -23,6 +23,17 @@ export type BookSummary = {
   tagIds: number[];
   /** Times read, counting re-reads. */
   readCount: number;
+  /** How far through it you are (0-100), when that's known. */
+  progress: number | null;
+};
+
+export type Progress = {
+  percent: number;
+  source: "manual" | "spotify";
+  page: number | null;
+  position_ms: number | null;
+  duration_ms: number | null;
+  updated_at: string;
 };
 
 export type Book = BookSummary & {
@@ -50,6 +61,9 @@ export type Book = BookSummary & {
   recommendedBy: PersonLink[];
   reads: Read[];
   series: { id: number; name: string; position: number | null } | null;
+  progress_detail: Progress | null;
+  /** The Spotify audiobook this book's listening progress comes from. */
+  spotify: { audiobook_id: string; name: string } | null;
 };
 
 /** `clientId` is set for reads that were added offline (see src/lib/outbox.ts). */
@@ -84,7 +98,8 @@ function summaryColumns() {
     (SELECT count(*) FROM book_reads WHERE book_id = b.id) AS read_count,
     (SELECT group_concat(name, '|') FROM (SELECT s.name FROM book_shelves bs JOIN shelves s ON s.id = bs.shelf_id
        WHERE bs.book_id = b.id ORDER BY s.position)) AS shelves,
-    (SELECT group_concat(tag_id, ',') FROM book_tags WHERE book_id = b.id) AS tag_ids`;
+    (SELECT group_concat(tag_id, ',') FROM book_tags WHERE book_id = b.id) AS tag_ids,
+    (SELECT percent FROM book_progress WHERE book_id = b.id) AS progress`;
 }
 
 type SummaryRow = Omit<BookSummary, "years" | "shelves" | "tagIds" | "readCount"> & {
@@ -106,6 +121,7 @@ function toSummary(r: SummaryRow): BookSummary {
     blurb: (r.blurb ?? "").replace(/\s+/g, " ").trim(),
     tagIds: r.tag_ids ? r.tag_ids.split(",").map(Number) : [],
     readCount: r.read_count ?? 0,
+    progress: r.progress ?? null,
   };
 }
 
@@ -238,6 +254,11 @@ export async function getBook(id: number): Promise<Book | null> {
     bad_isbn: (row.bad_isbn as string | null) ?? null,
     tags,
     reads: (await db.prepare("SELECT id, year, note, client_id AS clientId FROM book_reads WHERE book_id = ? ORDER BY year DESC, id DESC").all(id)) as Read[],
+    progress_detail:
+      ((await db.prepare("SELECT percent, source, page, position_ms, duration_ms, updated_at FROM book_progress WHERE book_id = ?").get(id)) as
+        | Progress
+        | undefined) ?? null,
+    spotify: ((await db.prepare("SELECT audiobook_id, name FROM spotify_links WHERE book_id = ?").get(id)) as Book["spotify"] | undefined) ?? null,
     series:
       ((await db
         .prepare("SELECT s.id, s.name, bs.position FROM book_series bs JOIN series s ON s.id = bs.series_id WHERE bs.book_id = ?")
@@ -583,6 +604,21 @@ export async function addRead(bookId: number, year: number, note: string, client
 export async function deleteRead(ref: { id: number } | { clientId: string }) {
   if ("id" in ref) await db.prepare("DELETE FROM book_reads WHERE id = ?").run(ref.id);
   else await db.prepare("DELETE FROM book_reads WHERE client_id = ?").run(ref.clientId);
+}
+
+/** Sets progress by hand (a percentage, or a page when the book has a page count), or clears it with null. */
+export async function setManualProgress(bookId: number, percent: number | null, page: number | null) {
+  if (percent === null) {
+    await db.prepare("DELETE FROM book_progress WHERE book_id = ? AND source = 'manual'").run(bookId);
+    return;
+  }
+  await db
+    .prepare(
+      `INSERT INTO book_progress (book_id, percent, source, page, position_ms, duration_ms, updated_at) VALUES (?, ?, 'manual', ?, NULL, NULL, datetime('now'))
+       ON CONFLICT(book_id) DO UPDATE SET percent = excluded.percent, source = 'manual', page = excluded.page, position_ms = NULL,
+         duration_ms = NULL, updated_at = excluded.updated_at`,
+    )
+    .run(bookId, Math.max(0, Math.min(100, percent)), page);
 }
 
 export async function setRating(bookId: number, rating: number | null) {

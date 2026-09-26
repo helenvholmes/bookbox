@@ -41,3 +41,11 @@ export function withReads(reads: Read[], ops: SyncOp[]): ShownRead[] {
   const order = (r: ShownRead) => r.id ?? Number.MAX_SAFE_INTEGER;
   return shown.sort((a, b) => b.year - a.year || order(b) - order(a));
 }
+
+export type ShownProgress = { percent: number; page: number | null; source: "manual" | "spotify"; pending: boolean } | null;
+
+export function withProgress(saved: ShownProgress, ops: SyncOp[]): ShownProgress {
+  let p = saved;
+  for (const op of ops) if (op.kind === "progress") p = op.percent === null ? null : { percent: op.percent, page: op.page, source: "manual", pending: true };
+  return p;
+}

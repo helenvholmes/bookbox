@@ -17,6 +17,8 @@ export type SyncOp = Base &
     | { kind: "text"; field: TextField; value: string }
     | { kind: "addRead"; clientId: string; year: number; note: string }
     | { kind: "deleteRead"; readId: number | null; clientId: string | null }
+    /** Progress by hand: a percentage, and the page it came from if entered as one. Null clears it. */
+    | { kind: "progress"; percent: number | null; page: number | null }
   );
 
 export type SyncResult = { applied: string[]; rejected: string[] };
@@ -38,6 +40,11 @@ export function isValidOp(op: unknown): op is SyncOp {
       return (TEXT_FIELDS as readonly unknown[]).includes(o.field) && typeof o.value === "string" && o.value.length <= 100_000;
     case "addRead":
       return isId(o.clientId) && validYear(o.year) && typeof o.note === "string" && o.note.length <= 1000;
+    case "progress":
+      return (
+        (o.percent === null && o.page === null) ||
+        (typeof o.percent === "number" && o.percent >= 0 && o.percent <= 100 && (o.page === null || (Number.isInteger(o.page) && (o.page as number) >= 0)))
+      );
     case "deleteRead":
       return (Number.isInteger(o.readId) && o.clientId === null) || (o.readId === null && isId(o.clientId));
     default:

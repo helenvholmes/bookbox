@@ -135,6 +135,40 @@ CREATE TABLE IF NOT EXISTS not_duplicates (
   book_b INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
   PRIMARY KEY (book_a, book_b)
 );
+
+-- How far through a book you are: set by hand, or synced from a linked Spotify audiobook.
+CREATE TABLE IF NOT EXISTS book_progress (
+  book_id     INTEGER PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+  percent     REAL NOT NULL CHECK (percent >= 0 AND percent <= 100),
+  source      TEXT NOT NULL CHECK (source IN ('manual', 'spotify')),
+  page        INTEGER,            -- manual progress by page, when the book has a page count
+  position_ms INTEGER,            -- Spotify: listened so far
+  duration_ms INTEGER,            -- Spotify: the whole audiobook
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- The one Spotify account BookBox reads listening progress from.
+CREATE TABLE IF NOT EXISTS spotify_account (
+  id             INTEGER PRIMARY KEY CHECK (id = 1),
+  display_name   TEXT NOT NULL DEFAULT '',
+  country        TEXT,
+  access_token   TEXT NOT NULL,
+  refresh_token  TEXT NOT NULL,
+  expires_at     INTEGER NOT NULL, -- ms since the epoch
+  last_synced_at INTEGER
+);
+
+-- Which Spotify audiobook is which book, confirmed by you once.
+CREATE TABLE IF NOT EXISTS spotify_links (
+  book_id      INTEGER PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+  audiobook_id TEXT NOT NULL UNIQUE,
+  name         TEXT NOT NULL DEFAULT ''
+);
+
+-- Spotify audiobooks you've said aren't in BookBox, so they stop being suggested.
+CREATE TABLE IF NOT EXISTS spotify_ignored (
+  audiobook_id TEXT PRIMARY KEY
+);
 `;
 
 // Columns added after the first release. Added in place so existing databases keep their data.
@@ -268,7 +302,17 @@ export async function batch(stmts: InStatement[]) {
 }
 
 // Foreign keys aren't enforced over libsql/Turso connections, so child rows are deleted explicitly.
-const BOOK_CHILDREN = ["book_reads", "book_series", "book_shelves", "book_tags", "recommendations", "cover_skipped", "refresh_suggestions"];
+const BOOK_CHILDREN = [
+  "book_reads",
+  "book_series",
+  "book_shelves",
+  "book_tags",
+  "recommendations",
+  "cover_skipped",
+  "refresh_suggestions",
+  "book_progress",
+  "spotify_links",
+];
 
 export async function deleteBookRows(id: number) {
   await transaction(async () => {
