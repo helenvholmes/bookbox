@@ -41,7 +41,7 @@ export async function saveShareAction(_prev: ShareState, fd: FormData): Promise<
   const accent = String(fd.get("accent") ?? "");
   const token = await saveShareSettings(personId, {
     enabled: fd.get("enabled") === "on",
-    list: fd.get("list") === "by" ? "by" : "for",
+    show_theirs: fd.get("show_theirs") === "on",
     title: text(fd, "title"),
     message: text(fd, "message"),
     layout: fd.get("layout") === "list" ? "list" : "grid",

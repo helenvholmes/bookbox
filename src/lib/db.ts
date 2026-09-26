@@ -147,6 +147,9 @@ const ADDED_COLUMNS: [table: string, column: string, definition: string][] = [
   ["books", "ol_checked_at", "TEXT"], // last bulk OpenLibrary refresh
   ["books", "author_original", "TEXT NOT NULL DEFAULT ''"], // the author's name in its original script (村上春樹)
   ["people", "slug", "TEXT"], // "colette-shade", for /people/colette-shade
+  // Share pages list the books for someone, then (when on) the books they recommended to you.
+  // The older `list` column picked one or the other; it's now always 'for'.
+  ["share_pages", "show_theirs", "INTEGER NOT NULL DEFAULT 1"],
 ];
 
 async function migrate(c: Client) {

@@ -11,15 +11,15 @@ type Props = {
   first: string;
   settings: ShareSettings;
   counts: { for: number; by: number };
-  defaults: { for: string; by: string };
+  defaultTitle: string;
   accents: string[];
 };
 
 /** Settings for a person's public share page, with its link. */
-export function ShareEditor({ personId, first, settings, counts, defaults, accents }: Props) {
+export function ShareEditor({ personId, first, settings, counts, defaultTitle, accents }: Props) {
   const [state, action, pending] = useActionState(saveShareAction, null as ShareState);
   const [enabled, setEnabled] = useState(settings.enabled || !settings.token);
-  const [list, setList] = useState(settings.list);
+  const [theirs, setTheirs] = useState(settings.show_theirs);
   const [ratings, setRatings] = useState(settings.show_ratings);
   const [reviews, setReviews] = useState(settings.show_reviews);
   const [accent, setAccent] = useState(settings.accent);
@@ -79,22 +79,24 @@ export function ShareEditor({ personId, first, settings, counts, defaults, accen
           <div className="py-2">
             <Toggle name="enabled" label="Link is on" checked={enabled} onChange={setEnabled} />
           </div>
-          <fieldset className="space-y-2 py-4">
-            <legend className="mb-2 text-sm font-medium">Which books</legend>
-            {(["for", "by"] as const).map((k) => (
-              <label key={k} className="flex items-center gap-2.5 text-sm">
-                <input type="radio" name="list" value={k} checked={list === k} onChange={() => setList(k)} className="size-4 accent-[var(--ink)]" />
-                {k === "for" ? `Books for ${first}` : `Books ${first} recommended`}
-                <span className="text-faint">{counts[k]}</span>
-              </label>
-            ))}
-          </fieldset>
+          <div className="py-2">
+            <Toggle
+              name="show_theirs"
+              label={`Also show the books ${first} recommended to me`}
+              checked={theirs}
+              onChange={setTheirs}
+            />
+            <p className="pb-2 text-xs text-muted">
+              {counts.for} {counts.for === 1 ? "book" : "books"} for {first}
+              {theirs ? `, then ${counts.by} from ${first} underneath` : ""}.
+            </p>
+          </div>
         </section>
 
         <section className="space-y-4">
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium">Title</span>
-            <input name="title" defaultValue={settings.title} placeholder={defaults[list]} className="field display text-lg" />
+            <input name="title" defaultValue={settings.title} placeholder={defaultTitle} className="field display text-lg" />
           </label>
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium">Message</span>

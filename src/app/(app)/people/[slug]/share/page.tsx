@@ -30,7 +30,7 @@ export default async function SharePage(props: PageProps<"/people/[slug]/share">
         first={person.first}
         settings={settings}
         counts={{ for: recommendedTo.length, by: recommendedBy.length }}
-        defaults={{ for: defaultTitle(person.first, "for"), by: defaultTitle(person.first, "by") }}
+        defaultTitle={defaultTitle(person.first)}
         accents={[...ACCENTS]}
       />
     </div>

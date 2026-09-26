@@ -18,7 +18,7 @@ export default async function SharedListPage(props: PageProps<"/s/[token]">) {
   const { token } = await props.params;
   const data = await getSharedList(token);
   if (!data) notFound();
-  const { settings, books, title } = data;
+  const { settings, forThem, fromThem, title } = data;
   const srcBase = `/s/${token}/c`;
   const accent = settings.accent;
 
@@ -30,20 +30,35 @@ export default async function SharedListPage(props: PageProps<"/s/[token]">) {
         </p>
         <h1 className="display text-4xl leading-tight sm:text-5xl">{title}</h1>
         {settings.message && <p className="prose-text max-w-2xl text-[0.9375rem] text-muted">{settings.message}</p>}
-        <p className="text-xs text-faint">
-          {books.length} {books.length === 1 ? "book" : "books"}
-        </p>
+        <p className="text-xs text-faint">{count(forThem.length)}</p>
       </header>
 
       <div className="mt-10">
-        {books.length === 0 ? (
+        {forThem.length === 0 ? (
           <p className="py-16 text-center text-muted">No books on this list yet.</p>
         ) : (
-          <SharedBooks books={books} layout={settings.layout} srcBase={srcBase} accent={accent} owner={OWNER_NAME} />
+          <SharedBooks books={forThem} layout={settings.layout} srcBase={srcBase} accent={accent} owner={OWNER_NAME} />
         )}
       </div>
+
+      {fromThem.length > 0 && (
+        <section className="mt-16 space-y-5 border-t border-line pt-10" aria-labelledby="from-them">
+          <div>
+            <h2 id="from-them" className="display text-2xl sm:text-3xl">
+              Books you recommended to me
+            </h2>
+            <p className="mt-1 text-xs text-faint">
+              {count(fromThem.length)}
+              {settings.show_ratings || settings.show_reviews ? ", and what I thought of them" : ""}
+            </p>
+          </div>
+          <SharedBooks books={fromThem} layout={settings.layout} srcBase={srcBase} accent={accent} owner={OWNER_NAME} />
+        </section>
+      )}
 
       <footer className="mt-16 text-center text-xs text-faint">Shared from BookBox</footer>
     </main>
   );
 }
+
+const count = (n: number) => `${n} ${n === 1 ? "book" : "books"}`;
