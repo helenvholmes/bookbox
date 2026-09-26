@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import path from "node:path";
 import { createClient, type Client, type InStatement, type InValue, type Transaction } from "@libsql/client";
+import { slugify } from "./names";
 
 /**
  * One database layer for everywhere. Locally it's the SQLite file in DATA_DIR; on Vercel it's a
@@ -145,6 +146,7 @@ const ADDED_COLUMNS: [table: string, column: string, definition: string][] = [
   ["books", "isbn_skipped", "INTEGER NOT NULL DEFAULT 0"],
   ["books", "ol_checked_at", "TEXT"], // last bulk OpenLibrary refresh
   ["books", "author_original", "TEXT NOT NULL DEFAULT ''"], // the author's name in its original script (村上春樹)
+  ["people", "slug", "TEXT"], // "colette-shade", for /people/colette-shade
 ];
 
 async function migrate(c: Client) {
@@ -157,6 +159,20 @@ async function migrate(c: Client) {
   if (old.rows.length) {
     await c.batch(["INSERT INTO book_reads (book_id, year) SELECT book_id, year FROM book_years ORDER BY book_id, year", "DROP TABLE book_years"], "write");
   }
+  // People got URL slugs; give everyone without one a unique slug, oldest first.
+  const unslugged = (await c.execute("SELECT id, first, last FROM people WHERE slug IS NULL OR slug = '' ORDER BY id")).rows;
+  if (unslugged.length) {
+    const taken = new Set((await c.execute("SELECT slug FROM people WHERE slug IS NOT NULL AND slug != ''")).rows.map((r) => String(r.slug)));
+    const updates = unslugged.map((r) => {
+      const base = slugify(String(r.first), String(r.last));
+      let slug = base;
+      for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
+      taken.add(slug);
+      return { sql: "UPDATE people SET slug = ? WHERE id = ?", args: [slug, r.id] };
+    });
+    await c.batch(updates, "write");
+  }
+  await c.execute("CREATE UNIQUE INDEX IF NOT EXISTS people_slug ON people(slug)");
 }
 
 function open(): Client {
@@ -165,10 +181,17 @@ function open(): Client {
 }
 
 // Reuse one client (and one schema check) across hot reloads in dev and warm serverless invocations.
-const g = globalThis as unknown as { bookboxClient?: Client; bookboxReady?: Promise<void> };
+const g = globalThis as unknown as { bookboxClient?: Client; bookboxReady?: Promise<void>; bookboxSchema?: string };
 const client = (g.bookboxClient ??= open());
 
+// Changes whenever the schema or migrations do, so a running dev server re-checks after an edit.
+const SCHEMA_VERSION = `${SCHEMA.length}:${ADDED_COLUMNS.length}:${migrate.toString().length}`;
+
 function ready(): Promise<void> {
+  if (g.bookboxSchema !== SCHEMA_VERSION) {
+    g.bookboxSchema = SCHEMA_VERSION;
+    g.bookboxReady = undefined;
+  }
   g.bookboxReady ??= (async () => {
     if (!IS_REMOTE_DB) await client.execute("PRAGMA journal_mode = WAL");
     await client.executeMultiple(SCHEMA);

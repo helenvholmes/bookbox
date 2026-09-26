@@ -1,12 +1,14 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { BookGrid } from "@/components/BookGrid";
 import { getPerson } from "@/lib/books";
 import { PersonHeader } from "@/components/PersonHeader";
 
-export default async function PersonPage(props: PageProps<"/people/[id]">) {
-  const { id } = await props.params;
-  const data = await getPerson(Number(id));
+export default async function PersonPage(props: PageProps<"/people/[slug]">) {
+  const { slug } = await props.params;
+  const data = await getPerson(decodeURIComponent(slug));
   if (!data) notFound();
+  // Old links used the id: /people/12 -> /people/colette-shade
+  if (data.person.slug !== decodeURIComponent(slug)) permanentRedirect(`/people/${data.person.slug}`);
   const { person, recommendedBy, recommendedTo } = data;
 
   return (

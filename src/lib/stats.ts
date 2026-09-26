@@ -62,11 +62,11 @@ export async function getStats() {
     // Whose recommendations you end up rating highest.
     recommenders: (await db
       .prepare(
-        `SELECT p.id, trim(p.first || ' ' || p.last) AS label, count(*) AS count, round(avg(b.rating), 1) AS avg
+        `SELECT p.id, p.slug, trim(p.first || ' ' || p.last) AS label, count(*) AS count, round(avg(b.rating), 1) AS avg
          FROM recommendations r JOIN people p ON p.id = r.person_id JOIN books b ON b.id = r.book_id
          WHERE r.kind = 'by' AND b.rating IS NOT NULL GROUP BY p.id HAVING count(*) >= 2
          ORDER BY avg DESC, count DESC LIMIT 6`,
       )
-      .all()) as (Count & { id: number; avg: number })[],
+      .all()) as (Count & { id: number; slug: string; avg: number })[],
   };
 }

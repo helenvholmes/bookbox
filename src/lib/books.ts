@@ -3,9 +3,11 @@ import { connection } from "next/server";
 import { cache } from "react";
 import { db, deleteBookRows, transaction } from "./db";
 import { searchBooks, type SearchEntry } from "./search";
-import { authorSort } from "./names";
+import { authorSort, slugify } from "./names";
 
 export type Named = { id: number; name: string };
+/** A person to link to: /people/<slug>. */
+export type PersonLink = Named & { slug: string };
 
 export type BookSummary = {
   id: number;
@@ -43,8 +45,8 @@ export type Book = BookSummary & {
   due_date: string | null;
   bad_isbn: string | null;
   tags: Named[];
-  recommendedFor: Named[];
-  recommendedBy: Named[];
+  recommendedFor: PersonLink[];
+  recommendedBy: PersonLink[];
   reads: Read[];
   series: { id: number; name: string; position: number | null } | null;
 };
@@ -207,9 +209,9 @@ export async function getBook(id: number): Promise<Book | null> {
     .prepare("SELECT t.id, t.name FROM book_tags bt JOIN tags t ON t.id = bt.tag_id WHERE bt.book_id = ? ORDER BY t.name")
     .all(id)) as Named[];
   const recs = (await db
-    .prepare(`SELECT p.id, ${PERSON_NAME} AS name, r.kind FROM recommendations r JOIN people p ON p.id = r.person_id
+    .prepare(`SELECT p.id, p.slug, ${PERSON_NAME} AS name, r.kind FROM recommendations r JOIN people p ON p.id = r.person_id
               WHERE r.book_id = ? ORDER BY p.first, p.last`)
-    .all(id)) as (Named & { kind: "for" | "by" })[];
+    .all(id)) as (PersonLink & { kind: "for" | "by" })[];
 
   return {
     ...toSummary(row),
@@ -238,8 +240,8 @@ export async function getBook(id: number): Promise<Book | null> {
       ((await db
         .prepare("SELECT s.id, s.name, bs.position FROM book_series bs JOIN series s ON s.id = bs.series_id WHERE bs.book_id = ?")
         .get(id)) as Book["series"] | undefined) ?? null,
-    recommendedFor: recs.filter((r) => r.kind === "for").map(({ id, name }) => ({ id, name })),
-    recommendedBy: recs.filter((r) => r.kind === "by").map(({ id, name }) => ({ id, name })),
+    recommendedFor: recs.filter((r) => r.kind === "for").map(({ id, slug, name }) => ({ id, slug, name })),
+    recommendedBy: recs.filter((r) => r.kind === "by").map(({ id, slug, name }) => ({ id, slug, name })),
   };
 }
 
@@ -247,7 +249,7 @@ export type Facets = {
   shelves: (Named & { count: number })[];
   years: { year: number; count: number }[];
   tags: (Named & { count: number })[];
-  people: (Named & { relationship: string; forCount: number; byCount: number })[];
+  people: (PersonLink & { relationship: string; forCount: number; byCount: number })[];
   total: number;
   noShelf: number;
 };
@@ -265,7 +267,7 @@ export async function getFacets(): Promise<Facets> {
                 LEFT JOIN book_tags bt ON bt.tag_id = t.id GROUP BY t.id ORDER BY t.name COLLATE NOCASE`)
       .all()) as Facets["tags"],
     people: (await db
-      .prepare(`SELECT p.id, ${PERSON_NAME} AS name, p.relationship,
+      .prepare(`SELECT p.id, p.slug, ${PERSON_NAME} AS name, p.relationship,
                   (SELECT count(*) FROM recommendations WHERE person_id = p.id AND kind = 'for') AS forCount,
                   (SELECT count(*) FROM recommendations WHERE person_id = p.id AND kind = 'by') AS byCount
                 FROM people p ORDER BY p.first COLLATE NOCASE, p.last COLLATE NOCASE`)
@@ -381,7 +383,7 @@ async function resolvePerson(value: string): Promise<number> {
   const existing = (await db
     .prepare("SELECT id FROM people WHERE first = ? AND last = ?")
     .get(first, rest.join(" "))) as { id: number } | undefined;
-  return existing?.id ?? await createPerson(first, rest.join(" "), "");
+  return existing?.id ?? (await createPerson(first, rest.join(" "), "")).id;
 }
 
 export async function setCover(id: number, cover: string | null) {
@@ -398,29 +400,50 @@ export async function deleteBook(id: number) {
 
 // People
 
-export type Person = { id: number; first: string; last: string; relationship: string };
+export type Person = { id: number; slug: string; first: string; last: string; relationship: string };
 
-export async function getPerson(id: number) {
+/** Looks a person up by slug, or by id for old /people/12 links. */
+export async function getPerson(slugOrId: string) {
   await connection();
-  const person = (await db.prepare("SELECT id, first, last, relationship FROM people WHERE id = ?").get(id)) as Person | undefined;
+  const byId = /^\d+$/.test(slugOrId);
+  const person = (await db
+    .prepare(`SELECT id, slug, first, last, relationship FROM people WHERE ${byId ? "id" : "slug"} = ?`)
+    .get(byId ? Number(slugOrId) : slugOrId)) as Person | undefined;
   if (!person) return null;
   const books = async (kind: "for" | "by") =>
     ((await db
       .prepare(`SELECT ${summaryColumns()} FROM books b JOIN recommendations r ON r.book_id = b.id
                 WHERE r.person_id = ? AND r.kind = ? ORDER BY b.id DESC`)
-      .all(id, kind)) as SummaryRow[]).map(toSummary);
+      .all(person.id, kind)) as SummaryRow[]).map(toSummary);
   const [recommendedTo, recommendedBy] = await Promise.all([books("for"), books("by")]);
   return { person, recommendedTo, recommendedBy };
 }
 
-export async function createPerson(first: string, last: string, relationship: string): Promise<number> {
-  return ((await db.prepare("INSERT INTO people (first, last, relationship) VALUES (?, ?, ?) RETURNING id").get(first, last, relationship)) as {
-    id: number;
-  }).id;
+/** "colette-shade", or "colette-shade-2" if someone else already has it. */
+async function uniquePersonSlug(first: string, last: string, exceptId: number | null = null): Promise<string> {
+  const base = slugify(first, last);
+  const taken = new Set(
+    ((await db.prepare("SELECT slug FROM people WHERE (slug = ? OR slug LIKE ?) AND id IS NOT ?").all(base, `${base}-%`, exceptId)) as { slug: string }[]).map(
+      (r) => r.slug,
+    ),
+  );
+  let slug = base;
+  for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
+  return slug;
 }
 
-export async function updatePerson(id: number, first: string, last: string, relationship: string) {
-  (await db.prepare("UPDATE people SET first = ?, last = ?, relationship = ? WHERE id = ?").run(first, last, relationship, id));
+export async function createPerson(first: string, last: string, relationship: string): Promise<{ id: number; slug: string }> {
+  const slug = await uniquePersonSlug(first, last);
+  return (await db
+    .prepare("INSERT INTO people (first, last, relationship, slug) VALUES (?, ?, ?, ?) RETURNING id, slug")
+    .get(first, last, relationship, slug)) as { id: number; slug: string };
+}
+
+/** Saves the person and returns their slug, which changes with their name. */
+export async function updatePerson(id: number, first: string, last: string, relationship: string): Promise<string> {
+  const slug = await uniquePersonSlug(first, last, id);
+  await db.prepare("UPDATE people SET first = ?, last = ?, relationship = ?, slug = ? WHERE id = ?").run(first, last, relationship, slug, id);
+  return slug;
 }
 
 export async function deletePerson(id: number) {

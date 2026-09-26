@@ -57,3 +57,16 @@ function isbn13CheckDigit(core12: string): string {
 export function looksLikeIsbn(q: string): boolean {
   return /^[\d\-\sXx]{9,17}$/.test(q.trim()) && toIsbn13(q) !== null;
 }
+
+/** "Colette Shade" -> "colette-shade"; accents dropped ("Zoë Brontë" -> "zoe-bronte"). */
+export function slugify(...parts: string[]): string {
+  return (
+    parts
+      .join(" ")
+      .normalize("NFKD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, "-")
+      .replace(/^-+|-+$/g, "") || "person"
+  );
+}

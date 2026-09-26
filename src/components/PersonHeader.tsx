@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { deletePersonAction, updatePersonAction, type UpdatePersonState } from "@/app/(app)/people/actions";
 import type { Person } from "@/lib/books";
@@ -21,10 +22,13 @@ const BackLink = () => (
  * "Delete person" appears at the bottom, below the page content passed as children.
  */
 export function PersonHeader({ person, children }: { person: Person; children: React.ReactNode }) {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [state, action, pending] = useActionState(async (prev: UpdatePersonState, fd: FormData) => {
     const result = await updatePersonAction(prev, fd);
     if (result?.savedAt) setEditing(false);
+    // A new name means a new URL.
+    if (result?.slug && result.slug !== person.slug) router.replace(`/people/${result.slug}`, { scroll: false });
     return result;
   }, null);
 
@@ -60,7 +64,7 @@ export function PersonHeader({ person, children }: { person: Person; children: R
                 Updated
               </span>
             )}
-            <Link href={`/people/${person.id}/share`} className="btn rounded-full px-4">
+            <Link href={`/people/${person.slug}/share`} className="btn rounded-full px-4">
               Share
             </Link>
             <button type="button" className="btn rounded-full px-4" onClick={() => setEditing(true)}>

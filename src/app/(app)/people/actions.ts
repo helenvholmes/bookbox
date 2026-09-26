@@ -10,20 +10,21 @@ const relationships = (fd: FormData) => fd.getAll("relationship").map(String).jo
 export async function createPersonAction(fd: FormData) {
   const first = text(fd, "first");
   if (!first) return;
-  const id = await createPerson(first, text(fd, "last"), relationships(fd));
+  const { slug } = await createPerson(first, text(fd, "last"), relationships(fd));
   revalidatePath("/", "layout");
-  redirect(`/people/${id}`);
+  redirect(`/people/${slug}`);
 }
 
-export type UpdatePersonState = { savedAt?: number; error?: string } | null;
+/** `slug` is the person's (possibly new) URL slug after a save. */
+export type UpdatePersonState = { savedAt?: number; slug?: string; error?: string } | null;
 
 export async function updatePersonAction(_prev: UpdatePersonState, fd: FormData): Promise<UpdatePersonState> {
   const id = Number(fd.get("id"));
   const first = text(fd, "first");
   if (!first) return { error: "A first name is required." };
-  await updatePerson(id, first, text(fd, "last"), relationships(fd));
+  const slug = await updatePerson(id, first, text(fd, "last"), relationships(fd));
   revalidatePath("/", "layout");
-  return { savedAt: Date.now() };
+  return { savedAt: Date.now(), slug };
 }
 
 export async function deletePersonAction(fd: FormData) {
@@ -48,7 +49,7 @@ export async function saveShareAction(_prev: ShareState, fd: FormData): Promise<
     show_reviews: fd.get("show_reviews") === "on",
     accent: (ACCENTS as readonly string[]).includes(accent) ? accent : ACCENTS[0],
   });
-  revalidatePath(`/people/${personId}`, "layout");
+  revalidatePath("/people", "layout");
   return { savedAt: Date.now(), token };
 }
 
@@ -56,5 +57,5 @@ export async function regenerateShareAction(fd: FormData) {
   const { regenerateShareToken } = await import("@/lib/share");
   const personId = Number(fd.get("person_id"));
   await regenerateShareToken(personId);
-  revalidatePath(`/people/${personId}`, "layout");
+  revalidatePath("/people", "layout");
 }

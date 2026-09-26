@@ -7,7 +7,7 @@ import { ExpandableText } from "@/components/ExpandableText";
 import { ReadsCard } from "@/components/ReadsCard";
 import { Stars } from "@/components/Stars";
 import { ShelfIcon, STATUS_SHELVES, shelfLabel } from "@/components/ShelfIcon";
-import { getBook, type Named } from "@/lib/books";
+import { getBook, type PersonLink } from "@/lib/books";
 import { setStatusAction } from "../actions";
 
 async function load(params: Promise<{ id: string }>) {
@@ -185,14 +185,14 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
 }
 
 /** Like Oku's "Belongs to 3 collections" card. */
-function PeopleCard({ title, people }: { title: string; people: Named[] }) {
+function PeopleCard({ title, people }: { title: string; people: PersonLink[] }) {
   return (
     <section className="space-y-3">
       <h2 className="section-title">{title}</h2>
       <ul className="card space-y-3 p-4">
         {people.map((p) => (
           <li key={p.id}>
-            <Link href={`/people/${p.id}`} className="flex items-center gap-2.5 text-[0.8125rem] hover:text-ink">
+            <Link href={`/people/${p.slug}`} className="flex items-center gap-2.5 text-[0.8125rem] hover:text-ink">
               <Avatar id={p.id} name={p.name} />
               {p.name}
             </Link>

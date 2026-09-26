@@ -75,7 +75,7 @@ export default async function StatsPage() {
         <RankList
           title="Best recommenders"
           note="Average rating you gave books they recommended (2+ books)"
-          rows={s.recommenders.map((p) => ({ key: String(p.id), label: p.label, href: `/people/${p.id}`, value: `${p.avg}★ · ${p.count} books` }))}
+          rows={s.recommenders.map((p) => ({ key: String(p.id), label: p.label, href: `/people/${p.slug}`, value: `${p.avg}★ · ${p.count} books` }))}
           empty="Not enough rated recommendations yet."
         />
       </div>

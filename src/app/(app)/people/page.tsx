@@ -31,7 +31,7 @@ export default async function PeoplePage() {
             <ul className="divide-y divide-line overflow-hidden card">
               {g.people.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/people/${p.id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-raised">
+                  <Link href={`/people/${p.slug}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-raised">
                     <span className="flex min-w-0 items-center gap-3">
                       <Avatar id={p.id} name={p.name} className="size-8 text-[0.6875rem]" />
                       <span className="truncate">{p.name}</span>
