@@ -277,28 +277,40 @@ export type Facets = {
   noShelf: number;
 };
 
-export async function getFacets(): Promise<Facets> {
+/**
+ * Library-wide counts for the sidebar and filters. Cached per request (the layout and the page
+ * both need it), and its queries run together rather than one after another.
+ */
+export const getFacets = cache(async (): Promise<Facets> => {
   await connection();
-  return {
-    shelves: (await db
+  const [shelves, years, tags, people, total, noShelf] = await Promise.all([
+    db
       .prepare(`SELECT s.id, s.name, count(bs.book_id) AS count FROM shelves s
                 LEFT JOIN book_shelves bs ON bs.shelf_id = s.id GROUP BY s.id ORDER BY s.position, s.name`)
-      .all()) as Facets["shelves"],
-    years: (await db.prepare("SELECT year, count(DISTINCT book_id) AS count FROM book_reads GROUP BY year ORDER BY year DESC").all()) as Facets["years"],
-    tags: (await db
+      .all(),
+    db.prepare("SELECT year, count(DISTINCT book_id) AS count FROM book_reads GROUP BY year ORDER BY year DESC").all(),
+    db
       .prepare(`SELECT t.id, t.name, count(bt.book_id) AS count FROM tags t
                 LEFT JOIN book_tags bt ON bt.tag_id = t.id GROUP BY t.id ORDER BY t.name COLLATE NOCASE`)
-      .all()) as Facets["tags"],
-    people: (await db
+      .all(),
+    db
       .prepare(`SELECT p.id, p.slug, ${PERSON_NAME} AS name, p.relationship,
                   (SELECT count(*) FROM recommendations WHERE person_id = p.id AND kind = 'for') AS forCount,
                   (SELECT count(*) FROM recommendations WHERE person_id = p.id AND kind = 'by') AS byCount
                 FROM people p ORDER BY p.first COLLATE NOCASE, p.last COLLATE NOCASE`)
-      .all()) as Facets["people"],
-    total: ((await db.prepare("SELECT count(*) AS n FROM books").get()) as { n: number }).n,
-    noShelf: ((await db.prepare("SELECT count(*) AS n FROM books b WHERE NOT EXISTS (SELECT 1 FROM book_shelves WHERE book_id = b.id)").get()) as { n: number }).n,
+      .all(),
+    db.prepare("SELECT count(*) AS n FROM books").get(),
+    db.prepare("SELECT count(*) AS n FROM books b WHERE NOT EXISTS (SELECT 1 FROM book_shelves WHERE book_id = b.id)").get(),
+  ]);
+  return {
+    shelves: shelves as Facets["shelves"],
+    years: years as Facets["years"],
+    tags: tags as Facets["tags"],
+    people: people as Facets["people"],
+    total: (total as { n: number }).n,
+    noShelf: (noShelf as { n: number }).n,
   };
-}
+});
 
 export type BookInput = {
   title: string;

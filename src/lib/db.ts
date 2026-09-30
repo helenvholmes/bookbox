@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { createClient, type Client, type InStatement, type InValue, type Transaction } from "@libsql/client";
 import { slugify } from "./names";
@@ -225,7 +226,7 @@ const g = globalThis as unknown as { bookboxClient?: Client; bookboxReady?: Prom
 const client = (g.bookboxClient ??= open());
 
 // Changes whenever the schema or migrations do, so a running dev server re-checks after an edit.
-const SCHEMA_VERSION = `${SCHEMA.length}:${ADDED_COLUMNS.length}:${migrate.toString().length}`;
+const SCHEMA_VERSION = createHash("sha1").update(SCHEMA).update(JSON.stringify(ADDED_COLUMNS)).update(migrate.toString()).digest("hex").slice(0, 16);
 
 function ready(): Promise<void> {
   if (g.bookboxSchema !== SCHEMA_VERSION) {
@@ -233,9 +234,23 @@ function ready(): Promise<void> {
     g.bookboxReady = undefined;
   }
   g.bookboxReady ??= (async () => {
+    // A cold start only needs one query when the database is already on this schema; the full
+    // schema and migration pass (dozens of round trips to a hosted database) runs after a change.
+    const stamped = await client.execute("SELECT value FROM bookbox_meta WHERE key = 'schema'").then(
+      (r) => r.rows[0]?.value,
+      () => undefined, // no such table yet
+    );
+    if (stamped === SCHEMA_VERSION) return;
     if (!IS_REMOTE_DB) await client.execute("PRAGMA journal_mode = WAL");
     await client.executeMultiple(SCHEMA);
     await migrate(client);
+    await client.batch(
+      [
+        "CREATE TABLE IF NOT EXISTS bookbox_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+        { sql: "INSERT INTO bookbox_meta (key, value) VALUES ('schema', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", args: [SCHEMA_VERSION] },
+      ],
+      "write",
+    );
   })().catch((err) => {
     g.bookboxReady = undefined; // retry on the next query
     throw err;

@@ -20,6 +20,14 @@
         "3100"
       ],
       "port": 3100
+    },
+    {
+      "name": "live-data",
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": [
+        "/private/tmp/claude-501/-Users-helen-code-book-box/e8c3a75c-a59c-4a0a-a8e6-2867ab25b625/scratchpad/next-live.cjs"
+      ],
+      "port": 3200
     }
   ]
 }
