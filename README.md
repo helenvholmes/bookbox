@@ -1,90 +1,90 @@
 # BookBox
 
-A personal reading log that replaces an Airtable base. It's built with Next.js and SQLite (a local file, or [Turso](https://turso.tech) when hosted), and it fills in book details from [OpenLibrary](https://openlibrary.org).
+A personal reading log you host yourself, for free. Track what you're reading, what you've read (and re-read), who recommended what, and what you thought, with book details filled in from [OpenLibrary](https://openlibrary.org). It installs to your phone's home screen, works offline, and can follow your audiobook progress on Spotify.
 
-- **Search**: results appear as you type, from a copy of the library kept in the browser. It covers titles, authors (including original-script names), series, tags, ISBNs, and your reviews, quotes and notes. Accents don't matter, words match by their start, and small typos are forgiven ("kill crek" finds *Kill Creek*).
-- **Offline**: once opened online, the home screen app keeps working without a connection. The library, the main pages, every cover and search stay available, and a page that wasn't saved falls back to a searchable offline library. Anything saved while the connection drops goes through once it's back, as long as the app stays open.
-- **Library**: shelves (Currently Reading, To Read, Read, …, or no shelf), year read, tag, person, rating, and owned/Kindle filters.
-- **Add a book**: search OpenLibrary by title, author or ISBN. The title, author, ISBN, description, publisher, year, pages and cover fill in automatically.
-- **Refresh from OpenLibrary** on any book: empty fields get filled, and fields that differ are shown for you to accept one at a time.
-- **People**: who recommended a book and who it's for. **Tags**: rename, merge or delete them.
-- **Reads**: every read of a book is logged separately, so re-reads (with an optional note) are tracked.
+BookBox is for one reader per copy: you deploy your own, on your own free accounts, and your library stays yours. It's built with Next.js and SQLite (a local file, or [Turso](https://turso.tech) when hosted).
+
+## Features
+
+- **Add books in seconds**: search OpenLibrary by title, author or ISBN, or scan the barcode on the back with your phone's camera. The title, author, description, publisher, year, pages and cover fill in automatically.
+- **Search as you type**: titles, authors (including names in their original script), series, tags, ISBNs, and your reviews, quotes and notes. Accents don't matter, words match by their start, and small typos are forgiven ("kill crek" finds *Kill Creek*).
+- **Shelves and filters**: Currently Reading, To Read, Read, Abandoned and your own shelves, plus year read, tag, person, rating, and owned/Kindle/borrowed.
+- **Reads and progress**: every read is logged separately, so re-reads are tracked. Progress is set by page (or by percentage for Kindle books) and shows on your Currently Reading shelf.
+- **Spotify audiobooks** (optional): when you start or resume an audiobook on Spotify, its book moves to Currently Reading (and is added if it isn't in your library yet), with your listening progress.
+- **Offline**: once opened online, the home screen app keeps working without a connection. Search, covers and the main pages stay available, and changes to status, ratings, reads, progress and notes are saved on your device and sync when you're back online.
+- **People and sharing**: note who recommended a book and who it's for, and give anyone a read-only page ("Books for Sam") at an unguessable link, with its own title, message, layout, accent colour, and whether your ratings and reviews show. Private notes and spoilers are never shared.
 - **Stats**: a reading goal per year, books per year, ratings, top tags and authors, and whose recommendations you rate highest.
-- **Series**: group books into series with their number; titles like "(Shades of Magic, #3)" can be filed automatically.
-- **Library borrowing**: mark a book as borrowed, with the library and due date; overdue books are flagged.
-- **Sharing**: each person can have a public, read-only page ("Books for Walter") at an unguessable `/s/…` link, with its own title, message, layout, accent colour, and whether ratings and reviews show. Private notes and spoilers are never shown.
-- **Tidy up**: Missing covers, Missing ISBNs, Duplicates, and a bulk OpenLibrary refresh that fills empty fields and suggests fixes.
-- **Export**: download the whole library as CSV.
-- Installs to the home screen as a standalone web app, with an icon, iOS launch screens and support for the notch and home bar.
+- **Series**, **tags** (rename, merge, delete), **library borrowing** with due dates, and **tidy-up tools** for missing covers, missing ISBNs, duplicates and a bulk OpenLibrary refresh.
+- **Export** your whole library as CSV at any time.
 
-## Running it
+## Deploy your own (free)
+
+BookBox runs within the free tiers of [Vercel](https://vercel.com) (the app and cover storage) and [Turso](https://turso.tech) (the database). You'll need a GitHub account and about ten minutes.
+
+1. **Fork this repository** on GitHub.
+2. **Create a Vercel project** from your fork (Vercel → Add New → Project → import the repo). The first deploy will show a locked app until the next steps are done; that's expected.
+3. **Add a database.** In the project, open **Storage → Create Database → Turso**, pick the free plan, and connect it to the project. That sets `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`. (Or create a database at [turso.tech](https://turso.tech) yourself and set those two variables.)
+4. **Add cover storage.** Still under **Storage**, create a **Blob** store with **Private** access and connect it. That sets `BLOB_READ_WRITE_TOKEN`.
+5. **Set a password.** Under **Settings → Environment Variables**, add `BOOKBOX_PASSWORD`. Mark it Sensitive, and use a long passphrase: it's the only thing protecting your library.
+6. **Redeploy** (Deployments → ⋯ → Redeploy), open your site, and sign in. The database is set up on first use. Then open **Settings** in BookBox's sidebar to add your name.
+
+On iPhone, open your site in Safari, tap Share, then **Add to Home Screen**. The home screen app keeps its own sign-in, so you sign in once inside it.
+
+### Environment variables
+
+These are for the server: the password and the services BookBox runs on. Preferences, like your name, are on the **Settings** page in the app and saved with your library.
+
+| Variable | Required | What it's for |
+|---|---|---|
+| `BOOKBOX_PASSWORD` | Yes, when hosted | The password you sign in with. When deployed on Vercel, the app stays locked until it's set. |
+| `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | Yes, when hosted | The database. Without them, BookBox uses a SQLite file in `DATA_DIR`. |
+| `BLOB_READ_WRITE_TOKEN` | Yes, when hosted | Cover storage (a private Vercel Blob store). Without it, covers are files in `DATA_DIR`. |
+| `BOOKBOX_SECRET` | No | Signs the sign-in cookie. Defaults to the password. |
+| `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` | No | Spotify app keys, if you'd rather set them here than in Settings; see below. |
+| `DATA_DIR` | No | Where the local database and covers live (default `./data`). |
+
+Changing the password signs out every device.
+
+### Spotify (optional)
+
+Spotify only lets each developer app serve a handful of users, so everyone uses their own. It's free, but the Spotify account that owns it needs Premium, and Spotify only offers audiobooks in some countries.
+
+1. In BookBox, open **Settings → Spotify**. It shows the redirect URI for your site.
+2. On the [Spotify developer dashboard](https://developer.spotify.com/dashboard), create an app, tick **Web API**, and add that redirect URI.
+3. Paste the app's Client ID and Client secret into Settings, then tap **Connect Spotify**.
+
+BookBox only reads your saved audiobooks and listening positions; it never plays or changes anything. It checks when you open the app, at most every few minutes. The first check only records where each audiobook stands, so audiobooks you'd already started aren't all pulled in at once. Add any of them from the **Spotify** page, which lists your audiobooks and what they're linked to.
+
+(You can set the keys as `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` on the host instead; those win over Settings.)
+
+## Running it on your computer
 
 ```bash
 npm install
 npm run dev
 ```
 
-With `BOOKBOX_PASSWORD` unset there's no login, which is fine on your own machine. See `.env.example` for all the settings.
+With `BOOKBOX_PASSWORD` unset there's no sign-in, which is fine on your own machine. The database and covers go in `./data` (ignored by git). See `.env.example` for every setting.
 
-The service worker (offline support) only runs in production builds, so `npm run dev` always shows fresh code. Try it with `npm run build && npm start`.
+The service worker (offline support) only runs in production builds, so `npm run dev` always shows fresh code. Try offline mode with `npm run build && npm start`.
 
-## Data
+### Moving a local library to your hosted copy
 
-Running locally, everything lives in `DATA_DIR` (default `./data`, which git ignores):
-
-| Path | What |
-|---|---|
-| `bookbox.db` | SQLite database |
-| `covers/` | Covers resized to 600px WebP; filenames include a content hash |
-| `airtable-*` | The original Airtable export, kept for reference |
-
-Back up by copying the folder. Covers and the database are the whole app state.
-
-When hosted, the database is on Turso and covers are in a private Vercel Blob store instead (see Deploying). The database stores only cover filenames either way, and pages always load covers through `/covers/…`, which requires signing in.
-
-### Re-importing from Airtable
+If you've been using BookBox locally first, copy it up once, before you start using the hosted copy (this replaces what's in the hosted database, and uploads every cover that isn't there yet):
 
 ```bash
-npm run import:airtable -- --fresh
+TURSO_DATABASE_URL=libsql://… TURSO_AUTH_TOKEN=… BLOB_READ_WRITE_TOKEN=… npm run push:cloud
 ```
 
-This rebuilds the database from `data/airtable-books.csv`, `data/airtable-people.json` and `data/airtable-covers/`. `--fresh` deletes the current database first, so anything added in BookBox since then is lost.
+### Importing
 
-## Home screen assets
+`scripts/import-airtable.mts` imports the Airtable base BookBox was first built to replace; it's a starting point for writing an importer for your own spreadsheet.
 
-`npm run generate:icons` redraws the icon (defined as SVG in `scripts/generate-icons.mts`) and writes:
+### Home screen assets
 
-- `public/icons/`: manifest icons (192, 512, maskable, SVG)
-- `src/app/apple-icon.png`, `src/app/icon.png`: iOS home screen icon and favicon
-- `public/splash/`: iOS launch screens; the device list is in `src/lib/splash.ts`
+`npm run generate:icons` redraws the app icon (defined as SVG in `scripts/generate-icons.mts`) and writes the manifest icons, favicon and iOS launch screens.
 
-On iPhone, open the site in Safari, tap Share, then **Add to Home Screen**. The home screen app keeps its own cookies, so you sign in once inside it.
-
-## Deploying
-
-BookBox runs on the free tiers of Vercel (the app), Turso (the database) and Vercel Blob (covers). The code picks these up from environment variables; without them it uses `data/` as above.
-
-1. **Create the database.** Sign up at [turso.tech](https://turso.tech) and create a database, in the region closest to where Vercel will run the app. Copy its URL (`libsql://…`) and create an auth token for it.
-2. **Create the Vercel project** from the GitHub repo. Under **Storage**, create a **Blob** store with **Private** access and connect it to the project; that sets `BLOB_READ_WRITE_TOKEN`.
-3. **Set the environment variables** on the project:
-
-   | Variable | Value |
-   |---|---|
-   | `BOOKBOX_PASSWORD` | The password you'll sign in with. On Vercel the app stays locked until this is set. |
-   | `TURSO_DATABASE_URL` | The `libsql://…` URL |
-   | `TURSO_AUTH_TOKEN` | The token |
-
-4. **Copy your library up** from this machine, before you start using the hosted app. This replaces whatever is in the Turso database and uploads every cover that isn't there yet:
-
-   ```bash
-   TURSO_DATABASE_URL=libsql://… TURSO_AUTH_TOKEN=… BLOB_READ_WRITE_TOKEN=… npm run push:cloud
-   ```
-
-5. **Deploy.** From then on, the hosted copy is the real one; `data/` on this machine is a snapshot.
-
-Limits to know about: Vercel caps request bodies at 4.5 MB (cover photos are shrunk in the browser before upload, so this only matters for very large files the browser can't read). The OpenLibrary refresh runs a few books at a time from the page, so keep the page open while it runs.
-
-### Self-hosting instead
+## Hosting elsewhere
 
 Any host with a persistent disk works too (Fly.io, Railway, Render, a VPS), with the database and covers in `DATA_DIR`:
 
@@ -94,4 +94,14 @@ cp -R .next/static .next/standalone/.next/static && cp -R public .next/standalon
 DATA_DIR=/path/to/data BOOKBOX_PASSWORD=… node .next/standalone/server.js
 ```
 
-Copy your local `data/` folder to the server once to bring your library along. Always set `BOOKBOX_PASSWORD` on a public host.
+Always set `BOOKBOX_PASSWORD` on a host others can reach.
+
+## Security
+
+- One password protects everything except share pages, which are only reachable by their unguessable links and never include private notes or spoilers. Covers are served through the app, so they're private too.
+- After 10 wrong passwords from one network address in 15 minutes, sign-in from that address pauses for the rest of the 15 minutes.
+- Found a problem? Please open an issue, or for anything sensitive, contact the maintainer privately rather than posting details publicly.
+
+## License
+
+[AGPL-3.0](LICENSE). You're free to use, change and share BookBox. If you run a modified copy for other people to use, you have to offer them its source code under the same license. The "BookBox is open source" link in the app's sidebar is there for that: point `SOURCE_URL` in `src/lib/constants.ts` at your fork.

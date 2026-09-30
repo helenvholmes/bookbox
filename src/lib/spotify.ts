@@ -12,8 +12,9 @@ import { fold, searchBooks } from "./search";
  * linked to a book) adds up how much you've listened to: finished chapters in full, plus how far
  * into the current one you are.
  *
- * Needs SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET from a Spotify developer app, whose redirect
- * URIs include <site>/api/spotify/callback. Spotify only serves audiobooks in some countries.
+ * Needs the client ID and secret of a Spotify developer app whose redirect URIs include
+ * <site>/api/spotify/callback: entered in Settings, or set as SPOTIFY_CLIENT_ID and
+ * SPOTIFY_CLIENT_SECRET on the host (which win when present). Spotify only serves audiobooks in some countries.
  */
 
 const SCOPES = "user-library-read user-read-playback-position";
@@ -23,13 +24,41 @@ const API = "https://api.spotify.com/v1";
 /** Don't ask Spotify more often than this when the app is opened repeatedly. */
 const SYNC_EVERY_MS = 5 * 60 * 1000;
 
-export const spotifyConfigured = () => !!(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET);
+type Credentials = { clientId: string; clientSecret: string; from: "environment" | "settings" };
+
+/** The Spotify app's keys: from the host's environment variables if set, otherwise from Settings. */
+export async function spotifyCredentials(): Promise<Credentials | null> {
+  if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
+    return { clientId: process.env.SPOTIFY_CLIENT_ID, clientSecret: process.env.SPOTIFY_CLIENT_SECRET, from: "environment" };
+  }
+  const rows = (await db.prepare("SELECT key, value FROM settings WHERE key IN ('spotify_client_id', 'spotify_client_secret')").all()) as {
+    key: string;
+    value: string;
+  }[];
+  const get = (k: string) => rows.find((r) => r.key === k)?.value;
+  const clientId = get("spotify_client_id");
+  const clientSecret = get("spotify_client_secret");
+  return clientId && clientSecret ? { clientId, clientSecret, from: "settings" } : null;
+}
+
+export const spotifyConfigured = async () => !!(await spotifyCredentials());
+
+/** Saves the app's keys from Settings (null clears them). The secret is never sent back to the page. */
+export async function saveSpotifyCredentials(keys: { clientId: string; clientSecret: string } | null) {
+  await transaction(async () => {
+    await db.exec("DELETE FROM settings WHERE key IN ('spotify_client_id', 'spotify_client_secret')");
+    if (!keys) return;
+    await db.prepare("INSERT INTO settings (key, value) VALUES ('spotify_client_id', ?), ('spotify_client_secret', ?)").run(keys.clientId, keys.clientSecret);
+  });
+}
 
 export const callbackUrl = (origin: string) => `${origin}/api/spotify/callback`;
 
-export function authorizeUrl(origin: string, state: string) {
+export async function authorizeUrl(origin: string, state: string) {
+  const keys = await spotifyCredentials();
+  if (!keys) throw new SpotifyError("Spotify isn't set up", 400);
   const params = new URLSearchParams({
-    client_id: process.env.SPOTIFY_CLIENT_ID!,
+    client_id: keys.clientId,
     response_type: "code",
     redirect_uri: callbackUrl(origin),
     scope: SCOPES,
@@ -41,7 +70,9 @@ export function authorizeUrl(origin: string, state: string) {
 type Tokens = { access_token: string; refresh_token?: string; expires_in: number };
 
 async function tokenRequest(body: Record<string, string>): Promise<Tokens> {
-  const basic = Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString("base64");
+  const keys = await spotifyCredentials();
+  if (!keys) throw new SpotifyError("Spotify isn't set up", 400);
+  const basic = Buffer.from(`${keys.clientId}:${keys.clientSecret}`).toString("base64");
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded" },
@@ -161,7 +192,7 @@ const ALWAYS_CHECK = 5;
  */
 export async function syncSpotify(force = false): Promise<{ synced: boolean; changed: number[] }> {
   const account = await getSpotifyAccount();
-  if (!account || !spotifyConfigured()) return { synced: false, changed: [] };
+  if (!account || !(await spotifyConfigured())) return { synced: false, changed: [] };
   if (!force && account.last_synced_at && Date.now() - account.last_synced_at < SYNC_EVERY_MS) return { synced: false, changed: [] };
   const now = Date.now();
   await db.prepare("UPDATE spotify_account SET last_synced_at = ? WHERE id = 1").run(now);

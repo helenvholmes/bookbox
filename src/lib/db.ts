@@ -173,6 +173,19 @@ CREATE TABLE IF NOT EXISTS spotify_seen (
   checked_at   INTEGER NOT NULL
 );
 
+-- Your preferences, edited on the Settings page (see src/lib/settings.ts for the keys).
+CREATE TABLE IF NOT EXISTS settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+-- Failed sign-ins per network address (hashed, never stored as-is), to slow down password guessing.
+CREATE TABLE IF NOT EXISTS login_failures (
+  key      TEXT PRIMARY KEY,
+  count    INTEGER NOT NULL,
+  first_at INTEGER NOT NULL
+);
+
 -- An audiobook whose book is being found or created right now, so two requests at once can't both create it.
 CREATE TABLE IF NOT EXISTS spotify_adding (
   audiobook_id TEXT PRIMARY KEY,

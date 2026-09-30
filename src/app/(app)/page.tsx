@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { BookGrid } from "@/components/BookGrid";
 import { FilterBar } from "@/components/FilterBar";
 import { Greeting } from "@/components/Greeting";
+import { ownerName } from "@/lib/settings";
 import { LibraryGrid } from "@/components/LibraryGrid";
 import { ShelfIcon } from "@/components/ShelfIcon";
 import { countMissingCovers, countMissingIsbns, getContextualFacets, getFacets, listBooks, listBorrowed, SORTS, type Filters } from "@/lib/books";
@@ -81,7 +82,7 @@ export default async function LibraryPage(props: PageProps<"/">) {
     <div className="space-y-8 pb-4">
       {!filtered && (
         <header className="flex items-start justify-between gap-4 pt-2">
-          <Greeting />
+          <Greeting name={await ownerName()} />
           <Link href="/books/new" className="btn shrink-0">
             + Add book
           </Link>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { SOURCE_URL } from "@/lib/constants";
 import { ShelfIcon, STATUS_SHELVES, shelfLabel } from "./ShelfIcon";
 
 const ICONS = {
@@ -20,6 +21,8 @@ const ICONS = {
   spotify: "M4 15v-3a8 8 0 0 1 16 0v3M4 15a2 2 0 0 1 2-2h1v7H6a2 2 0 0 1-2-2zm16 0a2 2 0 0 0-2-2h-1v7h1a2 2 0 0 0 2-2z",
   export: "M12 4v11m0 0-4-4m4 4 4-4M5 19h14",
   menu: "M4 7h16M4 12h16M4 17h10",
+  // Sliders.
+  settings: "M4 7h9m4 0h3M4 17h3m4 0h9M15 5v4M9 15v4",
 };
 
 function Icon({ d, className = "size-4" }: { d: string; className?: string }) {
@@ -121,6 +124,12 @@ function SidebarLinks({ years }: Props) {
         <a href="/export/books.csv" download className={item(false)}>
           <Icon d={ICONS.export} /> Export CSV
         </a>
+        <Link href="/settings" className={item(pathname === "/settings")}>
+          <Icon d={ICONS.settings} /> Settings
+        </Link>
+        <a href={SOURCE_URL} target="_blank" rel="noreferrer" className="block px-2.5 pt-3 text-[0.6875rem] text-faint hover:text-muted">
+          BookBox is open source ↗
+        </a>
       </div>
     </>
   );
@@ -139,7 +148,7 @@ export function Nav({ years }: Props) {
 
   if (pathname === "/login") return null;
   const onLibrary = pathname === "/";
-  const inMenu = ["/series", "/missing-covers", "/missing-isbns", "/duplicates", "/refresh", "/spotify"].some((p) => pathname.startsWith(p));
+  const inMenu = ["/series", "/missing-covers", "/missing-isbns", "/duplicates", "/refresh", "/spotify", "/settings"].some((p) => pathname.startsWith(p));
 
   return (
     <>
