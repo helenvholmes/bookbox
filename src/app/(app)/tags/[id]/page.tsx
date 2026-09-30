@@ -17,7 +17,7 @@ export default async function TagPage(props: PageProps<"/tags/[id]">) {
       </Link>
       <header className="flex items-end justify-between gap-3">
         <h1 className="display text-3xl">{tag.name}</h1>
-        <Link href={`/?tag=${tag.id}`} className="btn shrink-0">
+        <Link href={`/library?tag=${tag.id}`} className="btn shrink-0">
           {count} {count === 1 ? "book" : "books"}
         </Link>
       </header>

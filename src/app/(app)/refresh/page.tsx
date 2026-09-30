@@ -18,7 +18,7 @@ export default async function RefreshPage() {
 
   return (
     <div className="space-y-8 pb-6">
-      <Link href="/" className="block w-fit text-muted hover:text-ink">
+      <Link href="/library" className="block w-fit text-muted hover:text-ink">
         ‹ Library
       </Link>
       <header>

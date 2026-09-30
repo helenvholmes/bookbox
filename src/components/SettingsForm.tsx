@@ -3,10 +3,12 @@
 import { useActionState, useState } from "react";
 import { saveSettingsAction, type SettingsState } from "@/app/(app)/settings/actions";
 import type { Settings } from "@/lib/settings";
+import { Toggle } from "./inputs";
 
 export function SettingsForm({ settings }: { settings: Settings }) {
   const [state, action, pending] = useActionState(saveSettingsAction, null as SettingsState);
   const [name, setName] = useState(settings.ownerName);
+  const [publicHome, setPublicHome] = useState(settings.publicHome);
   const shown = name.trim();
 
   return (
@@ -27,6 +29,15 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         <p className="text-xs text-muted">
           Shown as &ldquo;{shown ? `Hello, ${shown}` : "Hello"}&rdquo; in your library, and &ldquo;{shown ? `A reading list from ${shown}` : "A reading list"}
           &rdquo; on the pages you share. Leave it empty for neither.
+        </p>
+      </section>
+
+      <section className="card space-y-1 px-5 py-3">
+        <Toggle name="public_home" label="Show a page about BookBox to visitors" checked={publicHome} onChange={setPublicHome} />
+        <p className="pb-2 text-xs text-muted">
+          {publicHome
+            ? "People who aren’t signed in see a page about BookBox at your site’s address, with a link to sign in. Your library stays private."
+            : "People who aren’t signed in go straight to the sign-in page."}
         </p>
       </section>
 

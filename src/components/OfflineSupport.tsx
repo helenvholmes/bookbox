@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { flush, SYNCED_EVENT, useOutbox } from "@/lib/outbox";
 
 // Saved for offline use in the background: the index, these pages, and every cover.
-const OFFLINE_PAGES = ["/", "/people", "/tags", "/series", "/stats"];
+const OFFLINE_PAGES = ["/library", "/people", "/tags", "/series", "/stats"];
 const WARM_EVERY = 6 * 60 * 60 * 1000;
 const WARMED_KEY = "bookbox:warmed";
 const REFRESHED_KEY = "bookbox:refreshed-saved-copy";
@@ -61,7 +61,7 @@ export function OfflineSupport() {
     const onSynced = (e: Event) => {
       const { books } = (e as CustomEvent<{ books: number[] }>).detail;
       router.refresh();
-      navigator.serviceWorker?.controller?.postMessage({ type: "refresh", urls: ["/", ...books.map((id) => `/books/${id}`)] });
+      navigator.serviceWorker?.controller?.postMessage({ type: "refresh", urls: ["/library", ...books.map((id) => `/books/${id}`)] });
     };
     window.addEventListener(SYNCED_EVENT, onSynced);
     return () => window.removeEventListener(SYNCED_EVENT, onSynced);

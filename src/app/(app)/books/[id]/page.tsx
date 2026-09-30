@@ -37,7 +37,7 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
   return (
     <article className="pb-8">
       <nav className="flex items-center justify-between">
-        <Link href="/" aria-label="Back to library" className="flex size-9 items-center justify-center rounded-full border border-line text-muted hover:text-ink">
+        <Link href="/library" aria-label="Back to library" className="flex size-9 items-center justify-center rounded-full border border-line text-muted hover:text-ink">
           <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M19 12H5m6-6-6 6 6 6" />
           </svg>
@@ -54,7 +54,7 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
           {book.author && (
             <p className="mt-1.5 text-sm text-muted">
               by{" "}
-              <Link href={`/?q=${encodeURIComponent(book.author)}`} className="hover:text-ink">
+              <Link href={`/library?q=${encodeURIComponent(book.author)}`} className="hover:text-ink">
                 {book.author}
               </Link>
             </p>
@@ -124,12 +124,12 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
               {(book.tags.length > 0 || otherShelves.length > 0 || book.owned || book.on_kindle) && (
                 <div className="flex flex-wrap gap-1.5">
                   {book.tags.map((t) => (
-                    <Link key={t.id} href={`/?tag=${t.id}`} className="chip hover:text-ink">
+                    <Link key={t.id} href={`/library?tag=${t.id}`} className="chip hover:text-ink">
                       {t.name}
                     </Link>
                   ))}
                   {otherShelves.map((s) => (
-                    <Link key={s} href={`/?shelf=${encodeURIComponent(s)}`} className="chip hover:text-ink">
+                    <Link key={s} href={`/library?shelf=${encodeURIComponent(s)}`} className="chip hover:text-ink">
                       {s}
                     </Link>
                   ))}

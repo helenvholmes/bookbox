@@ -93,7 +93,7 @@ async function networkFirst(req, cacheName, key) {
 
 // Read-only pages that open from the saved copy at once, then refresh (see OfflineSupport).
 // Forms are left out on purpose: they must never open with old values in their fields.
-const INSTANT = /^\/$|^\/(people|tags|series|stats)$|^\/books\/\d+$/;
+const INSTANT = /^\/library$|^\/(people|tags|series|stats)$|^\/books\/\d+$/;
 const FROM_CACHE = "sw-cache";
 
 async function navigate(event) {
@@ -143,7 +143,7 @@ async function refreshPages(urls) {
   const pages = await caches.open(PAGES);
   for (const url of urls) {
     const href = new URL(url, self.location.origin).href;
-    if (url === "/" || (await pages.match(href))) await cachePut(pages, href).catch(() => {});
+    if (url === "/library" || (await pages.match(href))) await cachePut(pages, href).catch(() => {});
   }
   await cachePut(await caches.open(SHELL), "/api/library").catch(() => {});
 }

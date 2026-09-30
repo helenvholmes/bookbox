@@ -67,7 +67,7 @@ export default async function StatsPage() {
           rows={s.topAuthors.map((a) => ({
             key: a.label,
             label: a.label,
-            href: `/?q=${encodeURIComponent(a.label)}`,
+            href: `/library?q=${encodeURIComponent(a.label)}`,
             value: `${a.count} books${a.avg ? ` · ${a.avg}★` : ""}`,
           }))}
         />

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { LocalCopyBanner } from "@/components/LocalCopyBanner";
 import { Nav } from "@/components/Nav";
 import { OfflineSupport } from "@/components/OfflineSupport";
 import { SpotifySync } from "@/components/SpotifySync";
@@ -14,6 +15,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
     <div className="min-h-dvh md:flex">
       <OfflineSupport />
       <SpotifySync />
+      {process.env.NODE_ENV === "development" && <LocalCopyNotice />}
       {/* Three steps, so the page never shifts sideways: an empty sidebar of the right size in the first
           bytes, then its links (Nav reads the URL's query string, which needs a Suspense boundary of its
           own), then the years once their query returns. */}
@@ -38,6 +40,13 @@ function SidebarShell() {
       <span className="display px-2.5 text-xl">BookBox</span>
     </aside>
   );
+}
+
+/** Local development: offer to refresh this computer's copy from the hosted library when it's old. */
+async function LocalCopyNotice() {
+  const { canPull, isStale, lastPulled } = await import("@/lib/pull-cloud");
+  if (!canPull() || !isStale()) return null;
+  return <LocalCopyBanner pulledAt={lastPulled()} />;
 }
 
 async function NavWithYears() {

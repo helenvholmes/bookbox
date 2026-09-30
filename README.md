@@ -28,6 +28,8 @@ BookBox runs within the free tiers of [Vercel](https://vercel.com) (the app and 
 5. **Set a password.** Under **Settings → Environment Variables**, add `BOOKBOX_PASSWORD`. Mark it Sensitive, and use a long passphrase: it's the only thing protecting your library.
 6. **Redeploy** (Deployments → ⋯ → Redeploy), open your site, and sign in. The database is set up on first use. Then open **Settings** in BookBox's sidebar to add your name.
 
+Your library is at `/library`. Visitors who aren't signed in get the sign-in page, or a page about BookBox if you turn that on in Settings.
+
 On iPhone, open your site in Safari, tap Share, then **Add to Home Screen**. The home screen app keeps its own sign-in, so you sign in once inside it.
 
 ### Environment variables
@@ -75,6 +77,16 @@ If you've been using BookBox locally first, copy it up once, before you start us
 ```bash
 TURSO_DATABASE_URL=libsql://… TURSO_AUTH_TOKEN=… BLOB_READ_WRITE_TOKEN=… npm run push:cloud
 ```
+
+### Keeping a local copy up to date
+
+To work on BookBox against your real library, copy the hosted one down (the local database is backed up to `data/backups` first):
+
+```bash
+npm run pull:cloud
+```
+
+It uses the same keys file as `push:cloud`, saved as `.env.cloud` (git-ignored) with `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` and `BLOB_READ_WRITE_TOKEN`. With that file in place, `npm run dev` also shows a **Pull latest** notice whenever the local copy is more than three days old. Your Spotify sign-in and other server-only records stay on the server.
 
 ### Importing
 

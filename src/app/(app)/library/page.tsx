@@ -13,7 +13,7 @@ import { countDuplicates } from "@/lib/duplicates";
 /** How many books the page itself renders; the rest load as the grid is scrolled (see LibraryGrid). */
 const FIRST_BATCH = 60;
 
-export default async function LibraryPage(props: PageProps<"/">) {
+export default async function LibraryPage(props: PageProps<"/library">) {
   const sp = await props.searchParams;
   const one = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
   const filters: Filters = {
@@ -50,11 +50,11 @@ export default async function LibraryPage(props: PageProps<"/">) {
 
   // Status tiles, after the neumorphic home screen's "50% charging" grid.
   const tiles = [
-    { href: "/?shelf=Currently%20Reading", icon: <ShelfIcon shelf="Currently Reading" />, value: shelfCount("Currently Reading"), label: "reading now" },
+    { href: "/library?shelf=Currently%20Reading", icon: <ShelfIcon shelf="Currently Reading" />, value: shelfCount("Currently Reading"), label: "reading now" },
     goal
       ? { href: "/stats", icon: <ShelfIcon shelf="Read" />, value: `${readThisYear} of ${goal}`, label: `read in ${thisYear}`, progress: Math.min(1, readThisYear / goal) }
-      : { href: `/?year=${thisYear}`, icon: <ShelfIcon shelf="Read" />, value: readThisYear, label: `read in ${thisYear}` },
-    { href: "/?shelf=To%20Read", icon: <ShelfIcon shelf="To Read" />, value: shelfCount("To Read"), label: "to read" },
+      : { href: `/library?year=${thisYear}`, icon: <ShelfIcon shelf="Read" />, value: readThisYear, label: `read in ${thisYear}` },
+    { href: "/library?shelf=To%20Read", icon: <ShelfIcon shelf="To Read" />, value: shelfCount("To Read"), label: "to read" },
     { href: "/books/new?scan=1", icon: <ScanIcon />, value: null, label: "Scan a barcode" },
     ...(missingCovers > 0
       ? [{ href: "/missing-covers", icon: <TileIcon d="M4 5h16v14H4zM4 15l4.5-4.5 4 4 2.5-2.5L20 17" />, value: missingCovers, label: "missing covers" }]
@@ -69,7 +69,7 @@ export default async function LibraryPage(props: PageProps<"/">) {
     ...(borrowed.length > 0
       ? [
           {
-            href: "/?owned=borrowed",
+            href: "/library?owned=borrowed",
             icon: <TileIcon d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6" />,
             value: borrowed.length,
             label: nextDue ? `borrowed · next due ${new Date(`${nextDue}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "borrowed",

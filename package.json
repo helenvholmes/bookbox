@@ -10,7 +10,8 @@
     "lint": "eslint",
     "import:airtable": "tsx --disable-warning=ExperimentalWarning scripts/import-airtable.mts",
     "generate:icons": "tsx scripts/generate-icons.mts",
-    "push:cloud": "tsx scripts/push-to-cloud.mts"
+    "push:cloud": "tsx scripts/push-to-cloud.mts",
+    "pull:cloud": "tsx scripts/pull-from-cloud.mts"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

@@ -9,14 +9,15 @@ export async function proxy(request: NextRequest) {
   }
   const login = new URL("/login", request.url);
   const next = request.nextUrl.pathname + request.nextUrl.search;
-  if (next !== "/") login.searchParams.set("next", next);
+  if (next !== "/" && next !== "/library") login.searchParams.set("next", next);
   return NextResponse.redirect(login);
 }
 
 export const config = {
-  // Everything except the login page, public share links (/s/…), the offline page and service worker (which hold no
-  // data themselves), and the assets the home screen needs before signing in.
+  // Everything except the front page (it checks the session itself: your library when signed in, otherwise the
+  // page about BookBox or sign-in), the login page, public share links (/s/…), the offline page and service
+  // worker (which hold no data themselves), and the assets the home screen needs before signing in.
   matcher: [
-    "/((?!login|s/|offline|sw\\.js|_next/static|_next/image|manifest.webmanifest|favicon.ico|icon|apple-icon|icons/|splash/).*)",
+    "/((?!$|login|s/|offline|sw\\.js|_next/static|_next/image|manifest.webmanifest|favicon.ico|icon|apple-icon|icons/|splash/).*)",
   ],
 };

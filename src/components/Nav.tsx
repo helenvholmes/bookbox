@@ -51,18 +51,18 @@ const item = (active: boolean) =>
 function SidebarLinks({ years }: Props) {
   const pathname = usePathname();
   const params = useSearchParams();
-  const onLibrary = pathname === "/";
+  const onLibrary = pathname === "/library";
   const shelf = onLibrary ? params.get("shelf") : null;
   const year = onLibrary ? params.get("year") : null;
   const plainLibrary = onLibrary && !shelf && !year;
 
   return (
     <>
-      <Link href="/" className="display flex items-center gap-2 px-2.5 text-xl">
+      <Link href="/library" className="display flex items-center gap-2 px-2.5 text-xl">
         BookBox
       </Link>
       <nav aria-label="Main" className="space-y-0.5">
-        <Link href="/" className={item(plainLibrary || pathname.startsWith("/books/") && pathname !== "/books/new")}>
+        <Link href="/library" className={item(plainLibrary || pathname.startsWith("/books/") && pathname !== "/books/new")}>
           <Icon d={ICONS.library} /> Library
         </Link>
         <Link href="/books/new" className={item(pathname === "/books/new")}>
@@ -85,7 +85,7 @@ function SidebarLinks({ years }: Props) {
       <div className="space-y-0.5">
         <p className="px-2.5 pb-1 text-xs text-faint">Shelves</p>
         {STATUS_SHELVES.map((s) => (
-          <Link key={s} href={`/?shelf=${encodeURIComponent(s)}`} className={item(shelf === s)}>
+          <Link key={s} href={`/library?shelf=${encodeURIComponent(s)}`} className={item(shelf === s)}>
             <ShelfIcon shelf={s} /> {shelfLabel(s)}
           </Link>
         ))}
@@ -95,7 +95,7 @@ function SidebarLinks({ years }: Props) {
         <div className="space-y-0.5">
           <p className="px-2.5 pb-1 text-xs text-faint">Years</p>
           {years.map(({ year: y, count }) => (
-            <Link key={y} href={`/?year=${y}`} className={item(year === String(y))}>
+            <Link key={y} href={`/library?year=${y}`} className={item(year === String(y))}>
               <YearIcon filled={year === String(y)} />
               <span className="flex-1">{y}</span>
               <span className="text-xs text-faint">{count}</span>
@@ -147,7 +147,7 @@ export function Nav({ years }: Props) {
   }, [location]);
 
   if (pathname === "/login") return null;
-  const onLibrary = pathname === "/";
+  const onLibrary = pathname === "/library";
   const inMenu = ["/series", "/missing-covers", "/missing-isbns", "/duplicates", "/refresh", "/spotify", "/settings"].some((p) => pathname.startsWith(p));
 
   return (
@@ -179,7 +179,7 @@ export function Nav({ years }: Props) {
       >
         <div className="flex">
           {[
-            { href: "/", label: "Library", d: ICONS.library, active: onLibrary || (pathname.startsWith("/books/") && pathname !== "/books/new") },
+            { href: "/library", label: "Library", d: ICONS.library, active: onLibrary || (pathname.startsWith("/books/") && pathname !== "/books/new") },
             { href: "/books/new", label: "Add", d: ICONS.add, active: pathname === "/books/new" },
             { href: "/people", label: "People", d: ICONS.people, active: pathname.startsWith("/people") },
             { href: "/tags", label: "Tags", d: ICONS.tags, active: pathname.startsWith("/tags") },

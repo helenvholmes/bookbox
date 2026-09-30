@@ -6,7 +6,7 @@ import { saveSettings } from "@/lib/settings";
 export type SettingsState = { savedAt?: number } | null;
 
 export async function saveSettingsAction(_prev: SettingsState, fd: FormData): Promise<SettingsState> {
-  await saveSettings({ ownerName: String(fd.get("owner_name") ?? "") });
+  await saveSettings({ ownerName: String(fd.get("owner_name") ?? ""), publicHome: fd.get("public_home") === "on" });
   revalidatePath("/", "layout");
   return { savedAt: Date.now() };
 }

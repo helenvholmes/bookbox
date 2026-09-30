@@ -15,7 +15,7 @@ export default async function TagsPage() {
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {tags.map((t) => (
           <li key={t.id} className="flex overflow-hidden card">
-            <Link href={`/?tag=${t.id}`} className="min-w-0 flex-1 px-3 py-3 hover:bg-raised">
+            <Link href={`/library?tag=${t.id}`} className="min-w-0 flex-1 px-3 py-3 hover:bg-raised">
               <span className="line-clamp-2 leading-snug font-medium">{t.name}</span>
               <span className="text-xs text-muted">
                 {t.count} {t.count === 1 ? "book" : "books"}

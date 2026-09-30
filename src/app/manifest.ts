@@ -6,7 +6,8 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "BookBox",
     description: "My reading log",
     id: "/",
-    start_url: "/",
+    // The app opens on the library. (The id stays "/" so existing home screen installs are the same app.)
+    start_url: "/library",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

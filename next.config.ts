@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // No "N" badge in the corner during development (build and runtime errors still show).
+  devIndicators: false,
   // Standalone output is for self-hosting; Vercel builds its own functions.
   output: process.env.VERCEL ? undefined : "standalone",
   // The database and covers live in DATA_DIR at runtime; never bundle them into the build.

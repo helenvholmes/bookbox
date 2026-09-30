@@ -111,5 +111,5 @@ export async function deleteBookAction(fd: FormData) {
   await deleteBook(id);
   await deleteCover(cover);
   revalidatePath("/", "layout");
-  redirect("/");
+  redirect("/library");
 }
