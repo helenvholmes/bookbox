@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { ShelfIcon, STATUS_SHELVES, shelfLabel } from "./ShelfIcon";
 
 const ICONS = {
@@ -18,6 +19,7 @@ const ICONS = {
   // Headphones: listening progress from Spotify.
   spotify: "M4 15v-3a8 8 0 0 1 16 0v3M4 15a2 2 0 0 1 2-2h1v7H6a2 2 0 0 1-2-2zm16 0a2 2 0 0 0-2-2h-1v7h1a2 2 0 0 0 2-2z",
   export: "M12 4v11m0 0-4-4m4 4 4-4M5 19h14",
+  menu: "M4 7h16M4 12h16M4 17h10",
 };
 
 function Icon({ d, className = "size-4" }: { d: string; className?: string }) {
@@ -39,91 +41,127 @@ function YearIcon({ filled }: { filled: boolean }) {
 
 type Props = { years: { year: number; count: number }[] };
 
-export function Nav({ years }: Props) {
+const item = (active: boolean) =>
+  `flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[0.8125rem] transition ${active ? "bg-raised text-ink" : "text-muted hover:text-ink"}`;
+
+/** Everything in the sidebar: shown beside the page on desktop, and in the Menu drawer on phones. */
+function SidebarLinks({ years }: Props) {
   const pathname = usePathname();
   const params = useSearchParams();
-  if (pathname === "/login") return null;
-
   const onLibrary = pathname === "/";
   const shelf = onLibrary ? params.get("shelf") : null;
   const year = onLibrary ? params.get("year") : null;
   const plainLibrary = onLibrary && !shelf && !year;
 
-  const item = (active: boolean) =>
-    `flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[0.8125rem] transition ${active ? "bg-raised text-ink" : "text-muted hover:text-ink"}`;
+  return (
+    <>
+      <Link href="/" className="display flex items-center gap-2 px-2.5 text-xl">
+        BookBox
+      </Link>
+      <nav aria-label="Main" className="space-y-0.5">
+        <Link href="/" className={item(plainLibrary || pathname.startsWith("/books/") && pathname !== "/books/new")}>
+          <Icon d={ICONS.library} /> Library
+        </Link>
+        <Link href="/books/new" className={item(pathname === "/books/new")}>
+          <Icon d={ICONS.add} /> Add a book
+        </Link>
+        <Link href="/people" className={item(pathname.startsWith("/people"))}>
+          <Icon d={ICONS.people} /> People
+        </Link>
+        <Link href="/tags" className={item(pathname.startsWith("/tags"))}>
+          <Icon d={ICONS.tags} /> Tags
+        </Link>
+        <Link href="/series" className={item(pathname.startsWith("/series"))}>
+          <Icon d={ICONS.series} /> Series
+        </Link>
+        <Link href="/stats" className={item(pathname.startsWith("/stats"))}>
+          <Icon d={ICONS.stats} /> Stats
+        </Link>
+      </nav>
+
+      <div className="space-y-0.5">
+        <p className="px-2.5 pb-1 text-xs text-faint">Shelves</p>
+        {STATUS_SHELVES.map((s) => (
+          <Link key={s} href={`/?shelf=${encodeURIComponent(s)}`} className={item(shelf === s)}>
+            <ShelfIcon shelf={s} /> {shelfLabel(s)}
+          </Link>
+        ))}
+      </div>
+
+      {years.length > 0 && (
+        <div className="space-y-0.5">
+          <p className="px-2.5 pb-1 text-xs text-faint">Years</p>
+          {years.map(({ year: y, count }) => (
+            <Link key={y} href={`/?year=${y}`} className={item(year === String(y))}>
+              <YearIcon filled={year === String(y)} />
+              <span className="flex-1">{y}</span>
+              <span className="text-xs text-faint">{count}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-auto space-y-0.5">
+        <p className="px-2.5 pb-1 text-xs text-faint">Tidy up</p>
+        <Link href="/missing-covers" className={item(pathname === "/missing-covers")}>
+          <Icon d={ICONS.covers} /> Missing covers
+        </Link>
+        <Link href="/missing-isbns" className={item(pathname === "/missing-isbns")}>
+          <Icon d={ICONS.isbn} /> Missing ISBNs
+        </Link>
+        <Link href="/duplicates" className={item(pathname === "/duplicates")}>
+          <Icon d={ICONS.duplicates} /> Duplicates
+        </Link>
+        <Link href="/refresh" className={item(pathname === "/refresh")}>
+          <Icon d={ICONS.refresh} /> OpenLibrary refresh
+        </Link>
+        <Link href="/spotify" className={item(pathname === "/spotify")}>
+          <Icon d={ICONS.spotify} /> Spotify
+        </Link>
+        <a href="/export/books.csv" download className={item(false)}>
+          <Icon d={ICONS.export} /> Export CSV
+        </a>
+      </div>
+    </>
+  );
+}
+
+export function Nav({ years }: Props) {
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const menu = useRef<HTMLDialogElement>(null);
+
+  // Close the drawer once something in it is picked (the page or its filters change).
+  const location = `${pathname}?${params}`;
+  useEffect(() => {
+    menu.current?.close();
+  }, [location]);
+
+  if (pathname === "/login") return null;
+  const onLibrary = pathname === "/";
+  const inMenu = ["/series", "/missing-covers", "/missing-isbns", "/duplicates", "/refresh", "/spotify"].some((p) => pathname.startsWith(p));
 
   return (
     <>
       {/* Desktop: Oku-style sidebar. */}
       <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col gap-6 overflow-y-auto border-r border-line bg-[#0e0f11] px-3 py-5 md:flex">
-        <Link href="/" className="display flex items-center gap-2 px-2.5 text-xl">
-          BookBox
-        </Link>
-        <nav aria-label="Main" className="space-y-0.5">
-          <Link href="/" className={item(plainLibrary || pathname.startsWith("/books/") && pathname !== "/books/new")}>
-            <Icon d={ICONS.library} /> Library
-          </Link>
-          <Link href="/books/new" className={item(pathname === "/books/new")}>
-            <Icon d={ICONS.add} /> Add a book
-          </Link>
-          <Link href="/people" className={item(pathname.startsWith("/people"))}>
-            <Icon d={ICONS.people} /> People
-          </Link>
-          <Link href="/tags" className={item(pathname.startsWith("/tags"))}>
-            <Icon d={ICONS.tags} /> Tags
-          </Link>
-          <Link href="/series" className={item(pathname.startsWith("/series"))}>
-            <Icon d={ICONS.series} /> Series
-          </Link>
-          <Link href="/stats" className={item(pathname.startsWith("/stats"))}>
-            <Icon d={ICONS.stats} /> Stats
-          </Link>
-        </nav>
-
-        <div className="space-y-0.5">
-          <p className="px-2.5 pb-1 text-xs text-faint">Shelves</p>
-          {STATUS_SHELVES.map((s) => (
-            <Link key={s} href={`/?shelf=${encodeURIComponent(s)}`} className={item(shelf === s)}>
-              <ShelfIcon shelf={s} /> {shelfLabel(s)}
-            </Link>
-          ))}
-        </div>
-
-        {years.length > 0 && (
-          <div className="space-y-0.5">
-            <p className="px-2.5 pb-1 text-xs text-faint">Years</p>
-            {years.map(({ year: y, count }) => (
-              <Link key={y} href={`/?year=${y}`} className={item(year === String(y))}>
-                <YearIcon filled={year === String(y)} />
-                <span className="flex-1">{y}</span>
-                <span className="text-xs text-faint">{count}</span>
-              </Link>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-auto space-y-0.5">
-          <p className="px-2.5 pb-1 text-xs text-faint">Tidy up</p>
-          <Link href="/missing-covers" className={item(pathname === "/missing-covers")}>
-            <Icon d={ICONS.covers} /> Missing covers
-          </Link>
-          <Link href="/missing-isbns" className={item(pathname === "/missing-isbns")}>
-            <Icon d={ICONS.isbn} /> Missing ISBNs
-          </Link>
-          <Link href="/duplicates" className={item(pathname === "/duplicates")}>
-            <Icon d={ICONS.duplicates} /> Duplicates
-          </Link>
-          <Link href="/refresh" className={item(pathname === "/refresh")}>
-            <Icon d={ICONS.refresh} /> OpenLibrary refresh
-          </Link>
-          <Link href="/spotify" className={item(pathname === "/spotify")}>
-            <Icon d={ICONS.spotify} /> Spotify
-          </Link>
-          <a href="/export/books.csv" download className={item(false)}>
-            <Icon d={ICONS.export} /> Export CSV
-          </a>
-        </div>
+        <SidebarLinks years={years} />
       </aside>
+
+      {/* Phone: the same links in a drawer from the left, opened by the Menu tab. */}
+      <dialog
+        ref={menu}
+        aria-label="Menu"
+        // Tapping the backdrop (the dialog itself, outside its content) or any link closes it.
+        onClick={(e) => {
+          if (e.target === e.currentTarget || (e.target as Element).closest("a")) menu.current?.close();
+        }}
+        className="m-0 h-dvh max-h-none w-[min(18rem,85vw)] max-w-none -translate-x-full overflow-y-auto overscroll-contain border-r border-line bg-[#0e0f11] p-0 text-ink transition-[translate,display,overlay] transition-discrete duration-200 ease-out backdrop:bg-black/60 backdrop:opacity-0 backdrop:transition-opacity backdrop:duration-200 open:translate-x-0 open:backdrop:opacity-100 md:hidden starting:open:-translate-x-full starting:open:backdrop:opacity-0"
+      >
+        <div className="flex min-h-full flex-col gap-6 px-3 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          <SidebarLinks years={years} />
+        </div>
+      </dialog>
 
       {/* Phone: bottom tab bar. */}
       <nav
@@ -135,7 +173,7 @@ export function Nav({ years }: Props) {
             { href: "/", label: "Library", d: ICONS.library, active: onLibrary || (pathname.startsWith("/books/") && pathname !== "/books/new") },
             { href: "/books/new", label: "Add", d: ICONS.add, active: pathname === "/books/new" },
             { href: "/people", label: "People", d: ICONS.people, active: pathname.startsWith("/people") },
-            { href: "/tags", label: "Tags", d: ICONS.tags, active: ["/tags", "/series"].some((p) => pathname.startsWith(p)) },
+            { href: "/tags", label: "Tags", d: ICONS.tags, active: pathname.startsWith("/tags") },
             { href: "/stats", label: "Stats", d: ICONS.stats, active: pathname.startsWith("/stats") },
           ].map((t) => (
             <Link
@@ -148,6 +186,15 @@ export function Nav({ years }: Props) {
               {t.label}
             </Link>
           ))}
+          <button
+            type="button"
+            onClick={() => menu.current?.showModal()}
+            aria-haspopup="dialog"
+            className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] ${inMenu ? "text-ink" : "text-faint"}`}
+          >
+            <Icon d={ICONS.menu} className="size-5" />
+            Menu
+          </button>
         </div>
       </nav>
     </>
