@@ -1,7 +1,10 @@
 import "server-only";
+import { getSearchEntries, saveBook, setCover, setStatus } from "./books";
+import { fetchCover, fetchSpotifyImage, isUsableImage, saveCover } from "./covers";
 import { db, transaction } from "./db";
-import { getSearchEntries } from "./books";
-import { searchBooks } from "./search";
+import { getOpenLibraryDetails, searchOpenLibrary } from "./openlibrary";
+import { FINISHED_PERCENT } from "./progress";
+import { fold, searchBooks } from "./search";
 
 /**
  * Listening progress from Spotify audiobooks. You connect your account once; BookBox keeps the
@@ -137,22 +140,75 @@ async function listeningProgress(account: Account, audiobookId: string) {
   return { position, duration, percent: duration ? Math.min(100, (position / duration) * 100) : 0 };
 }
 
+const isBaselined = async () => ((await db.prepare("SELECT baselined FROM spotify_account WHERE id = 1").get()) as { baselined: number } | undefined)?.baselined === 1;
+
+/** A listening position counts as having moved once it differs by this much (Spotify rounds, and a stray tap shouldn't count). */
+const MOVED_MS = 30_000;
+/** Unlinked audiobooks beyond the newest few are only re-checked this often, to keep each sync to a handful of requests. */
+const RECHECK_UNLINKED_MS = 60 * 60 * 1000;
+const ALWAYS_CHECK = 5;
+
 /**
- * Updates progress for every linked audiobook. Skipped when it ran in the last few minutes,
- * unless `force`. Returns the books whose progress changed.
+ * Syncs Spotify listening into BookBox. Skipped when it ran in the last few minutes, unless
+ * `force`. Returns the books that changed.
+ *
+ * - Linked audiobooks get their progress updated.
+ * - An audiobook you start or resume is linked to its book (created from OpenLibrary, or from
+ *   Spotify's own details, when it isn't in BookBox yet) and the book moves to Currently
+ *   Reading, including one already marked Read that you're listening to again.
+ * - "Start or resume" means the listening position moved since the last sync. Audiobooks that
+ *   were already part-listened when this first ran are only recorded, not pulled in.
  */
 export async function syncSpotify(force = false): Promise<{ synced: boolean; changed: number[] }> {
   const account = await getSpotifyAccount();
   if (!account || !spotifyConfigured()) return { synced: false, changed: [] };
   if (!force && account.last_synced_at && Date.now() - account.last_synced_at < SYNC_EVERY_MS) return { synced: false, changed: [] };
-  await db.prepare("UPDATE spotify_account SET last_synced_at = ? WHERE id = 1").run(Date.now());
+  const now = Date.now();
+  await db.prepare("UPDATE spotify_account SET last_synced_at = ? WHERE id = 1").run(now);
 
+  const changed = new Set<number>();
   const links = (await db.prepare("SELECT book_id, audiobook_id FROM spotify_links").all()) as { book_id: number; audiobook_id: string }[];
-  const changed: number[] = [];
+  const progress = new Map<string, Awaited<ReturnType<typeof listeningProgress>>>();
+  const inProgress = (p: { position: number; percent: number }) => p.position > 0 && p.percent < FINISHED_PERCENT;
+
+  // 1. Audiobooks that aren't linked yet: notice the ones you've started or resumed.
+  const saved = await all<SpotifyAudiobook>(account, "/me/audiobooks").catch(() => null); // progress for linked books still syncs if this fails
+  if (saved) {
+    const baselined = await isBaselined();
+    const ignored = new Set(((await db.prepare("SELECT audiobook_id FROM spotify_ignored").all()) as { audiobook_id: string }[]).map((r) => r.audiobook_id));
+    const seen = new Map(
+      ((await db.prepare("SELECT audiobook_id, position_ms, checked_at FROM spotify_seen").all()) as { audiobook_id: string; position_ms: number; checked_at: number }[]).map(
+        (r) => [r.audiobook_id, r],
+      ),
+    );
+    const unlinked = saved.filter((a) => !ignored.has(a.id) && !links.some((l) => l.audiobook_id === a.id));
+    for (const [i, a] of unlinked.entries()) {
+      const before = seen.get(a.id);
+      if (baselined && i >= ALWAYS_CHECK && before && now - before.checked_at < RECHECK_UNLINKED_MS) continue;
+      const p = await listeningProgress(account, a.id);
+      await db
+        .prepare("INSERT INTO spotify_seen (audiobook_id, position_ms, checked_at) VALUES (?, ?, ?) ON CONFLICT(audiobook_id) DO UPDATE SET position_ms = excluded.position_ms, checked_at = excluded.checked_at")
+        .run(a.id, p.position, now);
+      // New to your Spotify library since the baseline, or moved since we last looked.
+      const active = baselined && inProgress(p) && (!before || Math.abs(p.position - before.position_ms) >= MOVED_MS);
+      if (!active) continue;
+      const bookId = await findOrCreateBook(a);
+      await linkAudiobook(bookId, a.id, a.name);
+      await setStatus(bookId, "Currently Reading");
+      links.push({ book_id: bookId, audiobook_id: a.id });
+      progress.set(a.id, p);
+      changed.add(bookId);
+    }
+    if (!baselined) await db.prepare("UPDATE spotify_account SET baselined = 1 WHERE id = 1").run();
+  }
+
+  // 2. Linked audiobooks: update progress, and bring a book back to Currently Reading when you're listening to it again.
   for (const link of links) {
-    const p = await listeningProgress(account, link.audiobook_id);
+    const p = progress.get(link.audiobook_id) ?? (await listeningProgress(account, link.audiobook_id));
     if (!p.duration) continue;
-    const before = (await db.prepare("SELECT percent FROM book_progress WHERE book_id = ?").get(link.book_id)) as { percent: number } | undefined;
+    const before = (await db.prepare("SELECT percent, position_ms FROM book_progress WHERE book_id = ? AND source = 'spotify'").get(link.book_id)) as
+      | { percent: number; position_ms: number | null }
+      | undefined;
     await db
       .prepare(
         `INSERT INTO book_progress (book_id, percent, source, page, position_ms, duration_ms, updated_at) VALUES (?, ?, 'spotify', NULL, ?, ?, datetime('now'))
@@ -160,14 +216,89 @@ export async function syncSpotify(force = false): Promise<{ synced: boolean; cha
            duration_ms = excluded.duration_ms, updated_at = excluded.updated_at`,
       )
       .run(link.book_id, p.percent, p.position, p.duration);
-    if (!before || Math.abs(before.percent - p.percent) >= 0.1) changed.push(link.book_id);
+    if (!before || Math.abs(before.percent - p.percent) >= 0.1) changed.add(link.book_id);
+    if (before && inProgress(p) && Math.abs(p.position - (before.position_ms ?? 0)) >= MOVED_MS) {
+      const reading = await db
+        .prepare("SELECT 1 FROM book_shelves bs JOIN shelves s ON s.id = bs.shelf_id WHERE bs.book_id = ? AND s.name = 'Currently Reading'")
+        .get(link.book_id);
+      if (!reading) {
+        await setStatus(link.book_id, "Currently Reading");
+        changed.add(link.book_id);
+      }
+    }
   }
-  return { synced: true, changed };
+  return { synced: true, changed: [...changed] };
+}
+
+/** "Diavola: A Novel" and "Diavola (Unabridged)" -> "diavola", for comparing titles across catalogues. */
+const baseTitle = (title: string) => fold(title.split(/[:(\[]/)[0]);
+const lastName = (name: string) => fold(name).split(" ").pop() ?? "";
+
+/** The book for an audiobook: the one already in BookBox with the same title and author, or a new one. */
+async function findOrCreateBook(a: SpotifyAudiobook): Promise<number> {
+  const author = a.authors[0]?.name ?? "";
+  const title = a.name.split(/[:(\[]/)[0].trim() || a.name;
+  const entries = (await db.prepare("SELECT id, title, author, additional_authors FROM books").all()) as {
+    id: number;
+    title: string;
+    author: string;
+    additional_authors: string;
+  }[];
+  const linked = new Set(((await db.prepare("SELECT book_id FROM spotify_links").all()) as { book_id: number }[]).map((r) => r.book_id));
+  const existing = entries.find(
+    (b) => !linked.has(b.id) && baseTitle(b.title) === baseTitle(a.name) && (!author || fold(`${b.author} ${b.additional_authors}`).split(" ").includes(lastName(author))),
+  );
+  if (existing) return existing.id;
+
+  // Not in BookBox: fill it in from OpenLibrary when it has the same title, otherwise from Spotify's details.
+  const match = (await searchOpenLibrary(`${title} ${author}`).catch(() => [])).find((r) => baseTitle(r.title) === baseTitle(a.name));
+  const details = match ? await getOpenLibraryDetails(match.work, match.edition).catch(() => null) : null;
+  const bookId = await saveBook(null, {
+    title: details?.title || match?.title || title,
+    author: details?.author || match?.authors[0] || author,
+    author_original: "",
+    additional_authors: details?.additional_authors ?? a.authors.slice(1).map((x) => x.name).join(", "),
+    isbn13: details?.isbn13 ?? match?.isbn13 ?? null,
+    rating: null,
+    description: details?.description ?? "",
+    review: "",
+    spoiler: "",
+    quotes: "",
+    private_notes: "",
+    on_kindle: false,
+    owned: false,
+    publisher: details?.publisher || match?.publisher || "",
+    publish_year: details?.publish_year ?? match?.year ?? null,
+    pages: details?.pages ?? match?.pages ?? null,
+    ol_work: match?.work ?? null,
+    ol_edition: details?.ol_edition ?? match?.edition ?? null,
+    borrowed: false,
+    library: "",
+    due_date: null,
+    series_name: "",
+    series_position: null,
+    years: [],
+    shelves: ["Currently Reading"],
+    tags: [],
+    recommendedFor: [],
+    recommendedBy: [],
+  });
+
+  const coverUrl = details?.coverUrl ?? match?.coverUrl;
+  const art = [...a.images].sort((x, y) => y.width - x.width)[0]?.url;
+  const image = (coverUrl ? await fetchCover(coverUrl).catch(() => null) : null) ?? (art ? await fetchSpotifyImage(art) : null);
+  if (image && (await isUsableImage(image))) {
+    const name = await saveCover(bookId, image);
+    if (name) await setCover(bookId, name);
+  }
+  return bookId;
 }
 
 export type AudiobookRow = {
   audiobook: { id: string; name: string; authors: string; image: string | null };
   linked: { bookId: number; title: string } | null;
+  /** You've said to leave this one alone. */
+  ignored: boolean;
   /** Books that look like this audiobook, best first, when it isn't linked yet. */
   candidates: { id: number; title: string; author: string }[];
 };
@@ -187,7 +318,6 @@ export async function spotifyLibrary(): Promise<AudiobookRow[]> {
   const skip = new Set(ignored.map((r) => r.audiobook_id));
   const linkedIds = new Set(links.map((l) => l.book_id));
   return saved
-    .filter((a) => !skip.has(a.id))
     .map((a) => {
       const link = links.find((l) => l.audiobook_id === a.id);
       const authors = a.authors.map((x) => x.name).join(", ");
@@ -201,7 +331,8 @@ export async function spotifyLibrary(): Promise<AudiobookRow[]> {
       return {
         audiobook: { id: a.id, name: a.name, authors, image: [...a.images].sort((x, y) => x.width - y.width)[0]?.url ?? null },
         linked: link ? { bookId: link.book_id, title: link.title } : null,
-        candidates: link ? [] : candidates,
+        ignored: !link && skip.has(a.id),
+        candidates: link || skip.has(a.id) ? [] : candidates,
       };
     })
     .sort((x, y) => Number(!!x.linked) - Number(!!y.linked) || x.audiobook.name.localeCompare(y.audiobook.name));
@@ -215,11 +346,17 @@ export async function linkAudiobook(bookId: number, audiobookId: string, name: s
   });
 }
 
+/** Unlinks a book and leaves its audiobook alone from now on (otherwise the next sync would link it again). */
 export async function unlinkAudiobook(bookId: number) {
   await transaction(async () => {
+    await db.prepare("INSERT OR IGNORE INTO spotify_ignored (audiobook_id) SELECT audiobook_id FROM spotify_links WHERE book_id = ?").run(bookId);
     await db.prepare("DELETE FROM spotify_links WHERE book_id = ?").run(bookId);
     await db.prepare("DELETE FROM book_progress WHERE book_id = ? AND source = 'spotify'").run(bookId);
   });
+}
+
+export async function restoreAudiobook(audiobookId: string) {
+  await db.prepare("DELETE FROM spotify_ignored WHERE audiobook_id = ?").run(audiobookId);
 }
 
 export async function ignoreAudiobook(audiobookId: string) {

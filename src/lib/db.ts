@@ -166,7 +166,14 @@ CREATE TABLE IF NOT EXISTS spotify_links (
   name         TEXT NOT NULL DEFAULT ''
 );
 
--- Spotify audiobooks you've said aren't in BookBox, so they stop being suggested.
+-- Where each unlinked Spotify audiobook stood when last checked, to notice when you start or resume one.
+CREATE TABLE IF NOT EXISTS spotify_seen (
+  audiobook_id TEXT PRIMARY KEY,
+  position_ms  INTEGER NOT NULL,
+  checked_at   INTEGER NOT NULL
+);
+
+-- Spotify audiobooks to leave alone: never suggested, linked or added automatically.
 CREATE TABLE IF NOT EXISTS spotify_ignored (
   audiobook_id TEXT PRIMARY KEY
 );
@@ -187,6 +194,9 @@ const ADDED_COLUMNS: [table: string, column: string, definition: string][] = [
   ["share_pages", "show_theirs", "INTEGER NOT NULL DEFAULT 1"],
   // Set when a read is added through the offline outbox, so a retried sync never adds it twice.
   ["book_reads", "client_id", "TEXT"],
+  // Set once every audiobook already in the Spotify library has a recorded position, so only
+  // listening after that point pulls a book into Currently Reading.
+  ["spotify_account", "baselined", "INTEGER NOT NULL DEFAULT 0"],
 ];
 
 async function migrate(c: Client) {

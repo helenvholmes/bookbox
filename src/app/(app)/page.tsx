@@ -3,10 +3,14 @@ import { Suspense } from "react";
 import { BookGrid } from "@/components/BookGrid";
 import { FilterBar } from "@/components/FilterBar";
 import { Greeting } from "@/components/Greeting";
+import { LibraryGrid } from "@/components/LibraryGrid";
 import { ShelfIcon } from "@/components/ShelfIcon";
 import { countMissingCovers, countMissingIsbns, getContextualFacets, getFacets, listBooks, listBorrowed, SORTS, type Filters } from "@/lib/books";
 import { getGoal } from "@/lib/stats";
 import { countDuplicates } from "@/lib/duplicates";
+
+/** How many books the page itself renders; the rest load as the grid is scrolled (see LibraryGrid). */
+const FIRST_BATCH = 60;
 
 export default async function LibraryPage(props: PageProps<"/">) {
   const sp = await props.searchParams;
@@ -22,6 +26,7 @@ export default async function LibraryPage(props: PageProps<"/">) {
     sort: one("sort"),
   };
   const filtered = Object.entries(filters).some(([k, v]) => k !== "sort" && v);
+  const query = new URLSearchParams(Object.entries(filters).filter((e): e is [string, string] => !!e[1])).toString();
 
   const [books, facets, reading, duplicates, missingCovers, missingIsbns, borrowed] = await Promise.all([
     listBooks(filters),
@@ -121,7 +126,14 @@ export default async function LibraryPage(props: PageProps<"/">) {
         <h2 className="section-title">
           {filtered ? "Results" : "All books"} <span className="count">{books.length}</span>
         </h2>
-        <BookGrid books={books} empty={filtered ? "No books match these filters." : "No books yet. Add your first one!"} />
+        {/* Keyed by the filters so a new search starts from its own first batch. */}
+        <LibraryGrid
+          key={query}
+          initial={books.slice(0, FIRST_BATCH)}
+          total={books.length}
+          query={query}
+          empty={filtered ? "No books match these filters." : "No books yet. Add your first one!"}
+        />
       </section>
     </div>
   );

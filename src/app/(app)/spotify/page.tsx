@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { connection } from "next/server";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { callbackUrl, getSpotifyAccount, spotifyConfigured, spotifyLibrary, type AudiobookRow } from "@/lib/spotify";
-import { disconnectAction, ignoreAction, linkAction, syncNowAction, unlinkAction } from "./actions";
+import { disconnectAction, ignoreAction, linkAction, restoreAction, syncNowAction, unlinkAction } from "./actions";
 
 export const metadata = { title: "Spotify" };
 
@@ -33,7 +33,8 @@ export default async function SpotifyPage(props: PageProps<"/spotify">) {
       libraryError = "Couldn’t load your Spotify library just now. Try again in a minute.";
     }
   }
-  const unlinked = rows.filter((r) => !r.linked);
+  const unlinked = rows.filter((r) => !r.linked && !r.ignored);
+  const ignored = rows.filter((r) => r.ignored);
   const linked = rows.filter((r) => r.linked);
 
   return (
@@ -41,8 +42,8 @@ export default async function SpotifyPage(props: PageProps<"/spotify">) {
       <header>
         <h1 className="display text-3xl">Spotify</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Link the audiobooks you listen to on Spotify to their books here, and their progress shows on your Currently Reading shelf. It updates when you open
-          BookBox.
+          When you start or pick up an audiobook on Spotify, its book moves to Currently Reading and shows how far you are. A book that isn&rsquo;t in BookBox yet
+          is added for you. It updates when you open BookBox.
         </p>
       </header>
 
@@ -84,14 +85,15 @@ export default async function SpotifyPage(props: PageProps<"/spotify">) {
       {libraryError && <p className="text-sm text-danger">{libraryError}</p>}
 
       {account && !libraryError && rows.length === 0 && (
-        <p className="py-6 text-center text-sm text-muted">No audiobooks in your Spotify library yet. Start one on Spotify (or save it to Your Library) and it shows up here.</p>
+        <p className="py-6 text-center text-sm text-muted">No audiobooks in your Spotify library yet. Start one on Spotify and it shows up here.</p>
       )}
 
       {unlinked.length > 0 && (
         <section className="space-y-3">
           <h2 className="section-title">
-            To link <span className="count">{unlinked.length}</span>
+            Not started <span className="count">{unlinked.length}</span>
           </h2>
+          <p className="text-xs text-faint">These link themselves when you start listening. You can also link one now, or tell BookBox to leave it alone.</p>
           <ul className="card divide-y divide-line">
             {unlinked.map((r) => (
               <li key={r.audiobook.id} className="flex flex-wrap items-start gap-4 p-4">
@@ -116,20 +118,13 @@ export default async function SpotifyPage(props: PageProps<"/spotify">) {
                     {r.candidates.length === 0 && <span className="text-xs text-faint">No matching book in BookBox.</span>}
                     <form action={ignoreAction}>
                       <input type="hidden" name="audiobook_id" value={r.audiobook.id} />
-                      <button className="text-xs text-faint hover:text-muted">Not in BookBox</button>
+                      <button className="text-xs text-faint hover:text-muted">Leave this one alone</button>
                     </form>
                   </div>
                 </div>
               </li>
             ))}
           </ul>
-          <p className="text-xs text-faint">
-            Not the right book? Add it with{" "}
-            <Link href="/books/new" className="underline hover:text-muted">
-              Add a book
-            </Link>{" "}
-            and it will be suggested here.
-          </p>
         </section>
       )}
 
@@ -151,6 +146,29 @@ export default async function SpotifyPage(props: PageProps<"/spotify">) {
                 <form action={unlinkAction}>
                   <input type="hidden" name="book_id" value={r.linked!.bookId} />
                   <button className="text-xs text-faint hover:text-danger">Unlink</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {ignored.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="section-title">
+            Left alone <span className="count">{ignored.length}</span>
+          </h2>
+          <ul className="card divide-y divide-line">
+            {ignored.map((r) => (
+              <li key={r.audiobook.id} className="flex items-center gap-4 p-4">
+                <Art row={r} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[0.8125rem] text-muted">{r.audiobook.name}</p>
+                  <p className="truncate text-xs text-faint">{r.audiobook.authors}</p>
+                </div>
+                <form action={restoreAction}>
+                  <input type="hidden" name="audiobook_id" value={r.audiobook.id} />
+                  <button className="text-xs text-faint hover:text-ink">Restore</button>
                 </form>
               </li>
             ))}

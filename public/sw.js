@@ -61,7 +61,7 @@ self.addEventListener("fetch", (event) => {
   } else if (path === "/api/library") {
     event.respondWith(networkFirst(req, SHELL, "/api/library"));
   } else if (req.mode === "navigate") {
-    event.respondWith(navigate(req));
+    event.respondWith(navigate(event));
   }
 });
 
@@ -91,11 +91,34 @@ async function networkFirst(req, cacheName, key) {
   }
 }
 
-async function navigate(req) {
+// Read-only pages that open from the saved copy at once, then refresh (see OfflineSupport).
+// Forms are left out on purpose: they must never open with old values in their fields.
+const INSTANT = /^\/$|^\/(people|tags|series|stats)$|^\/books\/\d+$/;
+const FROM_CACHE = "sw-cache";
+
+async function navigate(event) {
+  const req = event.request;
   const cache = await caches.open(PAGES);
   // One saved copy per page: filtered and searched views fall back to the unfiltered page.
   const url = new URL(req.url);
   const key = url.origin + url.pathname;
+
+  if (!url.search && INSTANT.test(url.pathname)) {
+    const hit = await cache.match(key);
+    if (hit) {
+      // Fetch a fresh copy for next time (and for the reload after a new deploy).
+      event.waitUntil(
+        fetch(req)
+          .then((res) => (usable(res) ? cache.put(key, res) : undefined))
+          .catch(() => {}),
+      );
+      // Marked so the page knows to ask the server for current data once it's up.
+      const headers = new Headers(hit.headers);
+      headers.set("Server-Timing", FROM_CACHE);
+      return new Response(hit.body, { status: hit.status, statusText: hit.statusText, headers });
+    }
+  }
+
   try {
     const res = await withTimeout(fetch(req), NETWORK_TIMEOUT);
     if (usable(res) && !url.search) await cache.put(key, res.clone());

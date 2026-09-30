@@ -9,6 +9,7 @@ import { flush, SYNCED_EVENT, useOutbox } from "@/lib/outbox";
 const OFFLINE_PAGES = ["/", "/people", "/tags", "/series", "/stats"];
 const WARM_EVERY = 6 * 60 * 60 * 1000;
 const WARMED_KEY = "bookbox:warmed";
+const REFRESHED_KEY = "bookbox:refreshed-saved-copy";
 
 /**
  * Registers the service worker, keeps the offline copy fresh, sends edits made offline once the
@@ -37,6 +38,22 @@ export function OfflineSupport() {
   useEffect(() => {
     if (!offline) void flush();
   }, [offline]);
+
+  // Read-only pages open from the service worker's saved copy for speed (see INSTANT in sw.js).
+  // When this page came from there, ask the server for the current data straight away.
+  useEffect(() => {
+    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    if (!nav || !navigator.serviceWorker?.controller) return;
+    // Browsers without Server-Timing can't tell, so they always refresh.
+    const fromCache = "serverTiming" in nav ? nav.serverTiming.some((t) => t.name === "sw-cache") : true;
+    if (!fromCache) return;
+    try {
+      // After a deploy the refresh reloads the page; don't let that turn into a loop.
+      if (Date.now() - Number(sessionStorage.getItem(REFRESHED_KEY) ?? 0) < 10_000) return;
+      sessionStorage.setItem(REFRESHED_KEY, String(Date.now()));
+    } catch {}
+    router.refresh();
+  }, [router]);
 
   // Once edits land: show the server's copy, and re-save the affected pages for offline use so a
   // later offline visit doesn't show the old version.

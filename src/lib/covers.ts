@@ -90,4 +90,17 @@ export async function fetchCover(url: string): Promise<Buffer | null> {
   return Buffer.from(await res.arrayBuffer());
 }
 
+/** Downloads audiobook art from Spotify's image CDN, for books added from Spotify that OpenLibrary has no cover for. */
+export async function fetchSpotifyImage(url: string): Promise<Buffer | null> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "https:" || parsed.hostname !== "i.scdn.co") return null;
+  const res = await fetch(parsed, { redirect: "error" }).catch(() => null);
+  return res?.ok ? Buffer.from(await res.arrayBuffer()) : null;
+}
+
 export const USER_AGENT = "BookBox/1.0 (personal reading log)";

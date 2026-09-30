@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { disconnectSpotify, ignoreAudiobook, linkAudiobook, syncSpotify, unlinkAudiobook } from "@/lib/spotify";
+import { disconnectSpotify, ignoreAudiobook, linkAudiobook, restoreAudiobook, syncSpotify, unlinkAudiobook } from "@/lib/spotify";
 
 const done = () => revalidatePath("/", "layout");
 
@@ -21,6 +21,11 @@ export async function unlinkAction(fd: FormData) {
 
 export async function ignoreAction(fd: FormData) {
   await ignoreAudiobook(String(fd.get("audiobook_id") ?? ""));
+  done();
+}
+
+export async function restoreAction(fd: FormData) {
+  await restoreAudiobook(String(fd.get("audiobook_id") ?? ""));
   done();
 }
 
