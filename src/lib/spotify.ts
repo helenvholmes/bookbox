@@ -192,9 +192,8 @@ export async function syncSpotify(force = false): Promise<{ synced: boolean; cha
       // New to your Spotify library since the baseline, or moved since we last looked.
       const active = baselined && inProgress(p) && (!before || Math.abs(p.position - before.position_ms) >= MOVED_MS);
       if (!active) continue;
-      const bookId = await findOrCreateBook(a);
-      await linkAudiobook(bookId, a.id, a.name);
-      await setStatus(bookId, "Currently Reading");
+      const bookId = await bringIn(a);
+      if (bookId === null) continue; // another request is adding it right now
       links.push({ book_id: bookId, audiobook_id: a.id });
       progress.set(a.id, p);
       changed.add(bookId);
@@ -346,10 +345,38 @@ export async function addAudiobook(audiobookId: string): Promise<number | null> 
   const account = await getSpotifyAccount();
   if (!account) return null;
   const a = await api<SpotifyAudiobook>(account, `/audiobooks/${audiobookId}?${market(account)}`);
-  const bookId = await findOrCreateBook(a);
-  await linkAudiobook(bookId, a.id, a.name);
-  await setStatus(bookId, "Currently Reading");
-  return bookId;
+  return bringIn(a);
+}
+
+/** A claim older than this was left by a request that died; it no longer blocks anyone. */
+const CLAIM_EXPIRES_MS = 2 * 60 * 1000;
+
+/**
+ * Finds or creates an audiobook's book, links it and moves it to Currently Reading, exactly once:
+ * an audiobook that's already linked is left as it is, and when two requests arrive together
+ * (a double tap, or a tap during a sync) only the first does the work. Returns the book's id, or
+ * null when another request is already on it.
+ */
+async function bringIn(a: SpotifyAudiobook): Promise<number | null> {
+  const linked = async () => ((await db.prepare("SELECT book_id FROM spotify_links WHERE audiobook_id = ?").get(a.id)) as { book_id: number } | undefined)?.book_id;
+  const already = await linked();
+  if (already) return already;
+
+  const now = Date.now();
+  await db.prepare("DELETE FROM spotify_adding WHERE audiobook_id = ? AND started_at < ?").run(a.id, now - CLAIM_EXPIRES_MS);
+  // The primary key makes this the tie-break: only one request's insert goes in.
+  const claim = await db.prepare("INSERT OR IGNORE INTO spotify_adding (audiobook_id, started_at) VALUES (?, ?)").run(a.id, now);
+  if (!claim.changes) return null;
+  try {
+    const again = await linked(); // linked while we were claiming
+    if (again) return again;
+    const bookId = await findOrCreateBook(a);
+    await linkAudiobook(bookId, a.id, a.name);
+    await setStatus(bookId, "Currently Reading");
+    return bookId;
+  } finally {
+    await db.prepare("DELETE FROM spotify_adding WHERE audiobook_id = ?").run(a.id);
+  }
 }
 
 export async function linkAudiobook(bookId: number, audiobookId: string, name: string) {

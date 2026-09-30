@@ -10,6 +10,8 @@ import { ago, FINISHED_PERCENT, formatDuration } from "@/lib/progress";
 type Props = {
   bookId: number;
   pages: number | null;
+  /** Kindle shows a percentage, not page numbers, so that's what progress is entered as. */
+  onKindle: boolean;
   shelves: string[];
   reads: Read[];
   progress: Progress | null;
@@ -18,10 +20,12 @@ type Props = {
 
 /**
  * How far through the book you are. Synced from Spotify when the book is linked to an audiobook;
- * otherwise set by hand, by page when the page count is known. Shown while you're reading it, or
- * whenever there's progress to show.
+ * otherwise set by hand: by page when the page count is known, or as a percentage for Kindle books
+ * (which show one) and books without a page count. Shown while you're reading it, or whenever
+ * there's progress to show.
  */
-export function ProgressCard({ bookId, pages, shelves, reads, progress, spotify }: Props) {
+export function ProgressCard({ bookId, pages: pageCount, onKindle, shelves, reads, progress, spotify }: Props) {
+  const pages = onKindle ? null : pageCount;
   const ops = usePendingOps(bookId);
   const statuses = withStatus(statusesFrom(shelves), ops);
   const saved: ShownProgress = progress && { percent: progress.percent, page: progress.page, source: progress.source, pending: false };
@@ -120,7 +124,11 @@ function ProgressEditor({
   onCancel: () => void;
 }) {
   const byPage = !!pages;
-  const [value, setValue] = useState(() => (initial ? String(byPage && initial.page !== null ? initial.page : Math.round(initial.percent)) : ""));
+  // Start from what's saved, in the unit being asked for (a saved percentage becomes its page, and the other way round).
+  const [value, setValue] = useState(() => {
+    if (!initial) return "";
+    return String(byPage ? (initial.page ?? Math.round((initial.percent / 100) * pages!)) : Math.round(initial.percent));
+  });
   const [error, setError] = useState<string | null>(null);
 
   return (

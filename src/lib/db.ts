@@ -173,6 +173,12 @@ CREATE TABLE IF NOT EXISTS spotify_seen (
   checked_at   INTEGER NOT NULL
 );
 
+-- An audiobook whose book is being found or created right now, so two requests at once can't both create it.
+CREATE TABLE IF NOT EXISTS spotify_adding (
+  audiobook_id TEXT PRIMARY KEY,
+  started_at   INTEGER NOT NULL
+);
+
 -- Spotify audiobooks to leave alone: never suggested, linked or added automatically.
 CREATE TABLE IF NOT EXISTS spotify_ignored (
   audiobook_id TEXT PRIMARY KEY

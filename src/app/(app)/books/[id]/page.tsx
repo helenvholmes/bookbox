@@ -143,6 +143,7 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
           <ProgressCard
             bookId={book.id}
             pages={book.pages}
+            onKindle={book.on_kindle}
             shelves={book.shelves}
             reads={book.reads}
             progress={book.progress_detail}

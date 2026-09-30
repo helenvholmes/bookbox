@@ -3,6 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { connection } from "next/server";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { SubmitButton } from "@/components/SubmitButton";
 import { callbackUrl, getSpotifyAccount, spotifyConfigured, spotifyLibrary, type AudiobookRow } from "@/lib/spotify";
 import { addAction, disconnectAction, ignoreAction, linkAction, restoreAction, syncNowAction, unlinkAction } from "./actions";
 
@@ -71,7 +72,9 @@ export default async function SpotifyPage(props: PageProps<"/spotify">) {
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <form action={syncNowAction}>
-              <button className="btn rounded-full px-4">Sync now</button>
+              <SubmitButton className="btn rounded-full px-4" pending="Syncing…">
+                Sync now
+              </SubmitButton>
             </form>
             <form action={disconnectAction}>
               <ConfirmButton className="btn rounded-full px-4" message="Disconnect Spotify? Synced progress is removed." confirmLabel="Disconnect">
@@ -112,15 +115,17 @@ export default async function SpotifyPage(props: PageProps<"/spotify">) {
                         <input type="hidden" name="book_id" value={c.id} />
                         <input type="hidden" name="audiobook_id" value={r.audiobook.id} />
                         <input type="hidden" name="name" value={r.audiobook.name} />
-                        <button className="chip text-left hover:text-ink">
+                        <SubmitButton className="chip text-left hover:text-ink" pending="Linking…">
                           Link to <span className="text-ink">{c.title}</span>
                           {c.author && <span className="text-faint"> · {c.author}</span>}
-                        </button>
+                        </SubmitButton>
                       </form>
                     ))}
                     <form action={addAction}>
                       <input type="hidden" name="audiobook_id" value={r.audiobook.id} />
-                      <button className="chip border-ink text-ink hover:bg-raised">Add to Currently Reading</button>
+                      <SubmitButton className="chip border-ink text-ink hover:bg-raised" pending="Adding…">
+                        Add to Currently Reading
+                      </SubmitButton>
                     </form>
                     <form action={ignoreAction}>
                       <input type="hidden" name="audiobook_id" value={r.audiobook.id} />
