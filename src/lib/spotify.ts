@@ -338,6 +338,20 @@ export async function spotifyLibrary(): Promise<AudiobookRow[]> {
     .sort((x, y) => Number(!!x.linked) - Number(!!y.linked) || x.audiobook.name.localeCompare(y.audiobook.name));
 }
 
+/**
+ * Adds one audiobook now, without waiting for the sync to notice you listening: finds or creates
+ * its book, links it and moves it to Currently Reading. Returns the book's id.
+ */
+export async function addAudiobook(audiobookId: string): Promise<number | null> {
+  const account = await getSpotifyAccount();
+  if (!account) return null;
+  const a = await api<SpotifyAudiobook>(account, `/audiobooks/${audiobookId}?${market(account)}`);
+  const bookId = await findOrCreateBook(a);
+  await linkAudiobook(bookId, a.id, a.name);
+  await setStatus(bookId, "Currently Reading");
+  return bookId;
+}
+
 export async function linkAudiobook(bookId: number, audiobookId: string, name: string) {
   await transaction(async () => {
     await db.prepare("DELETE FROM spotify_links WHERE book_id = ? OR audiobook_id = ?").run(bookId, audiobookId);

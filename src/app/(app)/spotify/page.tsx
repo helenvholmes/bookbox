@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { connection } from "next/server";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { callbackUrl, getSpotifyAccount, spotifyConfigured, spotifyLibrary, type AudiobookRow } from "@/lib/spotify";
-import { disconnectAction, ignoreAction, linkAction, restoreAction, syncNowAction, unlinkAction } from "./actions";
+import { addAction, disconnectAction, ignoreAction, linkAction, restoreAction, syncNowAction, unlinkAction } from "./actions";
 
 export const metadata = { title: "Spotify" };
 
@@ -91,9 +91,12 @@ export default async function SpotifyPage(props: PageProps<"/spotify">) {
       {unlinked.length > 0 && (
         <section className="space-y-3">
           <h2 className="section-title">
-            Not started <span className="count">{unlinked.length}</span>
+            Not in Currently Reading <span className="count">{unlinked.length}</span>
           </h2>
-          <p className="text-xs text-faint">These link themselves when you start listening. You can also link one now, or tell BookBox to leave it alone.</p>
+          <p className="text-xs text-faint">
+            These are added by themselves when you next listen to them. To bring one in now, add it (its book is created if BookBox doesn&rsquo;t have it) or link it to a
+            book you already have.
+          </p>
           <ul className="card divide-y divide-line">
             {unlinked.map((r) => (
               <li key={r.audiobook.id} className="flex flex-wrap items-start gap-4 p-4">
@@ -115,7 +118,10 @@ export default async function SpotifyPage(props: PageProps<"/spotify">) {
                         </button>
                       </form>
                     ))}
-                    {r.candidates.length === 0 && <span className="text-xs text-faint">No matching book in BookBox.</span>}
+                    <form action={addAction}>
+                      <input type="hidden" name="audiobook_id" value={r.audiobook.id} />
+                      <button className="chip border-ink text-ink hover:bg-raised">Add to Currently Reading</button>
+                    </form>
                     <form action={ignoreAction}>
                       <input type="hidden" name="audiobook_id" value={r.audiobook.id} />
                       <button className="text-xs text-faint hover:text-muted">Leave this one alone</button>
