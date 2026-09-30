@@ -1,21 +1,11 @@
-import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { Landing } from "@/components/Landing";
+import { Landing, LANDING_METADATA } from "@/components/Landing";
 import { authEnabled, isValidSession, SESSION_COOKIE } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 
-export const metadata: Metadata = {
-  title: { absolute: "BookBox · A free reading log you host yourself" },
-  description:
-    "Track what you read, re-read and want to read. Instant search, offline mode, barcode scanning, shareable lists and Spotify audiobook progress. Open source, and free to host.",
-  openGraph: {
-    title: "BookBox",
-    description: "A free reading log you host yourself: instant search, offline mode, shareable lists and Spotify audiobook progress.",
-    type: "website",
-  },
-};
+export const metadata = LANDING_METADATA;
 
 /**
  * The site's front page. Signed in, it's your library (keeping any filters, so old links like
@@ -33,5 +23,5 @@ export default async function Home(props: PageProps<"/">) {
   // Without a password there's no signing in (a copy running on your own computer): always the library.
   if (!authEnabled()) redirect("/library");
   if (!(await getSettings()).publicHome) redirect("/login");
-  return <Landing />;
+  return <Landing signedIn={false} />;
 }

@@ -14,10 +14,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except the front page (it checks the session itself: your library when signed in, otherwise the
-  // page about BookBox or sign-in), the login page, public share links (/s/…), the offline page and service
-  // worker (which hold no data themselves), and the assets the home screen needs before signing in.
+  // Everything except the front page and /about (they check the session themselves: your library or the page
+  // about BookBox when signed in, otherwise the page about BookBox or sign-in), the login page, public share links (/s/…), the offline page and service
+  // worker (which hold no data themselves), the assets the home screen needs before signing in, and the
+  // public-domain covers on the page about BookBox.
   matcher: [
-    "/((?!$|login|s/|offline|sw\\.js|_next/static|_next/image|manifest.webmanifest|favicon.ico|icon|apple-icon|icons/|splash/).*)",
+    "/((?!$|about$|login|s/|offline|sw\\.js|_next/static|_next/image|manifest.webmanifest|favicon.ico|icon|apple-icon|icons/|splash/|landing/).*)",
   ],
 };

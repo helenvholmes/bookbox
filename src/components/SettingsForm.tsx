@@ -37,7 +37,10 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         <p className="pb-2 text-xs text-muted">
           {publicHome
             ? "People who aren’t signed in see a page about BookBox at your site’s address, with a link to sign in. Your library stays private."
-            : "People who aren’t signed in go straight to the sign-in page."}
+            : "People who aren’t signed in go straight to the sign-in page."}{" "}
+          <a href="/about" target="_blank" rel="noreferrer" className="text-ink underline">
+            Preview the page
+          </a>
         </p>
       </section>
 

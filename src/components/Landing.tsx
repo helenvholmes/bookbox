@@ -1,26 +1,40 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SOURCE_URL } from "@/lib/constants";
-import { Cover, spineColor } from "./Cover";
+import { Cover } from "./Cover";
 import { Stars } from "./Stars";
 
 /**
  * The public page about BookBox, shown at the site's address to visitors who aren't signed in
- * (when Settings allows). The library preview is drawn with the app's own generated covers and
- * public-domain titles, so nothing from anyone's real library appears here.
+ * (when Settings allows). The library preview uses first editions of public-domain books (images
+ * from Wikimedia Commons, credited in public/landing/CREDITS.md), so nothing from anyone's real
+ * library appears here.
  */
+
+export const LANDING_METADATA: Metadata = {
+  title: { absolute: "BookBox · A free reading log you host yourself" },
+  description:
+    "Track what you read, re-read and want to read. Instant search, offline mode, barcode scanning, shareable lists and Spotify audiobook progress. Open source, and free to host.",
+  openGraph: {
+    title: "BookBox",
+    description: "A free reading log you host yourself: instant search, offline mode, shareable lists and Spotify audiobook progress.",
+    type: "website",
+  },
+};
 
 const DEPLOY_URL = `${SOURCE_URL}#deploy-your-own-free`;
 
 const READING = [
-  { title: "Middlemarch", author: "George Eliot", progress: 62 },
-  { title: "The Moonstone", author: "Wilkie Collins", progress: 18 },
+  { title: "The Great Gatsby", author: "F. Scott Fitzgerald", cover: "great-gatsby.webp", progress: 62 },
+  { title: "Dracula", author: "Bram Stoker", cover: "dracula.webp", progress: 18 },
 ];
 const SHELF = [
-  { title: "Frankenstein", author: "Mary Shelley", rating: 5 },
-  { title: "Persuasion", author: "Jane Austen", rating: 4 },
-  { title: "The Age of Innocence", author: "Edith Wharton", rating: 5 },
-  { title: "Dracula", author: "Bram Stoker", rating: null },
+  { title: "Frankenstein", author: "Mary Shelley", cover: "frankenstein.webp", rating: 5 },
+  { title: "Middlemarch", author: "George Eliot", cover: "middlemarch.webp", rating: 5 },
+  { title: "The Moonstone", author: "Wilkie Collins", cover: "moonstone.webp", rating: 4 },
+  { title: "Jane Eyre", author: "Charlotte Brontë", cover: "jane-eyre.webp", rating: null },
 ];
+const COVERS = "/landing";
 
 const FEATURES: { title: string; body: string; d: string }[] = [
   {
@@ -55,7 +69,9 @@ const FEATURES: { title: string; body: string; d: string }[] = [
   },
 ];
 
-export function Landing() {
+/** `signedIn` swaps "Sign in" for a way back to the library. */
+export function Landing({ signedIn }: { signedIn: boolean }) {
+  const account = signedIn ? { href: "/library", label: "Open your library" } : { href: "/login", label: "Sign in" };
   return (
     <div className="min-h-dvh bg-paper text-ink">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-5 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8">
@@ -64,8 +80,8 @@ export function Landing() {
           <a href={SOURCE_URL} className="text-muted hover:text-ink">
             GitHub
           </a>
-          <Link href="/login" className="btn rounded-full px-4">
-            Sign in
+          <Link href={account.href} className="btn rounded-full px-4">
+            {account.label}
           </Link>
         </nav>
       </header>
@@ -164,13 +180,19 @@ export function Landing() {
 
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-8 text-xs text-faint sm:px-8">
-          <span>BookBox is open source under the AGPL-3.0.</span>
+          <span>
+            BookBox is open source under the AGPL-3.0. Covers shown are{" "}
+            <a href={`${SOURCE_URL}/blob/main/public/landing/CREDITS.md`} className="underline decoration-line underline-offset-2 hover:text-muted">
+              public-domain first editions
+            </a>
+            .
+          </span>
           <span className="flex gap-4">
             <a href={SOURCE_URL} className="hover:text-muted">
               Source code
             </a>
-            <Link href="/login" className="hover:text-muted">
-              Sign in
+            <Link href={account.href} className="hover:text-muted">
+              {account.label}
             </Link>
           </span>
         </div>
@@ -194,7 +216,7 @@ function LibraryPreview() {
           <div className="grid grid-cols-2 gap-4">
             {READING.map((b) => (
               <div key={b.title} className="card overflow-hidden">
-                <Cover cover={null} title={b.title} author={b.author} bleed />
+                <Cover cover={b.cover} srcBase={COVERS} title={b.title} author={b.author} bleed eager />
                 <div className="h-1.5 bg-line">
                   <div className="h-full bg-ink" style={{ width: `${b.progress}%` }} />
                 </div>
@@ -208,7 +230,7 @@ function LibraryPreview() {
           <div className="grid grid-cols-4 gap-3">
             {SHELF.map((b) => (
               <div key={b.title} className="space-y-1.5">
-                <MiniCover title={b.title} />
+                <Cover cover={b.cover} srcBase={COVERS} title={b.title} author={b.author} className="rounded-sm" eager />
                 <div className="flex justify-center">
                   <Stars rating={b.rating} className="size-2" label={false} />
                 </div>
@@ -221,15 +243,3 @@ function LibraryPreview() {
   );
 }
 
-/** A generated cover small enough for a shelf of six: the title only, in type that fits. */
-function MiniCover({ title }: { title: string }) {
-  const color = spineColor(title);
-  return (
-    <div
-      className="flex aspect-[2/3] w-full items-start overflow-hidden rounded-sm p-1.5 text-white"
-      style={{ background: `linear-gradient(160deg, ${color}, color-mix(in srgb, ${color} 70%, black))` }}
-    >
-      <span className="line-clamp-4 text-[0.625rem] leading-tight font-medium hyphens-auto">{title}</span>
-    </div>
-  );
-}

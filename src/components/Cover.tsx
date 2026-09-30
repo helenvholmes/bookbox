@@ -2,9 +2,6 @@ import { CoverImage } from "./CoverImage";
 
 const PALETTE = ["#7c3a2d", "#2f4f4f", "#5b4a7a", "#8a6a2f", "#3d5a3a", "#6b3050", "#2d4a6b"];
 
-/** The colour of the generated cover for a book without one: the same for the same title, every time. */
-export const spineColor = (title: string) => PALETTE[[...title].reduce((n, c) => n + c.charCodeAt(0), 0) % PALETTE.length];
-
 export function Cover({
   cover,
   title,
@@ -34,7 +31,7 @@ export function Cover({
     );
   }
   // A generated "spine" so books without covers still look like books.
-  const color = spineColor(title);
+  const color = PALETTE[[...title].reduce((n, c) => n + c.charCodeAt(0), 0) % PALETTE.length];
   return (
     <div
       aria-hidden
