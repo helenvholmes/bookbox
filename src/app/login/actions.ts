@@ -24,3 +24,8 @@ export async function loginAction(_prev: string | undefined, fd: FormData): Prom
   const next = String(fd.get("next") ?? "/library");
   redirect(next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/library");
 }
+
+/** Signs this device out by removing its sign-in cookie. (The page clears its offline copies first; see SignOutButton.) */
+export async function signOutAction() {
+  (await cookies()).delete({ name: SESSION_COOKIE, path: "/" });
+}

@@ -3,6 +3,7 @@ import { LocalCopyBanner } from "@/components/LocalCopyBanner";
 import { Nav } from "@/components/Nav";
 import { OfflineSupport } from "@/components/OfflineSupport";
 import { SpotifySync } from "@/components/SpotifySync";
+import { authEnabled } from "@/lib/auth";
 import { getFacets } from "@/lib/books";
 
 /**
@@ -22,7 +23,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <Suspense
         fallback={
           <Suspense fallback={<SidebarShell />}>
-            <Nav years={[]} />
+            <Nav years={[]} canSignOut={authEnabled()} />
           </Suspense>
         }
       >
@@ -51,5 +52,5 @@ async function LocalCopyNotice() {
 
 async function NavWithYears() {
   const { years } = await getFacets();
-  return <Nav years={years} />;
+  return <Nav years={years} canSignOut={authEnabled()} />;
 }

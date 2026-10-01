@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { connection } from "next/server";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { SettingsForm } from "@/components/SettingsForm";
+import { SignOutButton } from "@/components/SignOutButton";
+import { authEnabled } from "@/lib/auth";
 import { SpotifyKeysForm } from "@/components/SpotifyKeysForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { getSettings } from "@/lib/settings";
@@ -120,6 +122,19 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
           </div>
         </div>
       </section>
+
+      {authEnabled() && (
+        <section className="max-w-xl space-y-3">
+          <h2 className="section-title">Sign out</h2>
+          <div className="card flex flex-wrap items-center justify-between gap-4 p-5">
+            <p className="max-w-sm text-sm text-muted">
+              Signs out this device and removes the copy of your library it keeps for offline use. To sign out every device at once, change your password
+              (BOOKBOX_PASSWORD) on your host.
+            </p>
+            <SignOutButton className="btn rounded-full px-4" />
+          </div>
+        </section>
+      )}
     </div>
   );
 }

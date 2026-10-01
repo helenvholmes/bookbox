@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { SOURCE_URL } from "@/lib/constants";
+import { SignOutButton } from "./SignOutButton";
 import { ShelfIcon, STATUS_SHELVES, shelfLabel } from "./ShelfIcon";
 
 const ICONS = {
@@ -21,6 +22,7 @@ const ICONS = {
   spotify: "M4 15v-3a8 8 0 0 1 16 0v3M4 15a2 2 0 0 1 2-2h1v7H6a2 2 0 0 1-2-2zm16 0a2 2 0 0 0-2-2h-1v7h1a2 2 0 0 0 2-2z",
   export: "M12 4v11m0 0-4-4m4 4 4-4M5 19h14",
   menu: "M4 7h16M4 12h16M4 17h10",
+  signOut: "M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11",
   // Sliders.
   settings: "M4 7h9m4 0h3M4 17h3m4 0h9M15 5v4M9 15v4",
 };
@@ -42,13 +44,14 @@ function YearIcon({ filled }: { filled: boolean }) {
   );
 }
 
-type Props = { years: { year: number; count: number }[] };
+/** `canSignOut` is false when the app has no password (running on your own computer), so there's nothing to sign out of. */
+type Props = { years: { year: number; count: number }[]; canSignOut: boolean };
 
 const item = (active: boolean) =>
   `flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[0.8125rem] transition ${active ? "bg-raised text-ink" : "text-muted hover:text-ink"}`;
 
 /** Everything in the sidebar: shown beside the page on desktop, and in the Menu drawer on phones. */
-function SidebarLinks({ years }: Props) {
+function SidebarLinks({ years, canSignOut }: Props) {
   const pathname = usePathname();
   const params = useSearchParams();
   const onLibrary = pathname === "/library";
@@ -127,6 +130,16 @@ function SidebarLinks({ years }: Props) {
         <Link href="/settings" className={item(pathname === "/settings")}>
           <Icon d={ICONS.settings} /> Settings
         </Link>
+        {canSignOut && (
+          <SignOutButton
+            className={`${item(false)} w-full`}
+            label={
+              <>
+                <Icon d={ICONS.signOut} /> Sign out
+              </>
+            }
+          />
+        )}
         <a href={SOURCE_URL} target="_blank" rel="noreferrer" className="block px-2.5 pt-3 text-[0.6875rem] text-faint hover:text-muted">
           BookBox is open source ↗
         </a>
@@ -135,7 +148,7 @@ function SidebarLinks({ years }: Props) {
   );
 }
 
-export function Nav({ years }: Props) {
+export function Nav({ years, canSignOut }: Props) {
   const pathname = usePathname();
   const params = useSearchParams();
   const menu = useRef<HTMLDialogElement>(null);
@@ -154,7 +167,7 @@ export function Nav({ years }: Props) {
     <>
       {/* Desktop: Oku-style sidebar. */}
       <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col gap-6 overflow-y-auto border-r border-line bg-[#0e0f11] px-3 py-5 md:flex">
-        <SidebarLinks years={years} />
+        <SidebarLinks years={years} canSignOut={canSignOut} />
       </aside>
 
       {/* Phone: the same links in a drawer from the left, opened by the Menu tab. */}
@@ -168,7 +181,7 @@ export function Nav({ years }: Props) {
         className="m-0 h-dvh max-h-none w-[min(18rem,85vw)] max-w-none -translate-x-full overflow-y-auto overscroll-contain border-r border-line bg-[#0e0f11] p-0 text-ink transition-[translate,display,overlay] transition-discrete duration-200 ease-out backdrop:bg-black/60 backdrop:opacity-0 backdrop:transition-opacity backdrop:duration-200 open:translate-x-0 open:backdrop:opacity-100 md:hidden starting:open:-translate-x-full starting:open:backdrop:opacity-0"
       >
         <div className="flex min-h-full flex-col gap-6 px-3 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-          <SidebarLinks years={years} />
+          <SidebarLinks years={years} canSignOut={canSignOut} />
         </div>
       </dialog>
 

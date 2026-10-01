@@ -14,10 +14,10 @@ import { Stars } from "./Stars";
 export const LANDING_METADATA: Metadata = {
   title: { absolute: "BookBox · A free reading log you host yourself" },
   description:
-    "Track what you read, re-read and want to read. Instant search, offline mode, barcode scanning, shareable lists and Spotify audiobook progress. Open source, and free to host.",
+    "Track what you read, re-read, and want to read. Instant search, offline mode, barcode scanning, shareable lists, and Spotify audiobook progress. Open source, and free to host.",
   openGraph: {
     title: "BookBox",
-    description: "A free reading log you host yourself: instant search, offline mode, shareable lists and Spotify audiobook progress.",
+    description: "A free reading log you host yourself: instant search, offline mode, shareable lists, and Spotify audiobook progress.",
     type: "website",
   },
 };
@@ -29,42 +29,42 @@ const READING = [
   { title: "Dracula", author: "Bram Stoker", cover: "dracula.webp", progress: 18 },
 ];
 const SHELF = [
-  { title: "Frankenstein", author: "Mary Shelley", cover: "frankenstein.webp", rating: 5 },
-  { title: "Middlemarch", author: "George Eliot", cover: "middlemarch.webp", rating: 5 },
-  { title: "The Moonstone", author: "Wilkie Collins", cover: "moonstone.webp", rating: 4 },
-  { title: "Jane Eyre", author: "Charlotte Brontë", cover: "jane-eyre.webp", rating: null },
+  { title: "The Wonderful Wizard of Oz", author: "L. Frank Baum", cover: "wizard-of-oz.webp", rating: 5 },
+  { title: "Anne of Green Gables", author: "L. M. Montgomery", cover: "anne-of-green-gables.webp", rating: 4 },
+  { title: "The Sun Also Rises", author: "Ernest Hemingway", cover: "sun-also-rises.webp", rating: 4 },
+  { title: "The Maltese Falcon", author: "Dashiell Hammett", cover: "maltese-falcon.webp", rating: null },
 ];
 const COVERS = "/landing";
 
 const FEATURES: { title: string; body: string; d: string }[] = [
   {
-    title: "Add a book in seconds",
-    body: "Search by title, author or ISBN, or scan the barcode with your phone. The cover, description, pages and publisher fill themselves in.",
+    title: "Add a book in seconds.",
+    body: "Search by title, author, or ISBN, or scan the barcode with your phone. The cover, description, pages, and publisher fill themselves in.",
     d: "M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M8 9v6M11 9v6M14 9v6M17 9v6",
   },
   {
-    title: "Search as you type",
-    body: "Titles, authors, series, tags, and your own reviews and notes. Accents don’t matter and typos are forgiven: “kill crek” finds Kill Creek.",
+    title: "Search as you type.",
+    body: "Titles, authors, series, tags, and your own reviews. Accents don’t matter and typos are forgiven: “kill crek” becomes Kill Creek.",
     d: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm9 2-3.5-3.5",
   },
   {
-    title: "Works offline",
+    title: "Works offline.",
     body: "Add it to your home screen and it opens instantly, even with no signal. Changes save on your phone and sync when you’re back.",
     d: "M5 12.5a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01M3 3l18 18",
   },
   {
-    title: "Follows your audiobooks",
+    title: "Follows your audiobooks.",
     body: "Start an audiobook on Spotify and it moves to Currently Reading on its own, with how far you’ve listened.",
     d: "M4 15v-3a8 8 0 0 1 16 0v3M4 15a2 2 0 0 1 2-2h1v7H6a2 2 0 0 1-2-2zm16 0a2 2 0 0 0-2-2h-1v7h1a2 2 0 0 0 2-2z",
   },
   {
-    title: "Lists worth sharing",
-    body: "Give a friend their own page of the books you’d pick for them, and the ones they picked for you, with your ratings and reviews if you like.",
+    title: "Lists worth sharing.",
+    body: "Give a friend their own page of the books you’d pick for them, and the ones they picked for you, with ratings and reviews.",
     d: "M8.6 13.5l6.8 4M15.4 6.5l-6.8 4M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm12 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
   },
   {
-    title: "Re-reads, goals and stats",
-    body: "Every read is logged, so re-reads count. Set a yearly goal and see your years, ratings, favourite authors and whose recommendations land.",
+    title: "Re-reads, goals, and stats.",
+    body: "Every read is logged, so re-reads count. Set a yearly goal and see years, ratings, favorite authors, and whose recommendations land.",
     d: "M5 20v-8m6 8V5m6 15v-5M3 20h18",
   },
 ];
@@ -96,8 +96,8 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
             </p>
             <h1 className="display text-[2.75rem] leading-[1.05] sm:text-6xl">A reading log that&rsquo;s yours.</h1>
             <p className="max-w-lg text-[1.0625rem] leading-relaxed text-muted">
-              Everything you&rsquo;ve read, are reading and want to read, with who recommended it and what you thought. On your own site, on the free tiers of
-              Vercel and Turso, with no ads, no feed and nobody else&rsquo;s algorithm.
+              Own your own reading data. Handles what you&rsquo;re reading, want to read, recommendations, and reviews. Ships on free tiers of Vercel and
+              Turso with no ads, no feeds, and nobody else&rsquo;s algorithm.
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <a href={DEPLOY_URL} className="btn btn-primary rounded-full px-5">
@@ -107,7 +107,7 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
                 View the code
               </a>
             </div>
-            <p className="text-xs text-faint">About ten minutes to set up. Costs nothing to run.</p>
+            <p className="text-xs text-faint">Takes about ten minutes to set up. Costs nothing to run.</p>
           </div>
 
           <LibraryPreview />
@@ -116,13 +116,13 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
         <section aria-labelledby="features" className="border-t border-line">
           <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8">
             <h2 id="features" className="display max-w-xl text-3xl leading-tight sm:text-4xl">
-              Everything a reading log should do, and nothing it shouldn&rsquo;t.
+              Everything a reading log should do.
             </h2>
-            <ul className="mt-12 grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="mt-12 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
               {FEATURES.map((f) => (
                 <li key={f.title} className="space-y-3">
-                  <span className="flex size-10 items-center justify-center rounded-xl border border-line text-muted">
-                    <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <span className="flex size-12 items-center justify-center rounded-xl border border-line text-muted">
+                    <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <path d={f.d} />
                     </svg>
                   </span>
@@ -142,7 +142,7 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
               </h2>
               <p className="max-w-md leading-relaxed text-muted">
                 BookBox isn&rsquo;t a service you sign up for. You run your own copy, on your own free accounts, and your library never sits in anyone
-                else&rsquo;s database. Export it as a spreadsheet whenever you like.
+                else&rsquo;s database. Export it as a CSV whenever you like.
               </p>
             </div>
             <ol className="space-y-6">
