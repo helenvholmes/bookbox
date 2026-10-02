@@ -1,5 +1,5 @@
 import "server-only";
-import { getSearchEntries, saveBook, setCover, setStatus } from "./books";
+import { addRead, getSearchEntries, saveBook, setCover, setStatus } from "./books";
 import { fetchCover, fetchSpotifyImage, isUsableImage, saveCover } from "./covers";
 import { db, transaction } from "./db";
 import { getOpenLibraryDetails, searchOpenLibrary } from "./openlibrary";
@@ -232,7 +232,10 @@ export async function syncSpotify(force = false): Promise<{ synced: boolean; cha
     if (!baselined) await db.prepare("UPDATE spotify_account SET baselined = 1 WHERE id = 1").run();
   }
 
-  // 2. Linked audiobooks: update progress, and bring a book back to Currently Reading when you're listening to it again.
+  // 2. Linked audiobooks: update progress, bring a book back to Currently Reading when you're listening to it
+  //    again, and mark it Read once you've finished.
+  const isReading = async (bookId: number) =>
+    !!(await db.prepare("SELECT 1 FROM book_shelves bs JOIN shelves s ON s.id = bs.shelf_id WHERE bs.book_id = ? AND s.name = 'Currently Reading'").get(bookId));
   for (const link of links) {
     const p = progress.get(link.audiobook_id) ?? (await listeningProgress(account, link.audiobook_id));
     if (!p.duration) continue;
@@ -247,17 +250,29 @@ export async function syncSpotify(force = false): Promise<{ synced: boolean; cha
       )
       .run(link.book_id, p.percent, p.position, p.duration);
     if (!before || Math.abs(before.percent - p.percent) >= 0.1) changed.add(link.book_id);
-    if (before && inProgress(p) && Math.abs(p.position - (before.position_ms ?? 0)) >= MOVED_MS) {
-      const reading = await db
-        .prepare("SELECT 1 FROM book_shelves bs JOIN shelves s ON s.id = bs.shelf_id WHERE bs.book_id = ? AND s.name = 'Currently Reading'")
-        .get(link.book_id);
-      if (!reading) {
-        await setStatus(link.book_id, "Currently Reading");
-        changed.add(link.book_id);
-      }
+    if (before && inProgress(p) && Math.abs(p.position - (before.position_ms ?? 0)) >= MOVED_MS && !(await isReading(link.book_id))) {
+      await setStatus(link.book_id, "Currently Reading");
+      changed.add(link.book_id);
+    }
+    // Finished (the last few minutes are usually credits, so Spotify rarely reaches exactly 100%): a book
+    // you're reading moves to Read, with a read logged for this year unless one already is. Books on any
+    // other shelf are left as they are.
+    if (p.percent >= FINISHED_PERCENT && (await isReading(link.book_id))) {
+      await markFinished(link.book_id, link.audiobook_id);
+      changed.add(link.book_id);
     }
   }
   return { synced: true, changed: [...changed] };
+}
+
+async function markFinished(bookId: number, audiobookId: string) {
+  const year = new Date().getFullYear();
+  await transaction(async () => {
+    await setStatus(bookId, "Read");
+    const readThisYear = await db.prepare("SELECT 1 FROM book_reads WHERE book_id = ? AND year = ?").get(bookId, year);
+    // The client id makes a retried sync harmless (see addRead).
+    if (!readThisYear) await addRead(bookId, year, "", `spotify-${audiobookId}-${year}`);
+  });
 }
 
 /** "Diavola: A Novel" and "Diavola (Unabridged)" -> "diavola", for comparing titles across catalogues. */
