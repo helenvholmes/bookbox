@@ -139,7 +139,7 @@ export function SharedBooks({ books, layout, srcBase, accent, owner }: Props) {
 /** A button that opens the dialog when reviews are on; otherwise a plain box. */
 function Wrap({ onOpen, className, children }: { onOpen?: () => void; className: string; children: React.ReactNode }) {
   return onOpen ? (
-    <button type="button" onClick={onOpen} className={`${className} w-full transition hover:border-faint focus-visible:outline-2 focus-visible:outline-ink`} aria-haspopup="dialog">
+    <button type="button" onClick={onOpen} className={`${className} w-full transition hover:border-line-hover focus-visible:outline-2 focus-visible:outline-ink`} aria-haspopup="dialog">
       {children}
     </button>
   ) : (

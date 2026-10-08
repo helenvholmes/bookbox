@@ -9,6 +9,8 @@
   --muted: #8b8d93;
   --faint: #5d5f65;
   --line: #26272b;
+  /* A step brighter than --line: the border of a card or button you're hovering over. */
+  --line-hover: #38393e;
   --pill: #1f2024;
   --pill-ink: #a4a6ac;
   --accent: #ffffff;
@@ -27,6 +29,7 @@
   --color-muted: var(--muted);
   --color-faint: var(--faint);
   --color-line: var(--line);
+  --color-line-hover: var(--line-hover);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
   --color-accent-ink: var(--accent-ink);

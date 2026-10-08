@@ -24,7 +24,7 @@ export function BookStatus({ bookId, shelves }: { bookId: number; shelves: strin
                 aria-label={on ? `Remove from ${shelfLabel(s)}` : `Mark as ${shelfLabel(s)}`}
                 onClick={() => submit({ kind: "status", bookId, shelf: current.length === 1 && on ? null : s })}
                 className={`flex h-11 w-[4.25rem] items-center justify-center rounded-lg border transition sm:w-16 ${
-                  on ? "border-ink bg-ink text-paper" : "border-line text-muted hover:border-faint hover:text-ink"
+                  on ? "border-ink bg-ink text-paper" : "border-line text-muted hover:border-line-hover hover:text-ink"
                 }`}
               >
                 <ShelfIcon shelf={s} className="size-[1.125rem]" />

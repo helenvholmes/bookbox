@@ -93,7 +93,7 @@ export default async function LibraryPage(props: PageProps<"/library">) {
         <ul className="grid grid-cols-3 gap-2 sm:auto-cols-fr sm:grid-flow-col">
           {tiles.map((t) => (
             <li key={t.href}>
-              <Link href={t.href} className="card flex h-full min-h-[5.5rem] flex-col justify-between gap-3 p-3 transition hover:border-faint">
+              <Link href={t.href} className="card flex h-full min-h-[5.5rem] flex-col justify-between gap-3 p-3 transition hover:border-line-hover">
                 <span className="text-muted">{t.icon}</span>
                 <span className="text-[0.75rem] leading-tight text-muted">
                   {t.value !== null && <span className="block text-ink">{t.value}</span>}

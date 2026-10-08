@@ -37,7 +37,7 @@ export default async function SeriesPage() {
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {series.map((s) => (
             <li key={s.id}>
-              <Link href={`/series/${s.id}`} className="card flex items-center gap-4 p-3 transition hover:border-faint">
+              <Link href={`/series/${s.id}`} className="card flex items-center gap-4 p-3 transition hover:border-line-hover">
                 {/* Up to four covers fanned out, like a stack on a shelf. */}
                 <span className="relative h-16 w-20 shrink-0">
                   {s.covers.slice(0, 4).map((c, i) => (

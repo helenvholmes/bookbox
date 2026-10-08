@@ -24,7 +24,7 @@ export function BookGrid({
       {books.map((b, i) => (
         // Off-screen tiles skip rendering; hundreds of covers are heavy on phones.
         <li key={b.id} className="[contain-intrinsic-size:auto_25rem] [content-visibility:auto]">
-          <Link href={`/books/${b.id}`} className="card flex h-full flex-col overflow-hidden text-center transition hover:border-faint">
+          <Link href={`/books/${b.id}`} className="card flex h-full flex-col overflow-hidden text-center transition hover:border-line-hover">
             <Cover cover={b.cover} title={b.title} author={b.author} eager={i < 8} bleed />
             {b.progress !== null && b.shelves.includes("Currently Reading") && (
               <div className="h-1.5 bg-line" role="progressbar" aria-label="Progress" aria-valuenow={Math.round(b.progress)} aria-valuemin={0} aria-valuemax={100}>
