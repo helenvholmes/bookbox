@@ -30,7 +30,7 @@ BookBox runs within the free tiers of [Vercel](https://vercel.com) (the app and 
 
 Your library is at `/library`. Visitors who aren't signed in get the sign-in page, or a page about BookBox if you turn that on in Settings.
 
-On iPhone, open your site in Safari, tap Share, then **Add to Home Screen**. The home screen app keeps its own sign-in, so you sign in once inside it.
+On iPhone, open your site in the browser, tap Share, then **Add to Home Screen**. The home screen app keeps its own sign-in, so you sign in once inside it.
 
 ### Environment variables
 
