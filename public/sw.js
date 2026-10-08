@@ -91,6 +91,12 @@ async function networkFirst(req, cacheName, key) {
   }
 }
 
+/** Which build of the app a page belongs to: the content-hashed scripts and styles it loads. */
+const buildOf = (html) => [...new Set(html.match(/\/_next\/static\/[^"'\s)\\]+\.(?:js|css)/g) ?? [])].sort().join(" ");
+
+/** For pages answered from the saved copy: whether the fresh copy turned out to be a newer build. */
+const versionChecks = new Map();
+
 // Read-only pages that open from the saved copy at once, then refresh (see OfflineSupport).
 // Forms are left out on purpose: they must never open with old values in their fields.
 const INSTANT = /^\/library$|^\/(people|tags|series|stats)$|^\/books\/\d+$/;
@@ -106,12 +112,19 @@ async function navigate(event) {
   if (!url.search && INSTANT.test(url.pathname)) {
     const hit = await cache.match(key);
     if (hit) {
-      // Fetch a fresh copy for next time (and for the reload after a new deploy).
-      event.waitUntil(
-        fetch(req)
-          .then((res) => (usable(res) ? cache.put(key, res) : undefined))
-          .catch(() => {}),
-      );
+      // Fetch a fresh copy for next time, and note whether it's from a newer build of the app than the
+      // saved one (its scripts and styles would then be out of date; the page asks, see "is-stale").
+      const saved = hit.clone();
+      const check = (async () => {
+        const res = await fetch(req).catch(() => null);
+        if (!usable(res)) return false;
+        const [fresh, old] = await Promise.all([res.clone().text(), saved.text()]);
+        await cache.put(key, res);
+        return buildOf(fresh) !== buildOf(old);
+      })().catch(() => false);
+      const clientId = event.resultingClientId;
+      if (clientId) versionChecks.set(clientId, check);
+      event.waitUntil(check.finally(() => setTimeout(() => versionChecks.delete(clientId), 60_000)));
       // Marked so the page knows to ask the server for current data once it's up.
       const headers = new Headers(hit.headers);
       headers.set("Server-Timing", FROM_CACHE);
@@ -137,6 +150,11 @@ self.addEventListener("message", (event) => {
   if (event.data?.type === "warm") event.waitUntil(warm(event.data.pages ?? [], event.data.assets ?? []));
   // After edits sync, re-save those pages so offline visits show the new version.
   if (event.data?.type === "refresh") event.waitUntil(refreshPages(event.data.urls ?? []));
+  // A page opened from its saved copy asks whether the app has been updated since.
+  if (event.data?.type === "is-stale" && event.ports[0]) {
+    const check = versionChecks.get(event.source?.id);
+    event.waitUntil((check ?? Promise.resolve(false)).then((stale) => event.ports[0].postMessage({ stale })));
+  }
 });
 
 async function refreshPages(urls) {

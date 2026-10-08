@@ -48,11 +48,21 @@ export function OfflineSupport() {
     const fromCache = "serverTiming" in nav ? nav.serverTiming.some((t) => t.name === "sw-cache") : true;
     if (!fromCache) return;
     try {
-      // After a deploy the refresh reloads the page; don't let that turn into a loop.
+      // A reload below lands here again; don't let that turn into a loop.
       if (Date.now() - Number(sessionStorage.getItem(REFRESHED_KEY) ?? 0) < 10_000) return;
       sessionStorage.setItem(REFRESHED_KEY, String(Date.now()));
     } catch {}
-    router.refresh();
+    // If the app has been updated since this copy was saved, its scripts and styles are out of date:
+    // reload once (the service worker has the new copy by then). Otherwise just fetch current data.
+    const channel = new MessageChannel();
+    const timeout = setTimeout(() => router.refresh(), 10_000);
+    channel.port1.onmessage = (e: MessageEvent<{ stale: boolean }>) => {
+      clearTimeout(timeout);
+      if (e.data.stale) location.reload();
+      else router.refresh();
+    };
+    navigator.serviceWorker.controller.postMessage({ type: "is-stale" }, [channel.port2]);
+    return () => clearTimeout(timeout);
   }, [router]);
 
   // Once edits land: show the server's copy, and re-save the affected pages for offline use so a
