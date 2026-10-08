@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FEATURE_REQUESTS_URL, SOURCE_URL } from "@/lib/constants";
+import { FEATURE_REQUESTS_URL, SOURCE_URL, SUPPORT_URL } from "@/lib/constants";
 import { Cover } from "./Cover";
 import { Stars } from "./Stars";
 
@@ -187,12 +187,15 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
             </a>
             .
           </span>
-          <span className="flex gap-4">
+          <span className="flex flex-wrap gap-x-4 gap-y-2 whitespace-nowrap">
             <a href={SOURCE_URL} className="hover:text-muted">
               Source code
             </a>
             <a href={FEATURE_REQUESTS_URL} className="hover:text-muted">
               Request a feature
+            </a>
+            <a href={SUPPORT_URL} className="hover:text-muted">
+              Support BookBox
             </a>
             <Link href={account.href} className="hover:text-muted">
               {account.label}
