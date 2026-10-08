@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SOURCE_URL } from "@/lib/constants";
+import { FEATURE_REQUESTS_URL, SOURCE_URL } from "@/lib/constants";
 import { Cover } from "./Cover";
 import { Stars } from "./Stars";
 
@@ -190,6 +190,9 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
           <span className="flex gap-4">
             <a href={SOURCE_URL} className="hover:text-muted">
               Source code
+            </a>
+            <a href={FEATURE_REQUESTS_URL} className="hover:text-muted">
+              Request a feature
             </a>
             <Link href={account.href} className="hover:text-muted">
               {account.label}

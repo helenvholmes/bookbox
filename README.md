@@ -108,6 +108,10 @@ DATA_DIR=/path/to/data BOOKBOX_PASSWORD=… node .next/standalone/server.js
 
 Always set `BOOKBOX_PASSWORD` on a host others can reach.
 
+## Feature requests
+
+Ideas for BookBox go in [Feature requests](https://github.com/helenvholmes/bookbox/discussions/categories/feature-requests) on GitHub Discussions. Search first, and give an existing request a 👍 rather than posting it again: the most-wanted ideas get built first. Bugs go in [issues](https://github.com/helenvholmes/bookbox/issues).
+
 ## Security
 
 - One password protects everything except share pages, which are only reachable by their unguessable links and never include private notes or spoilers. Covers are served through the app, so they're private too.

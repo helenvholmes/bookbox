@@ -1,0 +1,27 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! Please [search existing requests](https://github.com/helenvholmes/bookbox/discussions/categories/feature-requests) first. If someone has already asked for it, a 👍 there helps more than a new post.
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      description: The problem or goal, in your own words.
+      placeholder: I lose track of which books I've lent to friends.
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What happens today?
+      description: How you handle it now, or where BookBox gets in the way.
+    validations:
+      required: false
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like instead?
+      description: Your idea for how it could work. Sketches or screenshots welcome.
+    validations:
+      required: false
