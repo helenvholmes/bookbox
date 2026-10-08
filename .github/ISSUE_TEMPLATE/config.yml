@@ -1,5 +1,5 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
   - name: 💡 Request a feature
-    url: https://github.com/helenvholmes/bookbox/discussions/new?category=feature-requests
-    about: Suggest an idea or upvote existing ones in Discussions.
+    url: https://github.com/helenvholmes/bookbox/discussions/categories/feature-requests
+    about: Suggest an idea, or upvote one that's already there.
