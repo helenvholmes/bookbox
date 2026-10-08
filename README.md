@@ -1,5 +1,7 @@
 # BookBox
 
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/helenvholmes)
+
 A personal reading log you host yourself, for free. Track what you're reading, what you've read (and re-read), who recommended what, and what you thought, with book details filled in from [OpenLibrary](https://openlibrary.org). It installs to your phone's home screen, works offline, and can follow your audiobook progress on Spotify.
 
 BookBox is for one reader per copy: you deploy your own, on your own free accounts, and your library stays yours. It's built with Next.js and SQLite (a local file, or [Turso](https://turso.tech) when hosted).
