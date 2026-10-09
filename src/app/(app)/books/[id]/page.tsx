@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
+import { BorrowedNote } from "@/components/BorrowedNote";
 import { Cover } from "@/components/Cover";
 import { ExpandableText } from "@/components/ExpandableText";
 import { ProgressCard } from "@/components/ProgressCard";
@@ -185,17 +186,5 @@ function TextSection({ title, text }: { title: string; text: string }) {
       <h2 className="section-title">{title}</h2>
       <ExpandableText text={text} />
     </section>
-  );
-}
-
-function BorrowedNote({ library, due }: { library: string; due: string | null }) {
-  const today = new Date().toISOString().slice(0, 10);
-  const overdue = !!due && due < today;
-  const dueText = due ? new Date(`${due}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null;
-  return (
-    <p className={`mt-3 inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs ${overdue ? "border-danger/40 text-danger" : "border-line text-muted"}`}>
-      Borrowed{library ? ` from ${library}` : " from the library"}
-      {dueText && <span>· {overdue ? `overdue since ${dueText}` : `due ${dueText}`}</span>}
-    </p>
   );
 }
