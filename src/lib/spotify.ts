@@ -1,5 +1,6 @@
 import "server-only";
-import { addRead, getSearchEntries, saveBook, setCover, setStatus } from "./books";
+import { addRead, getSearchEntries, saveBook, setCover, setReadDates, setStatus } from "./books";
+import { todayLocal } from "./dates";
 import { fetchCover, fetchSpotifyImage, isUsableImage, saveCover } from "./covers";
 import { db, transaction } from "./db";
 import { getOpenLibraryDetails, searchOpenLibrary } from "./openlibrary";
@@ -189,8 +190,9 @@ const ALWAYS_CHECK = 5;
  *   Reading, including one already marked Read that you're listening to again.
  * - "Start or resume" means the listening position moved since the last sync. Audiobooks that
  *   were already part-listened when this first ran are only recorded, not pulled in.
+ * `today` is the device's day (YYYY-MM-DD), for the days reads start and finish; without it, the server's.
  */
-export async function syncSpotify(force = false): Promise<{ synced: boolean; changed: number[] }> {
+export async function syncSpotify(force = false, today = todayLocal()): Promise<{ synced: boolean; changed: number[] }> {
   const account = await getSpotifyAccount();
   if (!account || !(await spotifyConfigured())) return { synced: false, changed: [] };
   if (!force && account.last_synced_at && Date.now() - account.last_synced_at < SYNC_EVERY_MS) return { synced: false, changed: [] };
@@ -223,7 +225,7 @@ export async function syncSpotify(force = false): Promise<{ synced: boolean; cha
       // New to your Spotify library since the baseline, or moved since we last looked.
       const active = baselined && inProgress(p) && (!before || Math.abs(p.position - before.position_ms) >= MOVED_MS);
       if (!active) continue;
-      const bookId = await bringIn(a);
+      const bookId = await bringIn(a, today);
       if (bookId === null) continue; // another request is adding it right now
       links.push({ book_id: bookId, audiobook_id: a.id });
       progress.set(a.id, p);
@@ -251,27 +253,33 @@ export async function syncSpotify(force = false): Promise<{ synced: boolean; cha
       .run(link.book_id, p.percent, p.position, p.duration);
     if (!before || Math.abs(before.percent - p.percent) >= 0.1) changed.add(link.book_id);
     if (before && inProgress(p) && Math.abs(p.position - (before.position_ms ?? 0)) >= MOVED_MS && !(await isReading(link.book_id))) {
-      await setStatus(link.book_id, "Currently Reading");
+      await setStatus(link.book_id, "Currently Reading", today);
       changed.add(link.book_id);
     }
     // Finished (the last few minutes are usually credits, so Spotify rarely reaches exactly 100%): a book
     // you're reading moves to Read, with a read logged for this year unless one already is. Books on any
     // other shelf are left as they are.
     if (p.percent >= FINISHED_PERCENT && (await isReading(link.book_id))) {
-      await markFinished(link.book_id, link.audiobook_id);
+      await markFinished(link.book_id, link.audiobook_id, today);
       changed.add(link.book_id);
     }
   }
   return { synced: true, changed: [...changed] };
 }
 
-async function markFinished(bookId: number, audiobookId: string) {
-  const year = new Date().getFullYear();
+/** Like finishing a book on its page (changeStatus in src/lib/book-state.ts): the read is logged with its days. */
+async function markFinished(bookId: number, audiobookId: string, today: string) {
+  const year = Number(today.slice(0, 4));
   await transaction(async () => {
+    const { started_on } = (await db.prepare("SELECT started_on FROM books WHERE id = ?").get(bookId)) as { started_on: string | null };
     await setStatus(bookId, "Read");
-    const readThisYear = await db.prepare("SELECT 1 FROM book_reads WHERE book_id = ? AND year = ?").get(bookId, year);
+    const logged = (await db.prepare("SELECT id, started_on, finished_on FROM book_reads WHERE book_id = ? AND year = ? ORDER BY id DESC").get(bookId, year)) as
+      | { id: number; started_on: string | null; finished_on: string | null }
+      | undefined;
     // The client id makes a retried sync harmless (see addRead).
-    if (!readThisYear) await addRead(bookId, year, "", `spotify-${audiobookId}-${year}`);
+    if (!logged) await addRead(bookId, year, "", `spotify-${audiobookId}-${year}`, { startedOn: started_on, finishedOn: today });
+    else if (!logged.finished_on) await setReadDates({ id: logged.id }, logged.started_on ?? started_on, today);
+    await db.prepare("UPDATE books SET started_on = NULL WHERE id = ?").run(bookId);
   });
 }
 
@@ -387,11 +395,11 @@ export async function spotifyLibrary(): Promise<AudiobookRow[]> {
  * Adds one audiobook now, without waiting for the sync to notice you listening: finds or creates
  * its book, links it and moves it to Currently Reading. Returns the book's id.
  */
-export async function addAudiobook(audiobookId: string): Promise<number | null> {
+export async function addAudiobook(audiobookId: string, today = todayLocal()): Promise<number | null> {
   const account = await getSpotifyAccount();
   if (!account) return null;
   const a = await api<SpotifyAudiobook>(account, `/audiobooks/${audiobookId}?${market(account)}`);
-  return bringIn(a);
+  return bringIn(a, today);
 }
 
 /** A claim older than this was left by a request that died; it no longer blocks anyone. */
@@ -403,7 +411,7 @@ const CLAIM_EXPIRES_MS = 2 * 60 * 1000;
  * (a double tap, or a tap during a sync) only the first does the work. Returns the book's id, or
  * null when another request is already on it.
  */
-async function bringIn(a: SpotifyAudiobook): Promise<number | null> {
+async function bringIn(a: SpotifyAudiobook, today: string): Promise<number | null> {
   const linked = async () => ((await db.prepare("SELECT book_id FROM spotify_links WHERE audiobook_id = ?").get(a.id)) as { book_id: number } | undefined)?.book_id;
   const already = await linked();
   if (already) return already;
@@ -418,7 +426,7 @@ async function bringIn(a: SpotifyAudiobook): Promise<number | null> {
     if (again) return again;
     const bookId = await findOrCreateBook(a);
     await linkAudiobook(bookId, a.id, a.name);
-    await setStatus(bookId, "Currently Reading");
+    await setStatus(bookId, "Currently Reading", today);
     return bookId;
   } finally {
     await db.prepare("DELETE FROM spotify_adding WHERE audiobook_id = ?").run(a.id);

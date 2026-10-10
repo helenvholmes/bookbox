@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { todayLocal } from "@/lib/dates";
 
 const KEY = "bookbox:spotify-synced";
 const EVERY_MS = 2 * 60 * 1000;
@@ -20,7 +21,7 @@ export function SpotifySync() {
         if (Date.now() - Number(sessionStorage.getItem(KEY) ?? 0) < EVERY_MS) return;
         sessionStorage.setItem(KEY, String(Date.now()));
       } catch {}
-      const res = await fetch("/api/spotify/sync", { method: "POST" }).catch(() => null);
+      const res = await fetch("/api/spotify/sync", { method: "POST", body: JSON.stringify({ today: todayLocal() }) }).catch(() => null);
       if (!res?.ok) return;
       const { changed } = (await res.json()) as { changed: number[] };
       if (changed.length) router.refresh();

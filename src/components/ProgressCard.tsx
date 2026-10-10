@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { statusesFrom, withProgress, withReads, withStatus, type ShownProgress } from "@/lib/book-state";
+import { changeStatus, statusesFrom, withProgress, withReads, withStartedOn, withStatus, type ShownProgress } from "@/lib/book-state";
 import type { Progress, Read } from "@/lib/books";
-import { newId, submit, usePendingOps } from "@/lib/outbox";
+import { formatDay, todayLocal } from "@/lib/dates";
+import { submit, usePendingOps } from "@/lib/outbox";
 import { ago, FINISHED_PERCENT, formatDuration } from "@/lib/progress";
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
   onKindle: boolean;
   shelves: string[];
   reads: Read[];
+  startedOn: string | null;
   progress: Progress | null;
   spotify: { name: string } | null;
 };
@@ -21,35 +23,32 @@ type Props = {
 /**
  * How far through the book you are. Synced from Spotify when the book is linked to an audiobook;
  * otherwise set by hand: by page when the page count is known, or as a percentage for Kindle books
- * (which show one) and books without a page count. Shown while you're reading it, or whenever
- * there's progress to show.
+ * (which show one) and books without a page count. Shown while you're reading it, for an abandoned
+ * book (where you stopped), or whenever there's progress to show.
  */
-export function ProgressCard({ bookId, pages: pageCount, onKindle, shelves, reads, progress, spotify }: Props) {
+export function ProgressCard({ bookId, pages: pageCount, onKindle, shelves, reads, startedOn: savedStart, progress, spotify }: Props) {
   const pages = onKindle ? null : pageCount;
   const ops = usePendingOps(bookId);
   const statuses = withStatus(statusesFrom(shelves), ops);
   const saved: ShownProgress = progress && { percent: progress.percent, page: progress.page, source: progress.source, pending: false };
   const shown = withProgress(saved, ops);
+  const startedOn = withStartedOn(savedStart, ops);
   const [editing, setEditing] = useState(false);
 
   const reading = statuses.includes("Currently Reading");
-  if (!reading && !shown) return null;
+  const abandoned = statuses.includes("Abandoned");
+  if (!reading && !abandoned && !shown) return null;
 
   const fromSpotify = !!spotify && shown?.source === "spotify";
   const left = fromSpotify && progress?.duration_ms && progress.position_ms !== null ? progress.duration_ms - progress.position_ms : null;
-  const finished = !!shown && shown.percent >= FINISHED_PERCENT && !statuses.includes("Read");
-  const thisYear = new Date().getFullYear();
+  const finished = !!shown && shown.percent >= FINISHED_PERCENT && !statuses.includes("Read") && !abandoned;
 
-  const markRead = () => {
-    submit({ kind: "status", bookId, shelf: "Read" });
-    // Log the read too, unless there's already one this year.
-    if (!withReads(reads, ops).some((r) => r.year === thisYear)) submit({ kind: "addRead", bookId, clientId: newId(), year: thisYear, note: "" });
-  };
+  const markRead = () => changeStatus(bookId, "Read", { reads: withReads(reads, ops), startedOn });
 
   return (
     <section className="space-y-3">
       <h2 className="section-title">
-        Progress {fromSpotify && <span className="count">from Spotify</span>}
+        {abandoned ? "Where you stopped" : "Progress"} {fromSpotify && <span className="count">from Spotify</span>}
       </h2>
       <div className="card space-y-3 p-4">
         {shown && (
@@ -78,6 +77,8 @@ export function ProgressCard({ bookId, pages: pageCount, onKindle, shelves, read
           </div>
         )}
 
+        {reading && <StartedOn bookId={bookId} day={startedOn} />}
+
         {editing ? (
           <ProgressEditor
             pages={pages}
@@ -98,7 +99,7 @@ export function ProgressCard({ bookId, pages: pageCount, onKindle, shelves, read
         ) : (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.8125rem]">
             <button type="button" className="text-muted hover:text-ink" onClick={() => setEditing(true)}>
-              {shown ? "Update progress" : "+ Add progress"}
+              {shown ? "Update progress" : abandoned ? "+ Add where you stopped" : "+ Add progress"}
             </button>
             {!spotify && (
               <Link href="/spotify" className="text-xs text-faint hover:text-muted">
@@ -109,6 +110,36 @@ export function ProgressCard({ bookId, pages: pageCount, onKindle, shelves, read
         )}
       </div>
     </section>
+  );
+}
+
+/** "Started Oct 3", editable; or a way to set it when the start wasn't recorded. */
+function StartedOn({ bookId, day }: { bookId: number; day: string | null }) {
+  const [editing, setEditing] = useState(false);
+  if (editing) {
+    return (
+      <form
+        className="flex flex-wrap items-center gap-2 text-[0.8125rem] text-muted"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const value = String(new FormData(e.currentTarget).get("started") ?? "");
+          submit({ kind: "startedOn", bookId, date: value || null });
+          setEditing(false);
+        }}
+      >
+        Started
+        <input type="date" name="started" autoFocus defaultValue={day ?? todayLocal()} max={todayLocal()} aria-label="Started on" className="field w-40 text-sm" />
+        <button type="button" className="btn rounded-full px-3 text-xs" onClick={() => setEditing(false)}>
+          Cancel
+        </button>
+        <button className="btn btn-primary rounded-full px-3 text-xs">Save</button>
+      </form>
+    );
+  }
+  return (
+    <button type="button" className="block text-left text-xs text-faint hover:text-muted" onClick={() => setEditing(true)}>
+      {day ? `Started ${formatDay(day)}` : "+ When did you start?"}
+    </button>
   );
 }
 

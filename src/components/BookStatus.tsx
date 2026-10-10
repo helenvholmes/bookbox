@@ -1,15 +1,20 @@
 "use client";
 
-import { statusesFrom, withRating, withStatus } from "@/lib/book-state";
+import { changeStatus, statusesFrom, withRating, withReads, withStartedOn, withStatus } from "@/lib/book-state";
+import type { Read } from "@/lib/books";
 import { submit, useOutbox, usePendingOps } from "@/lib/outbox";
 import { STATUSES } from "@/lib/sync-ops";
 import { ShelfIcon, shelfLabel } from "./ShelfIcon";
 
-/** The To Read / Reading / Read / Abandoned buttons. Tapping the current status clears it. Works offline. */
-export function BookStatus({ bookId, shelves }: { bookId: number; shelves: string[] }) {
+/**
+ * The To Read / Reading / Read / Abandoned buttons. Tapping the current status clears it. Moving a
+ * book from Reading to Read logs the read with its start and finish days. Works offline.
+ */
+export function BookStatus({ bookId, shelves, reads, startedOn }: { bookId: number; shelves: string[]; reads: Read[]; startedOn: string | null }) {
   const ops = usePendingOps(bookId);
   const { state } = useOutbox();
   const current = withStatus(statusesFrom(shelves), ops);
+  const finishing = current.includes("Currently Reading") ? { reads: withReads(reads, ops), startedOn: withStartedOn(startedOn, ops) } : undefined;
 
   return (
     <div className="col-span-2 mt-6 md:col-span-1">
@@ -22,7 +27,7 @@ export function BookStatus({ bookId, shelves }: { bookId: number; shelves: strin
                 type="button"
                 aria-pressed={on}
                 aria-label={on ? `Remove from ${shelfLabel(s)}` : `Mark as ${shelfLabel(s)}`}
-                onClick={() => submit({ kind: "status", bookId, shelf: current.length === 1 && on ? null : s })}
+                onClick={() => changeStatus(bookId, current.length === 1 && on ? null : s, finishing)}
                 className={`flex h-11 w-[4.25rem] items-center justify-center rounded-lg border transition sm:w-16 ${
                   on ? "border-ink bg-ink text-paper" : "border-line text-muted hover:border-line-hover hover:text-ink"
                 }`}

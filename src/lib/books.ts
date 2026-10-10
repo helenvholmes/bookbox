@@ -56,6 +56,8 @@ export type Book = BookSummary & {
   library: string;
   due_date: string | null;
   bad_isbn: string | null;
+  /** When the read in progress began (YYYY-MM-DD). */
+  started_on: string | null;
   tags: Named[];
   recommendedFor: PersonLink[];
   recommendedBy: PersonLink[];
@@ -66,8 +68,8 @@ export type Book = BookSummary & {
   spotify: { audiobook_id: string; name: string } | null;
 };
 
-/** `clientId` is set for reads that were added offline (see src/lib/outbox.ts). */
-export type Read = { id: number; year: number; note: string; clientId: string | null };
+/** `clientId` is set for reads that were added offline (see src/lib/outbox.ts). Days are YYYY-MM-DD. */
+export type Read = { id: number; year: number; note: string; clientId: string | null; startedOn: string | null; finishedOn: string | null };
 
 export type Filters = {
   q?: string;
@@ -252,8 +254,14 @@ export async function getBook(id: number): Promise<Book | null> {
     library: (row.library as string) ?? "",
     due_date: (row.due_date as string | null) ?? null,
     bad_isbn: (row.bad_isbn as string | null) ?? null,
+    started_on: (row.started_on as string | null) ?? null,
     tags,
-    reads: (await db.prepare("SELECT id, year, note, client_id AS clientId FROM book_reads WHERE book_id = ? ORDER BY year DESC, id DESC").all(id)) as Read[],
+    reads: (await db
+      .prepare(
+        `SELECT id, year, note, client_id AS clientId, started_on AS startedOn, finished_on AS finishedOn FROM book_reads
+         WHERE book_id = ? ORDER BY year DESC, coalesce(finished_on, '') DESC, id DESC`,
+      )
+      .all(id)) as Read[],
     progress_detail:
       ((await db.prepare("SELECT percent, source, page, position_ms, duration_ms, updated_at FROM book_progress WHERE book_id = ?").get(id)) as
         | Progress
@@ -484,6 +492,7 @@ export async function updatePerson(id: number, first: string, last: string, rela
 export async function deletePerson(id: number) {
   await transaction(async () => {
     await db.prepare("DELETE FROM recommendations WHERE person_id = ?").run(id);
+    await db.prepare("DELETE FROM loans WHERE person_id = ?").run(id);
     await db.prepare("DELETE FROM share_pages WHERE person_id = ?").run(id);
     await db.prepare("DELETE FROM people WHERE id = ?").run(id);
   });
@@ -561,14 +570,26 @@ export async function getBookForCoverSearch(id: number) {
 export const STATUS = ["To Read", "Currently Reading", "Read", "Abandoned"];
 
 /** Sets the book's status shelf (To Read, Currently Reading, …), replacing any other, or clears it with null. */
-export async function setStatus(bookId: number, shelf: string | null) {
+/**
+ * Moves a book to a status shelf (or none). `date` (the device's day) starts a read when the book
+ * moves to Currently Reading; back to To Read or no status forgets the start. Read keeps it until
+ * the finished read is logged (see addRead), and Abandoned keeps it.
+ */
+export async function setStatus(bookId: number, shelf: string | null, date: string | null = null) {
   await transaction(async () => {
     await db
       .prepare(`DELETE FROM book_shelves WHERE book_id = ? AND shelf_id IN (SELECT id FROM shelves WHERE name IN (${STATUS.map(() => "?").join(",")}))`)
       .run(bookId, ...STATUS);
     if (shelf) await db.prepare("INSERT OR IGNORE INTO book_shelves (book_id, shelf_id) VALUES (?, ?)").run(bookId, await findOrCreate("shelves", shelf));
     await db.prepare("UPDATE books SET updated_at = datetime('now') WHERE id = ?").run(bookId);
+    if (shelf === "Currently Reading" && date) await db.prepare("UPDATE books SET started_on = coalesce(started_on, ?) WHERE id = ?").run(date, bookId);
+    else if (!shelf || shelf === "To Read") await db.prepare("UPDATE books SET started_on = NULL WHERE id = ?").run(bookId);
   });
+}
+
+/** Sets (or clears) when the read in progress began. */
+export async function setStartedOn(bookId: number, date: string | null) {
+  await db.prepare("UPDATE books SET started_on = ?, updated_at = datetime('now') WHERE id = ?").run(date, bookId);
 }
 
 export async function findBookByIsbn(isbn13: string) {
@@ -606,10 +627,29 @@ export async function getContextualFacets(f: Filters, all: Facets): Promise<Face
 
 // Re-reads
 
-/** Adds a read. With a `clientId`, adding the same read again does nothing. */
-export async function addRead(bookId: number, year: number, note: string, clientId: string | null = null) {
-  await db.prepare("INSERT OR IGNORE INTO book_reads (book_id, year, note, client_id) VALUES (?, ?, ?, ?)").run(bookId, year, note, clientId);
-  await db.prepare("UPDATE books SET updated_at = datetime('now') WHERE id = ?").run(bookId);
+/**
+ * Adds a read. With a `clientId`, adding the same read again does nothing. A read with a finish
+ * day completes the read in progress, so the book's start day is cleared.
+ */
+export async function addRead(
+  bookId: number,
+  year: number,
+  note: string,
+  clientId: string | null = null,
+  dates: { startedOn?: string | null; finishedOn?: string | null } = {},
+) {
+  await db
+    .prepare("INSERT OR IGNORE INTO book_reads (book_id, year, note, client_id, started_on, finished_on) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(bookId, year, note, clientId, dates.startedOn ?? null, dates.finishedOn ?? null);
+  await db.prepare(`UPDATE books SET updated_at = datetime('now')${dates.finishedOn ? ", started_on = NULL" : ""} WHERE id = ?`).run(bookId);
+}
+
+/** Sets a read's start and finish days; a finish day moves the read to that day's year. */
+export async function setReadDates(ref: { id: number } | { clientId: string }, startedOn: string | null, finishedOn: string | null) {
+  const [where, arg] = "id" in ref ? ["id = ?", ref.id] : ["client_id = ?", ref.clientId];
+  await db
+    .prepare(`UPDATE book_reads SET started_on = ?, finished_on = ?, year = coalesce(CAST(substr(?, 1, 4) AS INTEGER), year) WHERE ${where}`)
+    .run(startedOn, finishedOn, finishedOn, arg);
 }
 
 /** Removes a read by id, or by the client id it was added offline with. */

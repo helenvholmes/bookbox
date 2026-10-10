@@ -81,7 +81,7 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
         </div>
 
         {/* Full width under the title and cover on phones; beside the cover on desktop. */}
-        <BookStatus bookId={book.id} shelves={book.shelves} />
+        <BookStatus bookId={book.id} shelves={book.shelves} reads={book.reads} startedOn={book.started_on} />
       </header>
 
       <div className="mt-10 grid gap-10 border-t border-line pt-8 md:grid-cols-[minmax(0,1fr)_17rem]">
@@ -147,6 +147,7 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
             onKindle={book.on_kindle}
             shelves={book.shelves}
             reads={book.reads}
+            startedOn={book.started_on}
             progress={book.progress_detail}
             spotify={book.spotify && { name: book.spotify.name }}
           />

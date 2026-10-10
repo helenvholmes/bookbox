@@ -7,6 +7,10 @@ export async function GET() {
       `SELECT b.*,
          (SELECT group_concat(year, '; ') FROM (SELECT year FROM book_reads WHERE book_id = b.id ORDER BY year DESC, id DESC)) AS reads,
          (SELECT count(*) FROM book_reads WHERE book_id = b.id) AS times_read,
+         (SELECT group_concat(coalesce(started_on, '?') || ' to ' || coalesce(finished_on, '?'), '; ') FROM (SELECT started_on, finished_on FROM book_reads
+            WHERE book_id = b.id AND (started_on IS NOT NULL OR finished_on IS NOT NULL) ORDER BY year DESC, id DESC)) AS read_dates,
+         (SELECT trim(p.first || ' ' || p.last) || ' since ' || l.lent_on FROM loans l JOIN people p ON p.id = l.person_id
+            WHERE l.book_id = b.id AND l.returned_on IS NULL ORDER BY l.id DESC LIMIT 1) AS lent_to,
          (SELECT group_concat(s.name, '; ') FROM book_shelves bs JOIN shelves s ON s.id = bs.shelf_id WHERE bs.book_id = b.id) AS shelves,
          (SELECT group_concat(t.name, '; ') FROM book_tags bt JOIN tags t ON t.id = bt.tag_id WHERE bt.book_id = b.id) AS tags,
          (SELECT s.name FROM book_series bs JOIN series s ON s.id = bs.series_id WHERE bs.book_id = b.id) AS series,
@@ -31,6 +35,8 @@ export async function GET() {
     ["My Rating", (r) => r.rating],
     ["Years Read", (r) => r.reads],
     ["Times Read", (r) => r.times_read],
+    ["Read Dates", (r) => r.read_dates],
+    ["Started Reading", (r) => r.started_on],
     ["Bookshelves", (r) => r.shelves],
     ["Tags", (r) => r.tags],
     ["Series", (r) => r.series],
@@ -38,6 +44,7 @@ export async function GET() {
     ["Recommended By", (r) => r.recommended_by],
     ["Recommended For", (r) => r.recommended_for],
     ["Owned", (r) => yes(r.owned)],
+    ["Lent To", (r) => r.lent_to],
     ["On Kindle", (r) => yes(r.on_kindle)],
     ["Borrowed", (r) => yes(r.borrowed)],
     ["Library", (r) => r.library],

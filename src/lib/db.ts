@@ -174,6 +174,17 @@ CREATE TABLE IF NOT EXISTS spotify_seen (
 );
 
 -- Your preferences, edited on the Settings page (see src/lib/settings.ts for the keys).
+-- Your own copies lent to people. Open while returned_on is null; returned loans are kept as history.
+CREATE TABLE IF NOT EXISTS loans (
+  id          INTEGER PRIMARY KEY,
+  book_id     INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  person_id   INTEGER NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+  lent_on     TEXT NOT NULL,
+  returned_on TEXT
+);
+CREATE INDEX IF NOT EXISTS loans_book ON loans(book_id);
+CREATE INDEX IF NOT EXISTS loans_person ON loans(person_id);
+
 CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -216,6 +227,11 @@ const ADDED_COLUMNS: [table: string, column: string, definition: string][] = [
   // Set once every audiobook already in the Spotify library has a recorded position, so only
   // listening after that point pulls a book into Currently Reading.
   ["spotify_account", "baselined", "INTEGER NOT NULL DEFAULT 0"],
+  // Days as YYYY-MM-DD, on the device's calendar. A read's dates are optional (older reads only
+  // have a year); books.started_on is when the read in progress began.
+  ["books", "started_on", "TEXT"],
+  ["book_reads", "started_on", "TEXT"],
+  ["book_reads", "finished_on", "TEXT"],
 ];
 
 async function migrate(c: Client) {
@@ -356,6 +372,7 @@ const BOOK_CHILDREN = [
   "refresh_suggestions",
   "book_progress",
   "spotify_links",
+  "loans",
 ];
 
 export async function deleteBookRows(id: number) {

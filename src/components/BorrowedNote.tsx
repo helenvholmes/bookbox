@@ -1,12 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { todayLocal } from "@/lib/dates";
 
-/** Today as YYYY-MM-DD in the device's own time zone. */
-function today() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
+const today = () => todayLocal();
 
 const noSubscribe = () => () => {};
 
