@@ -101,7 +101,7 @@ export function ProgressCard({ bookId, pages: pageCount, onKindle, shelves, read
             <button type="button" className="text-muted hover:text-ink" onClick={() => setEditing(true)}>
               {shown ? "Update progress" : abandoned ? "+ Add where you stopped" : "+ Add progress"}
             </button>
-            {!spotify && (
+            {!spotify && !abandoned && (
               <Link href="/spotify" className="text-xs text-faint hover:text-muted">
                 Listening on Spotify?
               </Link>
