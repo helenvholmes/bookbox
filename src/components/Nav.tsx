@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { SOURCE_URL } from "@/lib/constants";
 import { SignOutButton } from "./SignOutButton";
 import { ShelfIcon, STATUS_SHELVES, shelfLabel } from "./ShelfIcon";
@@ -14,6 +14,7 @@ const ICONS = {
   tags: "M3 12V4.5A1.5 1.5 0 0 1 4.5 3H12l9 9-9 9-9-9Zm4.5-4.5h.01",
   series: "M5 20V5m4.5 15V5m4.5 15 3.5-14.5 3.5.9L17.5 20",
   stats: "M5 20v-8m6 8V5m6 15v-5M3 20h18",
+  calendar: "M4 6h16v14H4zM4 10h16M8 3v4m8-4v4",
   covers: "M4 5h16v14H4zM4 15l4.5-4.5 4 4 2.5-2.5L20 17",
   duplicates: "M8 8h11v11H8zM5 16V5h11",
   isbn: "M4 6v12M7 6v12M10.5 6v12M13 6v12M16.5 6v12M20 6v12",
@@ -47,11 +48,25 @@ function YearIcon({ filled }: { filled: boolean }) {
 /** `canSignOut` is false when the app has no password (running on your own computer), so there's nothing to sign out of. */
 type Props = { years: { year: number; count: number }[]; canSignOut: boolean };
 
+const noSubscribe = () => () => {};
+const deviceYear = () => new Date().getFullYear();
+
+/**
+ * The years with reads, plus this year (on the device's calendar) even before its first finished
+ * book, so a new year's view is there on January 1st without setting anything up.
+ */
+function useYears(years: Props["years"]) {
+  const thisYear = useSyncExternalStore(noSubscribe, deviceYear, () => null);
+  if (!thisYear || years.length === 0 || years.some((y) => y.year === thisYear)) return years;
+  return [{ year: thisYear, count: 0 }, ...years].sort((a, b) => b.year - a.year);
+}
+
 const item = (active: boolean) =>
   `flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[0.8125rem] transition ${active ? "bg-raised text-ink" : "text-muted hover:text-ink"}`;
 
 /** Everything in the sidebar: shown beside the page on desktop, and in the Menu drawer on phones. */
-function SidebarLinks({ years, canSignOut }: Props) {
+function SidebarLinks({ years: withReads, canSignOut }: Props) {
+  const years = useYears(withReads);
   const pathname = usePathname();
   const params = useSearchParams();
   const onLibrary = pathname === "/library";
@@ -82,6 +97,9 @@ function SidebarLinks({ years, canSignOut }: Props) {
         </Link>
         <Link href="/stats" className={item(pathname.startsWith("/stats"))}>
           <Icon d={ICONS.stats} /> Stats
+        </Link>
+        <Link href="/calendar" className={item(pathname.startsWith("/calendar"))}>
+          <Icon d={ICONS.calendar} /> Calendar
         </Link>
       </nav>
 
@@ -161,7 +179,7 @@ export function Nav({ years, canSignOut }: Props) {
 
   if (pathname === "/login") return null;
   const onLibrary = pathname === "/library";
-  const inMenu = ["/series", "/missing-covers", "/missing-isbns", "/duplicates", "/refresh", "/spotify", "/settings"].some((p) => pathname.startsWith(p));
+  const inMenu = ["/series", "/calendar", "/missing-covers", "/missing-isbns", "/duplicates", "/refresh", "/spotify", "/settings"].some((p) => pathname.startsWith(p));
 
   return (
     <>
