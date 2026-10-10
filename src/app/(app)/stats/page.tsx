@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CollectionTabs } from "@/components/CollectionTabs";
 import { GoalCard } from "@/components/GoalCard";
+import { RankList } from "@/components/RankList";
 import { Stars } from "@/components/Stars";
 import { YearChart } from "@/components/YearChart";
 import { getStats } from "@/lib/stats";
@@ -46,6 +47,19 @@ export default async function StatsPage() {
 
       <YearChart rows={s.perYear} highlight={s.year} />
 
+      <section className="space-y-3">
+        <h2 className="section-title">Year in review</h2>
+        <div className="flex flex-wrap gap-1.5">
+          {[...new Set([s.year, ...s.perYear.map((r) => r.year)])]
+            .sort((a, b) => b - a)
+            .map((y) => (
+              <Link key={y} href={`/stats/${y}`} className="chip hover:text-ink">
+                {y}
+              </Link>
+            ))}
+        </div>
+      </section>
+
       <div className="grid gap-4 md:grid-cols-2">
         <section className="card space-y-3 p-5">
           <h2 className="section-title">Your ratings</h2>
@@ -80,45 +94,5 @@ export default async function StatsPage() {
         />
       </div>
     </div>
-  );
-}
-
-function RankList({
-  title,
-  note,
-  rows,
-  empty = "Nothing here yet.",
-}: {
-  title: string;
-  note?: string;
-  rows: { key: string; label: string; value: string; href?: string }[];
-  empty?: string;
-}) {
-  return (
-    <section className="card space-y-3 p-5">
-      <div>
-        <h2 className="section-title">{title}</h2>
-        {note && <p className="text-xs text-faint">{note}</p>}
-      </div>
-      {rows.length === 0 ? (
-        <p className="text-xs text-muted">{empty}</p>
-      ) : (
-        <ol className="divide-y divide-line text-[0.8125rem]">
-          {rows.map((r, i) => (
-            <li key={r.key} className="flex items-center gap-3 py-1.5">
-              <span className="w-4 text-xs text-faint tabular-nums">{i + 1}</span>
-              {r.href ? (
-                <Link href={r.href} className="min-w-0 flex-1 truncate hover:underline">
-                  {r.label}
-                </Link>
-              ) : (
-                <span className="min-w-0 flex-1 truncate">{r.label}</span>
-              )}
-              <span className="shrink-0 text-xs text-muted tabular-nums">{r.value}</span>
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
   );
 }

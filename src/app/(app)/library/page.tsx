@@ -124,9 +124,16 @@ export default async function LibraryPage(props: PageProps<"/library">) {
       </Suspense>
 
       <section className="space-y-3">
-        <h2 className="section-title">
-          {filtered ? "Results" : "All books"} <span className="count">{books.length}</span>
-        </h2>
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="section-title">
+            {filtered ? "Results" : "All books"} <span className="count">{books.length}</span>
+          </h2>
+          {filters.year && /^\d{4}$/.test(filters.year) && (
+            <Link href={`/stats/${filters.year}`} className="text-xs text-muted hover:text-ink">
+              {filters.year} in review →
+            </Link>
+          )}
+        </div>
         {/* Keyed by the filters so a new search starts from its own first batch. */}
         <LibraryGrid
           key={query}
