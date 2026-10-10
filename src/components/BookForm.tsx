@@ -7,6 +7,7 @@ import { saveBookAction } from "@/app/(app)/books/actions";
 import type { Book } from "@/lib/books";
 import type { OLDetails } from "@/lib/openlibrary";
 import { Cover } from "./Cover";
+import { EditionCovers } from "./EditionCovers";
 import { MultiPicker, StarInput, Toggle, YearsInput, type Option } from "./inputs";
 import { OpenLibraryLookup } from "./OpenLibraryLookup";
 
@@ -93,6 +94,7 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [removeCover, setRemoveCover] = useState(false);
   const [suggestedCover, setSuggestedCover] = useState<string | null>(null);
+  const [editionsOpen, setEditionsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [lookupOpen, setLookupOpen] = useState(isNew);
@@ -268,6 +270,16 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
               <label htmlFor="cover_file" className="btn w-full cursor-pointer px-2 py-1.5 text-xs">
                 {coverPreview || hasSavedCover ? "Change" : "Add photo"}
               </label>
+              {fields.title.trim() && (
+                <button
+                  type="button"
+                  aria-expanded={editionsOpen}
+                  className="btn w-full px-2 py-1.5 text-xs"
+                  onClick={() => setEditionsOpen((o) => !o)}
+                >
+                  Other editions
+                </button>
+              )}
               {(coverPreview || hasSavedCover) && (
                 <button
                   type="button"
@@ -288,6 +300,23 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
               {text("author", "Author")}
             </div>
           </div>
+
+          {editionsOpen && (
+            <EditionCovers
+              title={fields.title}
+              author={fields.author}
+              isbn13={fields.isbn13}
+              selected={coverUrl}
+              onClose={() => setEditionsOpen(false)}
+              onPick={(url) => {
+                setCoverUrl(url);
+                setFilePreview(null);
+                if (fileRef.current) fileRef.current.value = "";
+                setRemoveCover(false);
+                setSuggestedCover(null);
+              }}
+            />
+          )}
 
           {suggestedCover && (
             <div className="flex items-center gap-3 rounded-lg bg-accent-soft p-3 text-sm">
