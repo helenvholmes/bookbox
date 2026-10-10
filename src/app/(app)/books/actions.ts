@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { deleteBook, getCoverName, saveBook, setCover, type BookInput } from "@/lib/books";
+import { deleteBook, deleteLoan, getCoverName, lendBook, returnLoan, saveBook, setCover, setOwned, type BookInput } from "@/lib/books";
+import { isDay } from "@/lib/dates";
 import { deleteCover, fetchCover, isUsableImage, saveCover } from "@/lib/covers";
 import { toIsbn13 } from "@/lib/names";
 
@@ -112,4 +113,28 @@ export async function deleteBookAction(fd: FormData) {
   await deleteCover(cover);
   revalidatePath("/", "layout");
   redirect("/library");
+}
+
+// Your copy: owned, and lent to people. `date` is the device's day.
+
+export async function setOwnedAction(bookId: number, owned: boolean) {
+  await setOwned(bookId, owned);
+  revalidatePath("/", "layout");
+}
+
+export async function lendAction(bookId: number, person: string, date: string) {
+  if (!person.trim() || !isDay(date)) return;
+  await lendBook(bookId, person.trim(), date);
+  revalidatePath("/", "layout");
+}
+
+export async function returnLoanAction(loanId: number, date: string) {
+  if (!isDay(date)) return;
+  await returnLoan(loanId, date);
+  revalidatePath("/", "layout");
+}
+
+export async function deleteLoanAction(loanId: number) {
+  await deleteLoan(loanId);
+  revalidatePath("/", "layout");
 }

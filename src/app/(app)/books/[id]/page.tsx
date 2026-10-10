@@ -9,8 +9,9 @@ import { ProgressCard } from "@/components/ProgressCard";
 import { ReadsCard } from "@/components/ReadsCard";
 import { BookStatus, RatingPicker } from "@/components/BookStatus";
 import { BookTexts } from "@/components/BookTexts";
+import { CopyCard } from "@/components/CopyCard";
 import { STATUS_SHELVES } from "@/components/ShelfIcon";
-import { getBook, type PersonLink } from "@/lib/books";
+import { getBook, getFacets, type PersonLink } from "@/lib/books";
 
 async function load(params: Promise<{ id: string }>) {
   const { id } = await params;
@@ -25,7 +26,7 @@ export async function generateMetadata(props: PageProps<"/books/[id]">): Promise
 }
 
 export default async function BookPage(props: PageProps<"/books/[id]">) {
-  const book = await load(props.params);
+  const [book, { people }] = await Promise.all([load(props.params), getFacets()]);
   const otherShelves = book.shelves.filter((s) => !(STATUS_SHELVES as readonly string[]).includes(s));
 
   const details = [
@@ -152,6 +153,7 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
             spotify={book.spotify && { name: book.spotify.name }}
           />
           <ReadsCard bookId={book.id} reads={book.reads} shelves={book.shelves} />
+          <CopyCard bookId={book.id} owned={book.owned} loans={book.loans} people={people.map((p) => ({ id: p.id, name: p.name }))} />
 
           {book.recommendedBy.length > 0 && <PeopleCard title="Recommended by" people={book.recommendedBy} />}
           {book.recommendedFor.length > 0 && <PeopleCard title="Recommend to" people={book.recommendedFor} />}

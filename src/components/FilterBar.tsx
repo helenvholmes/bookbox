@@ -142,6 +142,7 @@ export function FilterBar({ facets, sorts }: Props) {
             <option value="owned">Owned</option>
             <option value="kindle">On Kindle</option>
             <option value="borrowed">Borrowed</option>
+            <option value="lent">Lent out</option>
           </Select>
         </div>
       )}

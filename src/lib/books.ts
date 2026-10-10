@@ -63,10 +63,14 @@ export type Book = BookSummary & {
   recommendedBy: PersonLink[];
   reads: Read[];
   series: { id: number; name: string; position: number | null } | null;
+  /** Your copy lent to people: the open loan (if any) first, then past ones, newest first. */
+  loans: Loan[];
   progress_detail: Progress | null;
   /** The Spotify audiobook this book's listening progress comes from. */
   spotify: { audiobook_id: string; name: string } | null;
 };
+
+export type Loan = { id: number; person: PersonLink; lentOn: string; returnedOn: string | null };
 
 /** `clientId` is set for reads that were added offline (see src/lib/outbox.ts). Days are YYYY-MM-DD. */
 export type Read = { id: number; year: number; note: string; clientId: string | null; startedOn: string | null; finishedOn: string | null };
@@ -172,6 +176,7 @@ export async function listBooks(f: Filters): Promise<BookSummary[]> {
   if (f.owned === "owned") where.push("b.owned = 1");
   if (f.owned === "kindle") where.push("b.on_kindle = 1");
   if (f.owned === "borrowed") where.push("b.borrowed = 1");
+  if (f.owned === "lent") where.push("EXISTS (SELECT 1 FROM loans l WHERE l.book_id = b.id AND l.returned_on IS NULL)");
 
   const order =
     {
@@ -262,6 +267,7 @@ export async function getBook(id: number): Promise<Book | null> {
          WHERE book_id = ? ORDER BY year DESC, coalesce(finished_on, '') DESC, id DESC`,
       )
       .all(id)) as Read[],
+    loans: await getLoans(id),
     progress_detail:
       ((await db.prepare("SELECT percent, source, page, position_ms, duration_ms, updated_at FROM book_progress WHERE book_id = ?").get(id)) as
         | Progress
@@ -458,8 +464,60 @@ export async function getPerson(slugOrId: string) {
       .prepare(`SELECT ${summaryColumns()} FROM books b JOIN recommendations r ON r.book_id = b.id
                 WHERE r.person_id = ? AND r.kind = ? ORDER BY b.id DESC`)
       .all(person.id, kind)) as SummaryRow[]).map(toSummary);
-  const [recommendedTo, recommendedBy] = await Promise.all([books("for"), books("by")]);
-  return { person, recommendedTo, recommendedBy };
+  const [recommendedTo, recommendedBy, loans] = await Promise.all([
+    books("for"),
+    books("by"),
+    db
+      .prepare(`SELECT l.id, l.lent_on AS lentOn, l.returned_on AS returnedOn, ${summaryColumns()} FROM loans l JOIN books b ON b.id = l.book_id
+                WHERE l.person_id = ? ORDER BY l.returned_on IS NOT NULL, l.lent_on DESC, l.id DESC`)
+      .all(person.id),
+  ]);
+  const lent = (loans as (SummaryRow & { lentOn: string; returnedOn: string | null })[]).map((r) => ({ ...toSummary(r), lentOn: r.lentOn, returnedOn: r.returnedOn }));
+  return {
+    person,
+    recommendedTo,
+    recommendedBy,
+    borrowing: lent.filter((b) => !b.returnedOn),
+    // A book they've borrowed more than once shows once, at its latest loan.
+    borrowedBefore: lent.filter((b, i) => b.returnedOn && !lent.some((o, j) => j < i && o.id === b.id)),
+  };
+}
+
+// Lending your own copies
+
+export async function getLoans(bookId: number): Promise<Loan[]> {
+  const rows = (await db
+    .prepare(
+      `SELECT l.id, l.lent_on AS lentOn, l.returned_on AS returnedOn, p.id AS personId, p.slug, ${PERSON_NAME} AS name
+       FROM loans l JOIN people p ON p.id = l.person_id WHERE l.book_id = ? ORDER BY l.returned_on IS NOT NULL, l.lent_on DESC, l.id DESC`,
+    )
+    .all(bookId)) as { id: number; lentOn: string; returnedOn: string | null; personId: number; slug: string; name: string }[];
+  return rows.map((r) => ({ id: r.id, lentOn: r.lentOn, returnedOn: r.returnedOn, person: { id: r.personId, slug: r.slug, name: r.name } }));
+}
+
+/**
+ * Lends your copy to someone (a person id, or "new:Full Name" to add them), from `date`. Lending
+ * a book means you own it, so it's marked owned. Does nothing while it's already lent out.
+ */
+export async function lendBook(bookId: number, person: string, date: string) {
+  await transaction(async () => {
+    if (await db.prepare("SELECT 1 FROM loans WHERE book_id = ? AND returned_on IS NULL").get(bookId)) return;
+    const personId = await resolvePerson(person);
+    await db.prepare("INSERT INTO loans (book_id, person_id, lent_on) VALUES (?, ?, ?)").run(bookId, personId, date);
+    await db.prepare("UPDATE books SET owned = 1, updated_at = datetime('now') WHERE id = ?").run(bookId);
+  });
+}
+
+export async function returnLoan(loanId: number, date: string) {
+  await db.prepare("UPDATE loans SET returned_on = ? WHERE id = ? AND returned_on IS NULL").run(date, loanId);
+}
+
+export async function deleteLoan(loanId: number) {
+  await db.prepare("DELETE FROM loans WHERE id = ?").run(loanId);
+}
+
+export async function setOwned(bookId: number, owned: boolean) {
+  await db.prepare("UPDATE books SET owned = ?, updated_at = datetime('now') WHERE id = ?").run(owned ? 1 : 0, bookId);
 }
 
 /** "colette-shade", or "colette-shade-2" if someone else already has it. */
