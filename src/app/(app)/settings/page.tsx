@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { connection } from "next/server";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { GoodreadsImport } from "@/components/GoodreadsImport";
 import { SettingsForm } from "@/components/SettingsForm";
 import { SignOutButton } from "@/components/SignOutButton";
 import { authEnabled } from "@/lib/auth";
@@ -122,6 +123,8 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
           </div>
         </div>
       </section>
+
+      <GoodreadsImport />
 
       {authEnabled() && (
         <section className="max-w-xl space-y-3">

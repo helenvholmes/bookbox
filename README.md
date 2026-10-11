@@ -17,6 +17,7 @@ BookBox is for one reader per copy: you deploy your own, on your own free accoun
 - **People and sharing**: note who recommended a book and who it's for, and give anyone a read-only page ("Books for Sam") at an unguessable link, with its own title, message, layout, accent colour, and whether your ratings and reviews show. Private notes and spoilers are never shared.
 - **Stats**: a reading goal per year, books per year, ratings, top tags and authors, and whose recommendations you rate highest.
 - **Series**, **tags** (rename, merge, delete), **library borrowing** with due dates, and **tidy-up tools** for missing covers, missing ISBNs, duplicates and a bulk OpenLibrary refresh.
+- **Import from Goodreads**: bring in your Goodreads export (books, shelves, ratings, reviews and finish dates) from Settings. Books you already have are flagged so you choose which to add, and covers are fetched from OpenLibrary.
 - **Export** your whole library as CSV at any time.
 
 ## Deploy your own (free)
