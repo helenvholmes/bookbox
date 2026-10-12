@@ -2,9 +2,11 @@
 
 /* eslint-disable @next/next/no-img-element -- previews of local files and OpenLibrary covers */
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { saveBookAction } from "@/app/(app)/books/actions";
 import type { Book } from "@/lib/books";
+import { hasPageBefore } from "@/lib/history";
 import type { OLDetails } from "@/lib/openlibrary";
 import { Cover } from "./Cover";
 import { EditionCovers } from "./EditionCovers";
@@ -78,6 +80,11 @@ async function downscale(file: File, maxWidth = 1200): Promise<File> {
 export function BookForm({ book, options, startScanning = false }: { book?: Book; options: FormOptions; startScanning?: boolean }) {
   const isNew = !book;
   const [state, formAction, saving] = useActionState(saveBookAction, undefined);
+  const router = useRouter();
+  // Opened from another page: Save (on an edit) and Cancel step back to it, so the form doesn't stay in the history.
+  useEffect(() => {
+    if (state?.saved) router.back();
+  }, [state?.saved, router]);
   const [fields, setFields] = useState<Fields>(() => initialFields(book));
   const [rating, setRating] = useState<number | null>(book?.rating ?? null);
   const [years, setYears] = useState<number[]>(book?.years ?? []);
@@ -225,9 +232,24 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
       )}
 
       {showForm && (
-        <form action={formAction} className="space-y-6">
+        <form
+          action={(fd) => {
+            if (book && hasPageBefore()) fd.set("after", "back");
+            formAction(fd);
+          }}
+          className="space-y-6"
+        >
           <div className="sticky top-0 z-30 -mx-4 flex items-center justify-between gap-3 border-b border-line bg-paper/90 px-4 py-3 backdrop-blur-md md:top-12">
-            <Link href={book ? `/books/${book.id}` : "/"} className="text-muted">
+            <Link
+              href={book ? `/books/${book.id}` : "/"}
+              replace
+              className="text-muted"
+              onClick={(e) => {
+                if (!hasPageBefore()) return;
+                e.preventDefault();
+                router.back();
+              }}
+            >
               Cancel
             </Link>
             <span className="truncate display text-lg">{isNew ? "New book" : "Edit book"}</span>

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { createTag, deleteTag, mergeTag, renameTag } from "@/lib/books";
 
 export async function updateTagAction(fd: FormData) {
@@ -22,13 +22,13 @@ export async function mergeTagAction(fd: FormData) {
   if (!into || into === from) return;
   await mergeTag(from, into);
   revalidatePath("/", "layout");
-  redirect(`/tags/${into}`);
+  redirect(`/tags/${into}`, RedirectType.replace);
 }
 
 export async function deleteTagAction(fd: FormData) {
   await deleteTag(Number(fd.get("id")));
   revalidatePath("/", "layout");
-  redirect("/tags");
+  redirect("/tags", RedirectType.replace);
 }
 
 export type CreateTagState = { error?: string; createdAt?: number } | null;

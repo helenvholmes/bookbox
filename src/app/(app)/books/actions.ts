@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { deleteBook, deleteLoan, getCoverName, lendBook, returnLoan, saveBook, setCover, setOwned, type BookInput } from "@/lib/books";
 import { isDay } from "@/lib/dates";
 import { deleteCover, fetchCover, isUsableImage, saveCover } from "@/lib/covers";
 import { toIsbn13 } from "@/lib/names";
 
-export type SaveState = { error?: string } | undefined;
+/** `saved`: an edit was saved and the form steps back to the page it was opened from. */
+export type SaveState = { error?: string; saved?: number } | undefined;
 
 const text = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 const int = (fd: FormData, k: string) => {
@@ -103,7 +104,9 @@ export async function saveBookAction(_prev: SaveState, fd: FormData): Promise<Sa
   await applyCover(bookId, cover);
 
   revalidatePath("/", "layout");
-  redirect(`/books/${bookId}`);
+  // Leave the form out of the history, so Back goes to the page before it.
+  if (id !== null && text(fd, "after") === "back") return { saved: Date.now() };
+  redirect(`/books/${bookId}`, RedirectType.replace);
 }
 
 export async function deleteBookAction(fd: FormData) {
@@ -112,7 +115,7 @@ export async function deleteBookAction(fd: FormData) {
   await deleteBook(id);
   await deleteCover(cover);
   revalidatePath("/", "layout");
-  redirect("/library");
+  redirect("/library", RedirectType.replace);
 }
 
 // Your copy: owned, and lent to people. `date` is the device's day.

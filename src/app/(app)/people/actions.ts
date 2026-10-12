@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { createPerson, deletePerson, updatePerson } from "@/lib/books";
 
 const text = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
@@ -30,7 +30,7 @@ export async function updatePersonAction(_prev: UpdatePersonState, fd: FormData)
 export async function deletePersonAction(fd: FormData) {
   await deletePerson(Number(fd.get("id")));
   revalidatePath("/", "layout");
-  redirect("/people");
+  redirect("/people", RedirectType.replace);
 }
 
 export type ShareState = { savedAt?: number; token?: string; error?: string } | null;

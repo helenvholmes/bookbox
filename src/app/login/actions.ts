@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { checkPassword, SESSION_COOKIE, SESSION_MAX_AGE, sessionToken } from "@/lib/auth";
 import { clearFailures, lockedOutFor, recordFailure } from "@/lib/login-limit";
 
@@ -22,7 +22,7 @@ export async function loginAction(_prev: string | undefined, fd: FormData): Prom
     maxAge: SESSION_MAX_AGE,
   });
   const next = String(fd.get("next") ?? "/library");
-  redirect(next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/library");
+  redirect(next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/library", RedirectType.replace);
 }
 
 /** Signs this device out by removing its sign-in cookie. (The page clears its offline copies first; see SignOutButton.) */
