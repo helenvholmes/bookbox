@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
-import { finishGoodreadsImportAction, goodreadsCoversAction, importGoodreadsAction, previewGoodreadsAction } from "@/app/(app)/settings/actions";
+import { finishImportAction, goodreadsCoversAction, importGoodreadsAction, previewGoodreadsAction } from "@/app/(app)/settings/actions";
 import type { GoodreadsBook } from "@/lib/goodreads";
 
 const BOOK_BATCH = 25;
@@ -64,7 +64,7 @@ export function GoodreadsImport() {
       setError(`The import stopped after ${plural(added.length, "book")}. Import the file again to add the rest: the ones already added will show as in your library.`);
       setStep({ kind: "done", added: added.length, covers: 0, withoutCover: added.length });
     } finally {
-      await finishGoodreadsImportAction().catch(() => {});
+      await finishImportAction().catch(() => {});
     }
   }
 

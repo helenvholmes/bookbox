@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { GoodreadsImport } from "@/components/GoodreadsImport";
 import { HardcoverTokenForm } from "@/components/HardcoverTokenForm";
+import { LibbyImport } from "@/components/LibbyImport";
 import { SettingsForm } from "@/components/SettingsForm";
 import { SignOutButton } from "@/components/SignOutButton";
 import { authEnabled } from "@/lib/auth";
@@ -168,6 +169,8 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
       </section>
 
       <GoodreadsImport />
+
+      <LibbyImport />
 
       <section id="tidy-up" className="max-w-xl scroll-mt-8 space-y-3">
         <h2 className="section-title">Tidy up</h2>

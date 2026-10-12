@@ -18,6 +18,7 @@ BookBox is for one reader per copy: you deploy your own, on your own free accoun
 - **Stats**: a reading goal per year, books per year, ratings, top tags and authors, and whose recommendations you rate highest.
 - **Series**, **tags** (rename, merge, delete), **library borrowing** with due dates, and **tidy-up tools** for missing covers, missing ISBNs, duplicates and a bulk OpenLibrary refresh.
 - **Import from Goodreads**: bring in your Goodreads export (books, shelves, ratings, reviews and finish dates) from Settings. Books you already have are flagged so you choose which to add, and covers are fetched from OpenLibrary.
+- **Import from Libby**: bring in your Libby timeline export (books you've borrowed, returned and placed holds on) from Settings. Returned books count as read on the day you returned them, unless you mark them as not finished.
 - **Export** your whole library as CSV at any time.
 
 ## Deploy your own (free)

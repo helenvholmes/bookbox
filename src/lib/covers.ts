@@ -90,6 +90,19 @@ export async function fetchCover(url: string): Promise<Buffer | null> {
   return Buffer.from(await res.arrayBuffer());
 }
 
+/** Downloads a cover from OverDrive's image CDN (img1.od-cdn.com and the like), for books imported from Libby. */
+export async function fetchLibbyImage(url: string): Promise<Buffer | null> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "https:" || !parsed.hostname.endsWith(".od-cdn.com")) return null;
+  const res = await fetch(parsed, { redirect: "error" }).catch(() => null);
+  return res?.ok ? Buffer.from(await res.arrayBuffer()) : null;
+}
+
 /** Downloads audiobook art from Spotify's image CDN, for books added from Spotify that OpenLibrary has no cover for. */
 export async function fetchSpotifyImage(url: string): Promise<Buffer | null> {
   let parsed: URL;

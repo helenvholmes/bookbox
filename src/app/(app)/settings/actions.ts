@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { cleanGoodreadsBook, fetchImportedCovers, findMatches, importGoodreadsBooks, parseGoodreadsCsv, type GoodreadsBook } from "@/lib/goodreads";
+import { cleanLibbyBook, type LibbyBook } from "@/lib/libby";
+import { fetchLibbyCovers, importLibbyBooks } from "@/lib/libby-import";
 import { saveSettings } from "@/lib/settings";
 
 export type SettingsState = { savedAt?: number } | null;
@@ -79,6 +81,31 @@ export async function goodreadsCoversAction(books: { id: number; isbn13: string 
   return fetchImportedCovers(clean);
 }
 
-export async function finishGoodreadsImportAction() {
+export async function finishImportAction() {
   revalidatePath("/", "layout");
+}
+
+// Libby import (see src/lib/libby.ts). The browser reads the file; these check and add the books.
+
+export async function previewLibbyAction(books: unknown[]): Promise<{ books?: LibbyBook[]; error?: string }> {
+  if (!Array.isArray(books) || books.length > 20_000) return { error: "That file is too big." };
+  const clean = books.map(cleanLibbyBook).filter((b): b is LibbyBook => b !== null);
+  if (!clean.length) return { error: "There are no books in that file." };
+  return { books: await findMatches(clean) };
+}
+
+export async function importLibbyAction(books: unknown[]): Promise<{ id: number; isbn13: string | null; coverUrl: string | null }[]> {
+  const clean = (Array.isArray(books) ? books.slice(0, 50) : []).map(cleanLibbyBook).filter((b): b is LibbyBook => b !== null);
+  return importLibbyBooks(clean);
+}
+
+export async function libbyCoversAction(books: { id: number; isbn13: string | null; coverUrl: string | null }[]): Promise<number> {
+  const clean = (Array.isArray(books) ? books.slice(0, 12) : [])
+    .filter((b) => Number.isInteger(b?.id))
+    .map((b) => ({
+      id: b.id,
+      isbn13: typeof b.isbn13 === "string" && /^97[89]\d{10}$/.test(b.isbn13) ? b.isbn13 : null,
+      coverUrl: typeof b.coverUrl === "string" ? b.coverUrl.slice(0, 2000) : null,
+    }));
+  return fetchLibbyCovers(clean);
 }

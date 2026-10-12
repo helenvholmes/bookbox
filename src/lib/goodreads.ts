@@ -129,8 +129,8 @@ export function parseGoodreadsCsv(csv: string): GoodreadsBook[] | string {
     .filter((b): b is GoodreadsBook => b !== null);
 }
 
-/** Marks books that look like ones already in the library: the same ISBN, or the same title and author. */
-export async function findMatches(books: GoodreadsBook[]): Promise<GoodreadsBook[]> {
+/** Marks books that look like ones already in the library: the same ISBN, or the same title and author. Shared with the Libby import. */
+export async function findMatches<T extends { title: string; author: string; isbn13: string | null; match: { id: number; title: string } | null }>(books: T[]): Promise<T[]> {
   const existing = (await db.prepare("SELECT id, title, author, isbn13 FROM books").all()) as { id: number; title: string; author: string; isbn13: string | null }[];
   const byIsbn = new Map(existing.filter((b) => b.isbn13).map((b) => [b.isbn13!, b]));
   const byKey = new Map(existing.map((b) => [sameBookKey(b.title, b.author), b]));
