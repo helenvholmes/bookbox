@@ -31,7 +31,7 @@ export function Greeting({ name }: { name: string | null }) {
       ) : (
         <>
           Hello,{" "}
-          <Link href="/settings#name" className="underline decoration-line decoration-1 underline-offset-4 hover:decoration-ink">
+          <Link href="/settings#name" className="text-muted transition hover:text-ink">
             you
           </Link>
         </>
