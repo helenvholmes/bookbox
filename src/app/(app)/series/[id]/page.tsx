@@ -70,7 +70,7 @@ async function RestOfSeries({ seriesId, positions }: { seriesId: number; positio
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="section-title">Not in your library</h2>
         <a href={found.url} target="_blank" rel="noreferrer" className="text-xs text-faint hover:text-muted">
-          The series on Hardcover ↗
+          This series on Hardcover ↗
         </a>
       </div>
       {missing.length ? (
