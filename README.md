@@ -15,8 +15,10 @@ BookBox is for one reader per copy: you deploy your own, on your own free accoun
 - **Spotify audiobooks** (optional): when you start or resume an audiobook on Spotify, its book moves to Currently Reading (and is added if it isn't in your library yet), with your listening progress.
 - **Offline**: once opened online, the home screen app keeps working without a connection. Search, covers and the main pages stay available, and changes to status, ratings, reads, progress and notes are saved on your device and sync when you're back online.
 - **People and sharing**: note who recommended a book and who it's for, and give anyone a read-only page ("Books for Sam") at an unguessable link, with its own title, message, layout, accent colour, and whether your ratings and reviews show. Private notes and spoilers are never shared.
-- **Stats**: a reading goal per year, books per year, ratings, top tags and authors, and whose recommendations you rate highest.
-- **Series**, **tags** (rename, merge, delete), **library borrowing** with due dates, and **tidy-up tools** for missing covers, missing ISBNs, duplicates and a bulk OpenLibrary refresh.
+- **Stats**: a reading goal per year, books per year, ratings, top tags and authors, and whose recommendations you rate highest, plus a reading calendar and a year in review for every year.
+- **Series** (optional, with Hardcover): each series page lists the books in the series you don't have yet, from [Hardcover](https://hardcover.app), with a button to add one to To Read. Series Hardcover doesn't know are left off the Series page.
+- **Lending**: note who has your copy of a book and when it's due back, with a history of past loans.
+- **Tags** (rename, merge, delete), **library borrowing** with due dates, and **tidy-up tools** in Settings for missing covers, missing ISBNs, duplicates and a bulk OpenLibrary refresh.
 - **Import from Goodreads**: bring in your Goodreads export (books, shelves, ratings, reviews and finish dates) from Settings. Books you already have are flagged so you choose which to add, and covers are fetched from OpenLibrary.
 - **Import from Libby**: bring in your Libby timeline export (books you've borrowed, returned and placed holds on) from Settings. Returned books count as read on the day you returned them, unless you mark them as not finished.
 - **Export** your whole library as CSV at any time.
@@ -47,6 +49,7 @@ These are for the server: the password and the services BookBox runs on. Prefere
 | `BLOB_READ_WRITE_TOKEN` | Yes, when hosted | Cover storage (a private Vercel Blob store). Without it, covers are files in `DATA_DIR`. |
 | `BOOKBOX_SECRET` | No | Signs the sign-in cookie. Defaults to the password. |
 | `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` | No | Spotify app keys, if you'd rather set them here than in Settings; see below. |
+| `HARDCOVER_TOKEN` | No | A Hardcover API token, if you'd rather set it here than in Settings; see below. |
 | `DATA_DIR` | No | Where the local database and covers live (default `./data`). |
 
 Changing the password signs out every device.
@@ -59,9 +62,18 @@ Spotify only lets each developer app serve a handful of users, so everyone uses 
 2. On the [Spotify developer dashboard](https://developer.spotify.com/dashboard), create an app, tick **Web API**, and add that redirect URI.
 3. Paste the app's Client ID and Client secret into Settings, then tap **Connect Spotify**.
 
-BookBox only reads your saved audiobooks and listening positions; it never plays or changes anything. It checks when you open the app, at most every few minutes. The first check only records where each audiobook stands, so audiobooks you'd already started aren't all pulled in at once. Add any of them from the **Spotify** page, which lists your audiobooks and what they're linked to.
+BookBox only reads your saved audiobooks and listening positions; it never plays or changes anything. It checks when you open the app, at most every few minutes. The first check only records where each audiobook stands, so audiobooks you'd already started aren't all pulled in at once. Add any of them from the **Spotify** page (linked from Settings), which lists your audiobooks and what they're linked to.
 
 (You can set the keys as `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` on the host instead; those win over Settings.)
+
+### Hardcover (optional)
+
+Series pages can show the books in each series that you don't have yet, using [Hardcover](https://hardcover.app)'s series data.
+
+1. Sign in to Hardcover (a free account is fine) and open [Hardcover API](https://hardcover.app/account/api) in your account settings.
+2. Make a token and paste it into **Settings → Hardcover**. BookBox checks it with Hardcover before saving it.
+
+Each series is looked up once and remembered; the Series page checks a few new ones per visit to stay within Hardcover's rate limits. Hardcover tokens expire, so make a new one if series pages say it was refused. (You can set the token as `HARDCOVER_TOKEN` on the host instead; that wins over Settings.)
 
 ## Running it on your computer
 

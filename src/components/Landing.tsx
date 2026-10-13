@@ -43,6 +43,12 @@ const FEATURES: { title: string; body: string; d: string }[] = [
     d: "M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M8 9v6M11 9v6M14 9v6M17 9v6",
   },
   {
+    title: "Bring your library with you.",
+    body: "Import your Goodreads export or your Libby timeline: shelves, ratings, reviews, and the dates you finished. Nothing to retype.",
+    // An arrow down into a tray.
+    d: "M12 4v11m0 0-4-4m4 4 4-4M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4",
+  },
+  {
     title: "Search as you type.",
     body: "Titles, authors, series, tags, and your own reviews. Accents don’t matter and typos are forgiven: “kill crek” becomes Kill Creek.",
     d: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm9 2-3.5-3.5",
@@ -64,8 +70,20 @@ const FEATURES: { title: string; body: string; d: string }[] = [
   },
   {
     title: "Re-reads, goals, and stats.",
-    body: "Every read is logged, so re-reads count. Set a yearly goal and see years, ratings, favorite authors, and whose recommendations land.",
+    body: "Every read is logged with its dates, so re-reads count. Set a yearly goal, browse your reading calendar, and look back on any year in review.",
     d: "M5 20v-8m6 8V5m6 15v-5M3 20h18",
+  },
+  {
+    title: "Finish the series.",
+    body: "See the books you’re missing from each series, from Hardcover, and add the next one to To Read in a click.",
+    // Spines on a shelf, one leaning.
+    d: "M5 20V5m4.5 15V5m4.5 15 3.5-14.5 3.5.9L17.5 20",
+  },
+  {
+    title: "Lend your copies.",
+    body: "Keep track of who has your books and when they’re due back, with every past loan.",
+    // Two arrows passing a book back and forth.
+    d: "M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3-3m-3 3 3 3",
   },
 ];
 
@@ -107,7 +125,7 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
                 View the code
               </a>
             </div>
-            <p className="text-xs text-faint">Takes about ten minutes to set up. Costs nothing to run.</p>
+            <p className="text-xs text-faint">Takes about ten minutes to set up. Costs nothing to run. Spotify and Hardcover are optional extras.</p>
           </div>
 
           <LibraryPreview />
@@ -149,7 +167,7 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
               {[
                 ["Fork it", "Copy the code to your GitHub account."],
                 ["Deploy it", "Connect it to Vercel with a free database and cover storage, then set a password."],
-                ["Add your books", "Search, scan, or import, and open it on your phone."],
+                ["Add your books", "Search, scan, or import from Goodreads or Libby, then open it on your phone."],
               ].map(([t, b], i) => (
                 <li key={t} className="flex gap-4">
                   <span className="display flex size-9 shrink-0 items-center justify-center rounded-full border border-line text-muted">{i + 1}</span>
