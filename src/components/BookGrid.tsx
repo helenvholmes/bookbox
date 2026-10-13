@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { BookSummary } from "@/lib/books";
 import { ClampedTitle } from "./ClampedTitle";
 import { Cover } from "./Cover";
@@ -11,7 +12,7 @@ export function BookGrid({
   caption,
 }: {
   books: BookSummary[];
-  empty?: string;
+  empty?: ReactNode;
   /** An extra small line above the title, e.g. "Book 3". */
   caption?: (b: BookSummary) => string | null;
 }) {

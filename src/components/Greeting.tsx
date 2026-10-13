@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSyncExternalStore } from "react";
 
 /** 1st, 2nd, 3rd, 4th … 11th, 12th, 13th … 21st, 22nd, 23rd … 31st */
@@ -25,7 +26,16 @@ export function Greeting({ name }: { name: string | null }) {
   const date = useSyncExternalStore(noSubscribe, today, () => null);
   return (
     <h1 className="display text-[2.125rem] leading-[1.1] sm:text-4xl">
-      {name ? `Hello, ${name}` : "Hello"}
+      {name ? (
+        `Hello, ${name}`
+      ) : (
+        <>
+          Hello,{" "}
+          <Link href="/settings#name" className="underline decoration-line decoration-1 underline-offset-4 hover:decoration-ink">
+            you
+          </Link>
+        </>
+      )}
       <span className="block text-faint">{date ?? " "}</span>
     </h1>
   );

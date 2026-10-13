@@ -13,7 +13,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
 
   return (
     <form action={action} className="max-w-xl space-y-6">
-      <section className="card space-y-3 p-5">
+      <section id="name" className="card scroll-mt-8 space-y-3 p-5">
         <label className="block space-y-1.5">
           <span className="text-sm font-medium">Your name</span>
           <input
@@ -27,8 +27,8 @@ export function SettingsForm({ settings }: { settings: Settings }) {
           />
         </label>
         <p className="text-xs text-muted">
-          Shown as &ldquo;{shown ? `Hello, ${shown}` : "Hello"}&rdquo; in your library, and &ldquo;{shown ? `A reading list from ${shown}` : "A reading list"}
-          &rdquo; on the pages you share. Leave it empty for neither.
+          Shown as &ldquo;{shown ? `Hello, ${shown}` : "Hello, you"}&rdquo; in your library, and &ldquo;{shown ? `A reading list from ${shown}` : "A reading list"}
+          &rdquo; on the pages you share. Leave it empty for neutral wording.
         </p>
       </section>
 

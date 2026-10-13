@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import type { BookSummary } from "@/lib/books";
 import { BookGrid } from "./BookGrid";
 
@@ -18,7 +18,7 @@ type Props = {
   total: number;
   /** The page's filters as a query string, passed on to /api/books. */
   query: string;
-  empty: string;
+  empty: ReactNode;
 };
 
 /** The library grid: the first batch straight away, the rest as you scroll towards the end. */

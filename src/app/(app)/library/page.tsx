@@ -140,7 +140,18 @@ export default async function LibraryPage(props: PageProps<"/library">) {
           initial={books.slice(0, FIRST_BATCH)}
           total={books.length}
           query={query}
-          empty={filtered ? "No books match these filters." : "No books yet. Add your first one!"}
+          empty={
+            filtered ? (
+              "No books match these filters."
+            ) : (
+              <>
+                No books yet. Import from{" "}
+                <Link href="/settings#libby" className="underline hover:text-ink">Libby</Link> or{" "}
+                <Link href="/settings#goodreads" className="underline hover:text-ink">Goodreads</Link>, or{" "}
+                <Link href="/books/new" className="underline hover:text-ink">add a new book</Link>.
+              </>
+            )
+          }
         />
       </section>
     </div>
