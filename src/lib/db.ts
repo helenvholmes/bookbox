@@ -219,7 +219,7 @@ const ADDED_COLUMNS: [table: string, column: string, definition: string][] = [
   ["books", "ol_checked_at", "TEXT"], // last bulk OpenLibrary refresh
   ["books", "author_original", "TEXT NOT NULL DEFAULT ''"], // the author's name in its original script (村上春樹)
   ["people", "slug", "TEXT"], // "colette-shade", for /people/colette-shade
-  // This series on Hardcover, once looked up: its id, or null with hardcover_checked_at set when Hardcover doesn't have it.
+  // The series on Hardcover, once looked up: its id, or null with hardcover_checked_at set when Hardcover doesn't have it.
   ["series", "hardcover_id", "INTEGER"],
   ["series", "hardcover_checked_at", "TEXT"],
   // Share pages list the books for someone, then (when on) the books they recommended to you.
