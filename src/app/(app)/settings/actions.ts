@@ -35,6 +35,30 @@ export async function removeSpotifyKeysAction() {
   revalidatePath("/", "layout");
 }
 
+export type HardcoverTokenState = { error?: string } | null;
+
+/** Saves the Hardcover API token from Settings, after checking Hardcover takes it. */
+export async function saveHardcoverTokenAction(_prev: HardcoverTokenState, fd: FormData): Promise<HardcoverTokenState> {
+  const { hardcoverSeries, saveHardcoverToken, HardcoverError } = await import("@/lib/hardcover");
+  const token = String(fd.get("token") ?? "").trim();
+  if (token.length < 20 || /\s/.test(token.replace(/^bearer /i, ""))) return { error: "That doesn’t look like a Hardcover token. Copy it from hardcover.app/account/api." };
+  await saveHardcoverToken(token);
+  try {
+    await hardcoverSeries("Harry Potter", []);
+  } catch (e) {
+    await saveHardcoverToken(null);
+    return { error: e instanceof HardcoverError ? e.message : "Couldn’t reach Hardcover to check the token. Try again in a minute." };
+  }
+  revalidatePath("/", "layout");
+  return null;
+}
+
+export async function removeHardcoverTokenAction() {
+  const { saveHardcoverToken } = await import("@/lib/hardcover");
+  await saveHardcoverToken(null);
+  revalidatePath("/", "layout");
+}
+
 // Goodreads import (see src/lib/goodreads.ts). The browser drives it a batch at a time.
 
 export async function previewGoodreadsAction(csv: string): Promise<{ books?: GoodreadsBook[]; error?: string }> {

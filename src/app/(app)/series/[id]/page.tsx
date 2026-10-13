@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { BookGrid } from "@/components/BookGrid";
+import { SeriesSuggestions } from "@/components/SeriesSuggestions";
 import { getSeries } from "@/lib/books";
+import { HardcoverError, hardcoverSeries, hardcoverToken, missingFromLibrary } from "@/lib/hardcover";
 import { renameSeriesAction } from "../actions";
 
 export default async function SeriesDetailPage(props: PageProps<"/series/[id]">) {
@@ -32,6 +35,49 @@ export default async function SeriesDetailPage(props: PageProps<"/series/[id]">)
         </form>
       </details>
       <BookGrid books={books} caption={(b) => (position.get(b.id) != null ? `Book ${position.get(b.id)}` : null)} />
+      <Suspense fallback={<p className="text-sm text-muted">Looking up the rest of the series on Hardcover…</p>}>
+        <RestOfSeries seriesId={series.id} name={series.name} authors={books.map((b) => b.author)} positions={books.map((b) => b.position)} />
+      </Suspense>
     </div>
+  );
+}
+
+/** The books in the series you don't have yet, from Hardcover. Streams in after the page so a slow lookup doesn't hold it up. */
+async function RestOfSeries({ seriesId, name, authors, positions }: { seriesId: number; name: string; authors: string[]; positions: (number | null)[] }) {
+  if (!(await hardcoverToken())) {
+    return (
+      <p className="text-sm text-muted">
+        To see the books in this series you don&rsquo;t have yet,{" "}
+        <Link href="/settings#hardcover" className="text-ink underline">
+          add a Hardcover token in Settings
+        </Link>
+        .
+      </p>
+    );
+  }
+
+  let found: Awaited<ReturnType<typeof hardcoverSeries>>;
+  try {
+    found = await hardcoverSeries(name, authors);
+  } catch (e) {
+    return <p className="text-sm text-danger">{e instanceof HardcoverError ? e.message : "Couldn’t reach Hardcover just now."}</p>;
+  }
+  if (!found) return <p className="text-sm text-muted">Hardcover doesn&rsquo;t have this series.</p>;
+  const missing = await missingFromLibrary(found.books, positions);
+
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="section-title">Not in your library</h2>
+        <a href={found.url} target="_blank" rel="noreferrer" className="text-xs text-faint hover:text-muted">
+          The series on Hardcover ↗
+        </a>
+      </div>
+      {missing.length ? (
+        <SeriesSuggestions seriesId={seriesId} books={missing} />
+      ) : (
+        <p className="text-sm text-muted">You have every book in the series.</p>
+      )}
+    </section>
   );
 }

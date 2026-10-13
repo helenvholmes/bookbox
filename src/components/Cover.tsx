@@ -26,7 +26,7 @@ export function Cover({
     return (
       // A fixed 2:3 frame the cover fills (see CoverImage for how odd shapes fit).
       <div className={`aspect-[2/3] w-full overflow-hidden ${rounding} ${className}`}>
-        <CoverImage src={`${srcBase}/${cover}`} eager={eager} alwaysFill={bleed} />
+        <CoverImage src={/^https:/.test(cover) ? cover : `${srcBase}/${cover}`} eager={eager} alwaysFill={bleed} />
       </div>
     );
   }

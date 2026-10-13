@@ -10,8 +10,8 @@ export default async function MissingIsbnsPage() {
 
   return (
     <div className="space-y-6 pb-6">
-      <Link href="/library" className="block w-fit text-muted hover:text-ink">
-        ‹ Library
+      <Link href="/settings#tidy-up" className="block w-fit text-muted hover:text-ink">
+        ‹ Settings
       </Link>
       <header>
         <h1 className="display text-3xl">Missing ISBNs</h1>

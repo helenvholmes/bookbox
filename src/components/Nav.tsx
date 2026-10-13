@@ -15,18 +15,15 @@ const ICONS = {
   series: "M5 20V5m4.5 15V5m4.5 15 3.5-14.5 3.5.9L17.5 20",
   stats: "M5 20v-8m6 8V5m6 15v-5M3 20h18",
   calendar: "M4 6h16v14H4zM4 10h16M8 3v4m8-4v4",
-  covers: "M4 5h16v14H4zM4 15l4.5-4.5 4 4 2.5-2.5L20 17",
-  duplicates: "M8 8h11v11H8zM5 16V5h11",
-  isbn: "M4 6v12M7 6v12M10.5 6v12M13 6v12M16.5 6v12M20 6v12",
-  refresh: "M20 11a8 8 0 0 0-14.5-4.5L4 8m0-4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16m0 4v-4h-4",
-  // Headphones: listening progress from Spotify.
-  spotify: "M4 15v-3a8 8 0 0 1 16 0v3M4 15a2 2 0 0 1 2-2h1v7H6a2 2 0 0 1-2-2zm16 0a2 2 0 0 0-2-2h-1v7h1a2 2 0 0 0 2-2z",
   export: "M12 4v11m0 0-4-4m4 4 4-4M5 19h14",
   menu: "M4 7h16M4 12h16M4 17h10",
   signOut: "M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11",
   // Sliders.
   settings: "M4 7h9m4 0h3M4 17h3m4 0h9M15 5v4M9 15v4",
 };
+
+/** Settings and the pages reached from it, which highlight Settings in the sidebar. */
+const SETTINGS_PAGES = ["/settings", "/spotify", "/missing-covers", "/missing-isbns", "/duplicates", "/refresh"];
 
 function Icon({ d, className = "size-4" }: { d: string; className?: string }) {
   return (
@@ -126,26 +123,10 @@ function SidebarLinks({ years: withReads, canSignOut }: Props) {
       )}
 
       <div className="mt-auto space-y-0.5">
-        <p className="px-2.5 pb-1 text-xs text-faint">Tidy up</p>
-        <Link href="/missing-covers" className={item(pathname === "/missing-covers")}>
-          <Icon d={ICONS.covers} /> Missing covers
-        </Link>
-        <Link href="/missing-isbns" className={item(pathname === "/missing-isbns")}>
-          <Icon d={ICONS.isbn} /> Missing ISBNs
-        </Link>
-        <Link href="/duplicates" className={item(pathname === "/duplicates")}>
-          <Icon d={ICONS.duplicates} /> Duplicates
-        </Link>
-        <Link href="/refresh" className={item(pathname === "/refresh")}>
-          <Icon d={ICONS.refresh} /> OpenLibrary refresh
-        </Link>
-        <Link href="/spotify" className={item(pathname === "/spotify")}>
-          <Icon d={ICONS.spotify} /> Spotify
-        </Link>
         <a href="/export/books.csv" download className={item(false)}>
           <Icon d={ICONS.export} /> Export CSV
         </a>
-        <Link href="/settings" className={item(pathname === "/settings")}>
+        <Link href="/settings" className={item(SETTINGS_PAGES.includes(pathname))}>
           <Icon d={ICONS.settings} /> Settings
         </Link>
         {canSignOut && (

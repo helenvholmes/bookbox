@@ -3,17 +3,26 @@ import { headers } from "next/headers";
 import { connection } from "next/server";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { GoodreadsImport } from "@/components/GoodreadsImport";
+import { HardcoverTokenForm } from "@/components/HardcoverTokenForm";
 import { SettingsForm } from "@/components/SettingsForm";
 import { SignOutButton } from "@/components/SignOutButton";
 import { authEnabled } from "@/lib/auth";
 import { SpotifyKeysForm } from "@/components/SpotifyKeysForm";
 import { SubmitButton } from "@/components/SubmitButton";
+import { hardcoverToken } from "@/lib/hardcover";
 import { getSettings } from "@/lib/settings";
 import { callbackUrl, getSpotifyAccount, spotifyCredentials } from "@/lib/spotify";
 import { disconnectAction, syncNowAction } from "../spotify/actions";
-import { removeSpotifyKeysAction } from "./actions";
+import { removeHardcoverTokenAction, removeSpotifyKeysAction } from "./actions";
 
 export const metadata = { title: "Settings" };
+
+const TIDY_UP = [
+  { href: "/missing-covers", title: "Missing covers", text: "Books without a cover, with ISBN matches first." },
+  { href: "/missing-isbns", title: "Missing ISBNs", text: "Books without an ISBN, which OpenLibrary needs to look them up." },
+  { href: "/duplicates", title: "Duplicates", text: "Books that share an ISBN or title." },
+  { href: "/refresh", title: "OpenLibrary refresh", text: "Fills empty details from OpenLibrary and lists differences to review." },
+];
 
 const SPOTIFY_MESSAGES: Record<string, { text: string; error?: boolean }> = {
   connected: { text: "Spotify is connected. Your audiobooks are on the Spotify page." },
@@ -26,7 +35,7 @@ const SPOTIFY_MESSAGES: Record<string, { text: string; error?: boolean }> = {
 export default async function SettingsPage(props: PageProps<"/settings">) {
   await connection();
   const sp = await props.searchParams;
-  const [settings, keys, account] = await Promise.all([getSettings(), spotifyCredentials(), getSpotifyAccount()]);
+  const [settings, keys, account, hardcover] = await Promise.all([getSettings(), spotifyCredentials(), getSpotifyAccount(), hardcoverToken()]);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
   const message = typeof sp.spotify === "string" ? SPOTIFY_MESSAGES[sp.spotify] : undefined;
@@ -124,7 +133,58 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
         </div>
       </section>
 
+      <section id="hardcover" className="max-w-xl scroll-mt-8 space-y-3">
+        <h2 className="section-title">Hardcover</h2>
+        <p className="text-sm text-muted">
+          Shows the books in each of your series that you don&rsquo;t have yet, on its series page, ready to add to To Read.
+        </p>
+        <div className="card space-y-4 p-5 text-sm">
+          {hardcover?.from === "environment" ? (
+            <p className="text-muted">Set on the host (HARDCOVER_TOKEN), so there&rsquo;s nothing to enter here.</p>
+          ) : (
+            <>
+              {hardcover ? (
+                <p className="text-muted">Saved. The token isn&rsquo;t shown again; paste a new one to replace it.</p>
+              ) : (
+                <p className="text-muted">
+                  Sign in to Hardcover (a free account is fine), open{" "}
+                  <a href="https://hardcover.app/account/api" target="_blank" rel="noreferrer" className="text-ink underline">
+                    Hardcover API
+                  </a>{" "}
+                  in your account settings, make a token, and paste it here.
+                </p>
+              )}
+              <HardcoverTokenForm replacing={!!hardcover} />
+              {hardcover && (
+                <form action={removeHardcoverTokenAction}>
+                  <ConfirmButton className="text-xs text-faint hover:text-danger" message="Remove the Hardcover token?" confirmLabel="Remove">
+                    Remove token
+                  </ConfirmButton>
+                </form>
+              )}
+            </>
+          )}
+        </div>
+      </section>
+
       <GoodreadsImport />
+
+      <section id="tidy-up" className="max-w-xl scroll-mt-8 space-y-3">
+        <h2 className="section-title">Tidy up</h2>
+        <div className="card divide-y divide-line">
+          {TIDY_UP.map((t) => (
+            <Link key={t.href} href={t.href} className="flex items-center justify-between gap-4 p-4 hover:bg-raised">
+              <span>
+                <span className="block text-sm font-medium">{t.title}</span>
+                <span className="block text-sm text-muted">{t.text}</span>
+              </span>
+              <span aria-hidden className="text-faint">
+                ›
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {authEnabled() && (
         <section className="max-w-xl space-y-3">
