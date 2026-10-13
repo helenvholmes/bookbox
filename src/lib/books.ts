@@ -758,20 +758,28 @@ export async function setBookSeries(bookId: number, name: string, position: numb
   await db.exec("DELETE FROM series WHERE id NOT IN (SELECT series_id FROM book_series)");
 }
 
-export type SeriesSummary = { id: number; name: string; count: number; read: number; covers: (string | null)[] };
+export type SeriesSummary = {
+  id: number;
+  name: string;
+  count: number;
+  read: number;
+  covers: (string | null)[];
+  /** Looked up on Hardcover and not found there. */
+  notOnHardcover: boolean;
+};
 
 export async function listSeries(): Promise<SeriesSummary[]> {
   await connection();
   const rows = (await db
     .prepare(
-      `SELECT s.id, s.name, count(bs.book_id) AS count,
+      `SELECT s.id, s.name, count(bs.book_id) AS count, s.hardcover_checked_at IS NOT NULL AND s.hardcover_id IS NULL AS notOnHardcover,
          sum(EXISTS (SELECT 1 FROM book_reads r WHERE r.book_id = bs.book_id)) AS read,
          (SELECT group_concat(coalesce(cover, ''), '|') FROM (SELECT b.cover FROM book_series x JOIN books b ON b.id = x.book_id
             WHERE x.series_id = s.id ORDER BY x.position IS NULL, x.position, b.title LIMIT 4)) AS covers
        FROM series s JOIN book_series bs ON bs.series_id = s.id GROUP BY s.id ORDER BY s.name COLLATE NOCASE`,
     )
-    .all()) as (Omit<SeriesSummary, "covers"> & { covers: string | null })[];
-  return rows.map((r) => ({ ...r, covers: (r.covers ?? "").split("|").map((c) => c || null) }));
+    .all()) as (Omit<SeriesSummary, "covers" | "notOnHardcover"> & { covers: string | null; notOnHardcover: number })[];
+  return rows.map((r) => ({ ...r, covers: (r.covers ?? "").split("|").map((c) => c || null), notOnHardcover: !!r.notOnHardcover }));
 }
 
 export async function getSeries(id: number) {
@@ -790,7 +798,8 @@ export async function getSeries(id: number) {
 }
 
 export async function renameSeries(id: number, name: string) {
-  (await db.prepare("UPDATE series SET name = ? WHERE id = ?").run(name, id));
+  // A new name may be a different series on Hardcover: look it up again.
+  (await db.prepare("UPDATE series SET name = ?, hardcover_id = NULL, hardcover_checked_at = NULL WHERE id = ?").run(name, id));
 }
 
 /** "A Conjuring of Light (Shades of Magic, #3)" -> { name: "Shades of Magic", position: 3 } */

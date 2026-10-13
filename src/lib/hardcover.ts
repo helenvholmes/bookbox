@@ -59,9 +59,13 @@ export type SeriesEntry = {
   url: string;
 };
 
-type Hit = { document: { id: string | number; name: string; author_name?: string | null } };
+type Hit = { document: { id: string | number; name: string; author_name?: string | null; books_count?: number } };
+type BookHit = {
+  document: { title: string; author_names?: string[]; featured_series?: { series?: { id: number; books_count?: number } | null } | null };
+};
 
 const SEARCH = `query ($q: String!) { search(query: $q, query_type: "Series", per_page: 10, page: 1) { results } }`;
+const BOOK_SEARCH = `query ($q: String!) { search(query: $q, query_type: "Book", per_page: 5, page: 1) { results } }`;
 
 // One book per position, most popular first, without merged duplicates, partial books or box sets
 // (https://docs.hardcover.app/api/guides/gettingbooksinseries/).
@@ -105,22 +109,88 @@ type BooksData = {
 
 const lastName = (name: string) => fold(name).split(" ").pop() ?? "";
 
+/** Series names compared loosely: "Monk & Robot" is "Monk and Robot". */
+const seriesKey = (name: string) => fold(name.replace(/&/g, " and "));
+
 /**
- * The whole series on Hardcover for one of yours: the hit with the same name and an author you have
- * in it, falling back to any hit by one of those authors. Null when Hardcover has nothing that fits,
- * rather than a guess at a different series.
+ * Finds a series on Hardcover: the hit with the same name and an author you have in it, falling
+ * back to any hit by one of those authors. Hardcover's empty placeholder series are skipped.
+ * When the name finds nothing ("Off Campus" is "Off-Campus" there), one of your books in the series
+ * is looked up instead and its series used. Null when nothing fits, rather than a guess at a
+ * different series.
  */
-export async function hardcoverSeries(name: string, authors: string[]): Promise<{ url: string; books: SeriesEntry[] } | null> {
+async function searchSeries(token: string, name: string, authors: string[], title: string | null): Promise<number | null> {
+  const surnames = new Set(authors.map(lastName).filter(Boolean));
+  const byAuthor = (names: string) => !surnames.size || fold(names).split(" ").some((w) => surnames.has(w));
+
+  const { search } = await query<{ search: { results: { hits?: Hit[] } | null } }>(token, SEARCH, { q: name });
+  const hits = (search.results?.hits ?? []).filter((h) => h.document.books_count !== 0 && byAuthor(h.document.author_name ?? ""));
+  const hit = hits.find((h) => seriesKey(h.document.name) === seriesKey(name)) ?? hits[0];
+  if (hit) return Number(hit.document.id);
+  if (!title) return null;
+
+  const books = await query<{ search: { results: { hits?: BookHit[] } | null } }>(token, BOOK_SEARCH, { q: `${title.split(/[:(\[]/)[0].trim()} ${authors[0] ?? ""}` });
+  const book = (books.search.results?.hits ?? []).find(
+    (h) => baseTitle(h.document.title) === baseTitle(title) && byAuthor((h.document.author_names ?? []).join(" ")),
+  );
+  const series = book?.document.featured_series?.series;
+  return series && series.books_count !== 0 ? series.id : null;
+}
+
+/** Checks a token works with one search, throwing HardcoverError when it doesn't. */
+export async function checkHardcoverToken(token: string) {
+  await query(token, SEARCH, { q: "Harry Potter" });
+}
+
+type Unchecked = { id: number; name: string; authors: string | null; title: string | null };
+
+const seriesAuthors = (r: Unchecked) => (r.authors ?? "").split("|").filter(Boolean);
+
+async function lookUp(token: string, r: Unchecked): Promise<number | null> {
+  const id = await searchSeries(token, r.name, seriesAuthors(r), r.title);
+  await db.prepare("UPDATE series SET hardcover_id = ?, hardcover_checked_at = datetime('now') WHERE id = ?").run(id, r.id);
+  return id;
+}
+
+const UNCHECKED = `SELECT s.id, s.name,
+    (SELECT group_concat(b.author, '|') FROM book_series x JOIN books b ON b.id = x.book_id WHERE x.series_id = s.id) AS authors,
+    (SELECT b.title FROM book_series x JOIN books b ON b.id = x.book_id WHERE x.series_id = s.id ORDER BY x.position IS NULL, x.position LIMIT 1) AS title
+  FROM series s WHERE s.hardcover_checked_at IS NULL`;
+
+/**
+ * Looks up series that haven't been checked on Hardcover yet, a few at a time so a visit stays
+ * within Hardcover's burst limit (10 requests; each series takes one or two). Stops quietly on any
+ * error; the next visit carries on.
+ */
+export async function checkSeriesOnHardcover(limit = 4) {
+  const auth = await hardcoverToken();
+  if (!auth) return;
+  const rows = (await db.prepare(`${UNCHECKED} ORDER BY s.name COLLATE NOCASE LIMIT ?`).all(limit)) as Unchecked[];
+  for (const r of rows) {
+    try {
+      await lookUp(auth.token, r);
+    } catch {
+      return;
+    }
+  }
+}
+
+/** The whole series on Hardcover for one of yours, looked up once and remembered. Null when Hardcover doesn't have it. */
+export async function hardcoverSeries(seriesId: number): Promise<{ url: string; books: SeriesEntry[] } | null> {
   const auth = await hardcoverToken();
   if (!auth) return null;
-  const { search } = await query<{ search: { results: { hits?: Hit[] } | null } }>(auth.token, SEARCH, { q: name });
-  const surnames = new Set(authors.map(lastName).filter(Boolean));
-  const byAuthor = (h: Hit) => !surnames.size || fold(h.document.author_name ?? "").split(" ").some((w) => surnames.has(w));
-  const hits = search.results?.hits ?? [];
-  const hit = hits.find((h) => fold(h.document.name) === fold(name) && byAuthor(h)) ?? hits.find(byAuthor);
-  if (!hit) return null;
+  const row = (await db.prepare("SELECT hardcover_id, hardcover_checked_at FROM series WHERE id = ?").get(seriesId)) as
+    | { hardcover_id: number | null; hardcover_checked_at: string | null }
+    | undefined;
+  if (!row) return null;
+  let id = row.hardcover_id;
+  if (!row.hardcover_checked_at) {
+    const r = (await db.prepare(`${UNCHECKED} AND s.id = ?`).get(seriesId)) as Unchecked | undefined;
+    id = r ? await lookUp(auth.token, r) : null;
+  }
+  if (id == null) return null;
 
-  const { series_by_pk: series } = await query<BooksData>(auth.token, BOOKS, { id: Number(hit.document.id) });
+  const { series_by_pk: series } = await query<BooksData>(auth.token, BOOKS, { id });
   if (!series) return null;
   return {
     url: `https://hardcover.app/series/${series.slug}`,

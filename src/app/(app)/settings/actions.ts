@@ -41,16 +41,15 @@ export type HardcoverTokenState = { error?: string } | null;
 
 /** Saves the Hardcover API token from Settings, after checking Hardcover takes it. */
 export async function saveHardcoverTokenAction(_prev: HardcoverTokenState, fd: FormData): Promise<HardcoverTokenState> {
-  const { hardcoverSeries, saveHardcoverToken, HardcoverError } = await import("@/lib/hardcover");
+  const { checkHardcoverToken, saveHardcoverToken, HardcoverError } = await import("@/lib/hardcover");
   const token = String(fd.get("token") ?? "").trim();
   if (token.length < 20 || /\s/.test(token.replace(/^bearer /i, ""))) return { error: "That doesn’t look like a Hardcover token. Copy it from hardcover.app/account/api." };
-  await saveHardcoverToken(token);
   try {
-    await hardcoverSeries("Harry Potter", []);
+    await checkHardcoverToken(token);
   } catch (e) {
-    await saveHardcoverToken(null);
     return { error: e instanceof HardcoverError ? e.message : "Couldn’t reach Hardcover to check the token. Try again in a minute." };
   }
+  await saveHardcoverToken(token);
   revalidatePath("/", "layout");
   return null;
 }

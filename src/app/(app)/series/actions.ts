@@ -32,7 +32,7 @@ export async function addSeriesBookAction(seriesId: number, hardcoverUrl: string
   const data = await getSeries(seriesId);
   if (!data) return { error: "That series is gone." };
   try {
-    const found = await hardcoverSeries(data.series.name, data.books.map((b) => b.author));
+    const found = await hardcoverSeries(seriesId);
     const entry = found?.books.find((b) => b.url === hardcoverUrl);
     if (!entry) return { error: "Hardcover doesn’t list that book in this series any more." };
     const bookId = await addSeriesBook(data.series.name, entry);

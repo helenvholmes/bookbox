@@ -2,12 +2,16 @@
 import Link from "next/link";
 import { CollectionTabs } from "@/components/CollectionTabs";
 import { detectSeriesFromTitles, listSeries } from "@/lib/books";
+import { checkSeriesOnHardcover } from "@/lib/hardcover";
 import { applyDetectedSeriesAction } from "./actions";
 
 export const metadata = { title: "Series" };
 
 export default async function SeriesPage() {
-  const [series, detected] = await Promise.all([listSeries(), detectSeriesFromTitles()]);
+  // Series Hardcover doesn't have are left out. New ones are checked a few per visit; until then they show.
+  await checkSeriesOnHardcover();
+  const [all, detected] = await Promise.all([listSeries(), detectSeriesFromTitles()]);
+  const series = all.filter((s) => !s.notOnHardcover);
   const detectedNames = [...new Set(detected.map((d) => d.name))];
 
   return (

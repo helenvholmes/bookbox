@@ -36,14 +36,14 @@ export default async function SeriesDetailPage(props: PageProps<"/series/[id]">)
       </details>
       <BookGrid books={books} caption={(b) => (position.get(b.id) != null ? `Book ${position.get(b.id)}` : null)} />
       <Suspense fallback={<p className="text-sm text-muted">Looking up the rest of the series on Hardcover…</p>}>
-        <RestOfSeries seriesId={series.id} name={series.name} authors={books.map((b) => b.author)} positions={books.map((b) => b.position)} />
+        <RestOfSeries seriesId={series.id} positions={books.map((b) => b.position)} />
       </Suspense>
     </div>
   );
 }
 
 /** The books in the series you don't have yet, from Hardcover. Streams in after the page so a slow lookup doesn't hold it up. */
-async function RestOfSeries({ seriesId, name, authors, positions }: { seriesId: number; name: string; authors: string[]; positions: (number | null)[] }) {
+async function RestOfSeries({ seriesId, positions }: { seriesId: number; positions: (number | null)[] }) {
   if (!(await hardcoverToken())) {
     return (
       <p className="text-sm text-muted">
@@ -58,11 +58,11 @@ async function RestOfSeries({ seriesId, name, authors, positions }: { seriesId: 
 
   let found: Awaited<ReturnType<typeof hardcoverSeries>>;
   try {
-    found = await hardcoverSeries(name, authors);
+    found = await hardcoverSeries(seriesId);
   } catch (e) {
     return <p className="text-sm text-danger">{e instanceof HardcoverError ? e.message : "Couldn’t reach Hardcover just now."}</p>;
   }
-  if (!found) return <p className="text-sm text-muted">Hardcover doesn&rsquo;t have this series.</p>;
+  if (!found) return null; // Hardcover doesn't have this series: just your books.
   const missing = await missingFromLibrary(found.books, positions);
 
   return (
