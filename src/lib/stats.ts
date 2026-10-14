@@ -19,9 +19,10 @@ export async function booksReadIn(year: number): Promise<number> {
 
 type Count = { label: string; count: number };
 
-export async function getStats() {
+/** Your stats, with the reading goal and pages for one year (this year unless you ask for another). */
+export async function getStats(year?: number) {
   await connection();
-  const year = new Date().getFullYear();
+  year ??= new Date().getFullYear();
   const n = async (sql: string, ...params: (string | number)[]) => ((await db.prepare(sql).get(...params)) as { n: number | null }).n ?? 0;
 
   const perYear = (await db

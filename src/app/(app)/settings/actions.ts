@@ -60,6 +60,42 @@ export async function removeHardcoverTokenAction() {
   revalidatePath("/", "layout");
 }
 
+// API keys for other apps (see src/lib/api-keys.ts).
+
+export type ApiKeyState = { key?: string; name?: string; error?: string } | null;
+
+/** Makes a key and hands it back once, to copy into the app. */
+export async function createApiKeyAction(_prev: ApiKeyState, fd: FormData): Promise<ApiKeyState> {
+  const { createApiKey, parseOrigins } = await import("@/lib/api-keys");
+  const name = String(fd.get("name") ?? "").trim().slice(0, 60);
+  if (!name) return { error: "Name the key after the app that will use it, like “Scriptable widget”." };
+  const parsed = parseOrigins(String(fd.get("origins") ?? ""));
+  if ("error" in parsed) return { error: parsed.error };
+  const key = await createApiKey(name, parsed.origins);
+  revalidatePath("/settings");
+  return { key, name };
+}
+
+export type ApiKeyOriginsState = { error?: string; savedAt?: number } | null;
+
+export async function saveApiKeyOriginsAction(_prev: ApiKeyOriginsState, fd: FormData): Promise<ApiKeyOriginsState> {
+  const { parseOrigins, setApiKeyOrigins } = await import("@/lib/api-keys");
+  const id = Number(fd.get("id"));
+  if (!Number.isInteger(id)) return { error: "That key is gone." };
+  const parsed = parseOrigins(String(fd.get("origins") ?? ""));
+  if ("error" in parsed) return { error: parsed.error };
+  await setApiKeyOrigins(id, parsed.origins);
+  revalidatePath("/settings");
+  return { savedAt: Date.now() };
+}
+
+export async function deleteApiKeyAction(fd: FormData) {
+  const { deleteApiKey } = await import("@/lib/api-keys");
+  const id = Number(fd.get("id"));
+  if (Number.isInteger(id)) await deleteApiKey(id);
+  revalidatePath("/settings");
+}
+
 // Goodreads import (see src/lib/goodreads.ts). The browser drives it a batch at a time.
 
 export async function previewGoodreadsAction(csv: string): Promise<{ books?: GoodreadsBook[]; error?: string }> {

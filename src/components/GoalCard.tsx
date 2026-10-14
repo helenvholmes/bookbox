@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { setGoalAction } from "@/app/(app)/stats/actions";
+import { goalPace } from "@/lib/goal";
 
 /** This year's reading goal: progress, pace, and an inline editor. */
 export function GoalCard({ year, goal, read }: { year: number; goal: number | null; read: number }) {
@@ -12,12 +13,10 @@ export function GoalCard({ year, goal, read }: { year: number; goal: number | nu
     return result;
   }, null);
 
-  const now = new Date();
-  const dayOfYear = Math.floor((now.getTime() - new Date(year, 0, 1).getTime()) / 86_400_000) + 1;
-  const daysInYear = new Date(year, 1, 29).getMonth() === 1 ? 366 : 365;
-  const expected = goal ? Math.round((goal * dayOfYear) / daysInYear) : 0;
-  const pct = goal ? Math.min(100, Math.round((read / goal) * 100)) : 0;
-  const pace = !goal ? null : read >= goal ? "Goal reached" : read >= expected ? `On track · ${goal - read} to go` : `${expected - read} behind pace · ${goal - read} to go`;
+  const p = goalPace(year, goal, read);
+  const pct = p?.percent ?? 0;
+  const pace =
+    !goal || !p ? null : p.status === "reached" ? "Goal reached" : p.status === "on-track" ? `On track · ${goal - read} to go` : `${p.expected - read} behind pace · ${goal - read} to go`;
 
   return (
     <section className="card space-y-4 p-5">

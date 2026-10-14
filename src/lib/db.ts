@@ -190,6 +190,17 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL
 );
 
+-- Keys other apps use to read your stats through /api/v1 (see src/lib/api-keys.ts). Only a hash of each key is kept.
+CREATE TABLE IF NOT EXISTS api_keys (
+  id           INTEGER PRIMARY KEY,
+  name         TEXT NOT NULL,
+  hash         TEXT NOT NULL UNIQUE,  -- SHA-256 of the whole key
+  prefix       TEXT NOT NULL,         -- the start of the key, to tell them apart in Settings
+  origins      TEXT NOT NULL DEFAULT '', -- websites allowed to use it from the browser, space-separated
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  last_used_at TEXT
+);
+
 -- Failed sign-ins per network address (hashed, never stored as-is), to slow down password guessing.
 CREATE TABLE IF NOT EXISTS login_failures (
   key      TEXT PRIMARY KEY,

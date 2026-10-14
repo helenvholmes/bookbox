@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { connection } from "next/server";
+import { ApiKeyOriginsForm, NewApiKeyForm } from "@/components/ApiKeyForms";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { GoodreadsImport } from "@/components/GoodreadsImport";
 import { HardcoverTokenForm } from "@/components/HardcoverTokenForm";
 import { LibbyImport } from "@/components/LibbyImport";
 import { SettingsForm } from "@/components/SettingsForm";
 import { SignOutButton } from "@/components/SignOutButton";
+import { listApiKeys } from "@/lib/api-keys";
 import { authEnabled } from "@/lib/auth";
 import { SpotifyKeysForm } from "@/components/SpotifyKeysForm";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -14,7 +16,7 @@ import { hardcoverToken } from "@/lib/hardcover";
 import { getSettings } from "@/lib/settings";
 import { callbackUrl, getSpotifyAccount, spotifyCredentials } from "@/lib/spotify";
 import { disconnectAction, syncNowAction } from "../spotify/actions";
-import { removeHardcoverTokenAction, removeSpotifyKeysAction } from "./actions";
+import { deleteApiKeyAction, removeHardcoverTokenAction, removeSpotifyKeysAction } from "./actions";
 
 export const metadata = { title: "Settings" };
 
@@ -36,7 +38,7 @@ const SPOTIFY_MESSAGES: Record<string, { text: string; error?: boolean }> = {
 export default async function SettingsPage(props: PageProps<"/settings">) {
   await connection();
   const sp = await props.searchParams;
-  const [settings, keys, account, hardcover] = await Promise.all([getSettings(), spotifyCredentials(), getSpotifyAccount(), hardcoverToken()]);
+  const [settings, keys, account, hardcover, apiKeys] = await Promise.all([getSettings(), spotifyCredentials(), getSpotifyAccount(), hardcoverToken(), listApiKeys()]);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
   const message = typeof sp.spotify === "string" ? SPOTIFY_MESSAGES[sp.spotify] : undefined;
@@ -168,6 +170,42 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
         </div>
       </section>
 
+      <section id="api" className="max-w-xl scroll-mt-8 space-y-3">
+        <h2 className="section-title">API keys</h2>
+        <p className="text-sm text-muted">
+          Let other apps read your stats and what you&rsquo;re reading, like a home screen widget made with Scriptable. Make a key for each app, so you can
+          revoke one without the others. Keys can only read. See{" "}
+          <a href="https://github.com/helenvholmes/bookbox/blob/main/docs/api.md" target="_blank" rel="noreferrer" className="text-ink underline">
+            the API docs
+          </a>
+          .
+        </p>
+        <div className="card divide-y divide-line text-sm">
+          {apiKeys.map((k) => (
+            <div key={k.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 p-5">
+              <div className="min-w-0 space-y-1">
+                <p className="font-medium">{k.name}</p>
+                <p className="text-xs text-muted">
+                  <code className="font-mono">{k.prefix}…</code> · made {shortDate(k.createdAt)} · {k.lastUsedAt ? `last used ${shortDate(k.lastUsedAt)}` : "not used yet"}
+                </p>
+                {k.origins.length > 0 && <p className="text-xs break-all text-muted">Websites: {k.origins.join(", ")}</p>}
+              </div>
+              <form action={deleteApiKeyAction}>
+                <input type="hidden" name="id" value={k.id} />
+                <ConfirmButton className="text-xs text-faint hover:text-danger" message={`Revoke the key for ${k.name}? Apps using it stop working.`} confirmLabel="Revoke">
+                  Revoke
+                </ConfirmButton>
+              </form>
+              <ApiKeyOriginsForm id={k.id} origins={k.origins} />
+            </div>
+          ))}
+          <div className="space-y-3 p-5">
+            {apiKeys.length > 0 && <h3 className="font-medium">New key</h3>}
+            <NewApiKeyForm />
+          </div>
+        </div>
+      </section>
+
       <GoodreadsImport />
 
       <LibbyImport />
@@ -203,4 +241,9 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
       )}
     </div>
   );
+}
+
+/** "Oct 14, 2026" from SQLite's UTC "2026-10-14 08:12:00". */
+function shortDate(s: string) {
+  return new Date(`${s.replace(" ", "T")}Z`).toLocaleDateString("en-US", { dateStyle: "medium" });
 }
