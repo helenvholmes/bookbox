@@ -16,10 +16,30 @@ const GROUPS = [
 
 const percent = (n: number, total: number) => (total ? Math.round((n / total) * 100) : 0);
 
-export async function GenderCard({ breakdown, scope }: { breakdown: Breakdown; scope: string }) {
+/** One bar split by share: 2px gaps between segments, rounded only at the bar's ends. */
+function SplitBar({ breakdown, className = "h-3" }: { breakdown: Breakdown; className?: string }) {
+  const shown = GROUPS.filter((g) => breakdown[g.key] > 0);
+  return (
+    <div className={`flex gap-[2px] overflow-hidden rounded-[4px] ${className}`} role="img" aria-label={shown.map((g) => `${g.label}: ${breakdown[g.key]}`).join(", ")}>
+      {shown.map((g) => (
+        <span
+          key={g.key}
+          className="h-full"
+          style={{ width: `${(breakdown[g.key] / breakdown.total) * 100}%`, background: g.color, minWidth: 3 }}
+          title={`${g.label}: ${breakdown[g.key]} (${percent(breakdown[g.key], breakdown.total)}%)`}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * `years` (on the Stats overview) adds the split for each year, as a bar per year with a table of
+ * the numbers to open (bars show their numbers on hover, which phones don't have).
+ */
+export async function GenderCard({ breakdown, scope, years }: { breakdown: Breakdown; scope: string; years?: { year: number; breakdown: Breakdown }[] }) {
   const unchecked = await countUnchecked();
   const { total } = breakdown;
-  const shown = GROUPS.filter((g) => breakdown[g.key] > 0);
   return (
     <section className="card space-y-4 p-5">
       <div className="flex items-baseline justify-between gap-3">
@@ -35,17 +55,7 @@ export async function GenderCard({ breakdown, scope }: { breakdown: Breakdown; s
           <p className="text-sm text-muted">
             Of {total.toLocaleString()} {total === 1 ? "book" : "books"} read {scope}, by the author on each.
           </p>
-          {/* 2px gaps between segments; rounded only at the bar's ends. */}
-          <div className="flex h-3 gap-[2px] overflow-hidden rounded-[4px]" role="img" aria-label={shown.map((g) => `${g.label}: ${breakdown[g.key]}`).join(", ")}>
-            {shown.map((g) => (
-              <span
-                key={g.key}
-                className="h-full"
-                style={{ width: `${(breakdown[g.key] / total) * 100}%`, background: g.color, minWidth: 3 }}
-                title={`${g.label}: ${breakdown[g.key]} (${percent(breakdown[g.key], total)}%)`}
-              />
-            ))}
-          </div>
+          <SplitBar breakdown={breakdown} />
           <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             {GROUPS.map((g) => (
               <li key={g.key} className={`flex items-center gap-2 ${breakdown[g.key] ? "" : "text-faint"}`}>
@@ -57,6 +67,51 @@ export async function GenderCard({ breakdown, scope }: { breakdown: Breakdown; s
               </li>
             ))}
           </ul>
+          {years && years.length > 1 && (
+            <div className="space-y-2 border-t border-line pt-4">
+              <h3 className="text-xs text-muted">By year</h3>
+              <ul className="space-y-1.5">
+                {years.map(({ year, breakdown: y }) => (
+                  <li key={year} className="grid grid-cols-[2.75rem_minmax(0,1fr)_2rem] items-center gap-3 text-xs">
+                    <Link href={`/stats/${year}`} className="text-muted tabular-nums hover:text-ink">
+                      {year}
+                    </Link>
+                    <SplitBar breakdown={y} className="h-2" />
+                    <span className="text-right text-muted tabular-nums" title={`${y.total} books read`}>
+                      {y.total}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <details className="text-xs">
+                <summary className="cursor-pointer text-muted hover:text-ink">Show the numbers</summary>
+                <table className="mt-2 w-full text-right tabular-nums">
+                  <thead className="text-faint">
+                    <tr>
+                      <th className="py-1 text-left font-normal">Year</th>
+                      {GROUPS.map((g) => (
+                        <th key={g.key} className="py-1 pl-2 font-normal">
+                          {g.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {years.map(({ year, breakdown: y }) => (
+                      <tr key={year} className="border-t border-line">
+                        <td className="py-1 text-left text-muted">{year}</td>
+                        {GROUPS.map((g) => (
+                          <td key={g.key} className={`py-1 pl-2 ${y[g.key] ? "" : "text-faint"}`}>
+                            {y[g.key]}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </details>
+            </div>
+          )}
           {breakdown.unknown > 0 && unchecked === 0 && (
             <p className="text-xs text-muted">
               {breakdown.unknown === 1 ? "One book's author isn't" : `${breakdown.unknown} books' authors aren't`} known.{" "}

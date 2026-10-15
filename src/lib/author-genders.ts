@@ -39,6 +39,26 @@ export async function genderBreakdown(year?: number): Promise<Breakdown> {
   return out;
 }
 
+/** The same split for every year with books read, newest first. */
+export async function genderByYear(): Promise<{ year: number; breakdown: Breakdown }[]> {
+  const rows = (await db
+    .prepare(
+      `SELECT x.year, g.gender, count(*) AS n
+       FROM (SELECT DISTINCT r.year, b.id, trim(b.author) AS author FROM book_reads r JOIN books b ON b.id = r.book_id) x
+       LEFT JOIN author_genders g ON g.name = x.author
+       GROUP BY x.year, g.gender`,
+    )
+    .all()) as { year: number; gender: Gender | null; n: number }[];
+  const byYear = new Map<number, Breakdown>();
+  for (const r of rows) {
+    const b = byYear.get(r.year) ?? { woman: 0, man: 0, nonbinary: 0, unknown: 0, total: 0 };
+    b[r.gender ?? "unknown"] += r.n;
+    b.total += r.n;
+    byYear.set(r.year, b);
+  }
+  return [...byYear].sort((a, b) => b[0] - a[0]).map(([year, breakdown]) => ({ year, breakdown }));
+}
+
 export type AuthorRow = { name: string; books: number; read: number; gender: Gender | null; source: "wikidata" | "you" | null; wikidataId: string | null };
 
 /** Every author in your library, with what's known of them; most-read first. */
