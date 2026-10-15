@@ -54,6 +54,12 @@ const FEATURES: { title: string; body: string; d: string }[] = [
     d: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm9 2-3.5-3.5",
   },
   {
+    title: "Lists of your own.",
+    body: "Gather books into lists like Urbanism or Gifts to give, right beside To Read and Read. A book can be on as many as you like.",
+    // A bulleted list.
+    d: "M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01",
+  },
+  {
     title: "Works offline.",
     body: "Add it to your home screen and it opens instantly, even with no signal. Changes save on your phone and sync when you’re back.",
     d: "M5 12.5a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01M3 3l18 18",
@@ -84,6 +90,12 @@ const FEATURES: { title: string; body: string; d: string }[] = [
     body: "Keep track of who has your books and when they’re due back, with every past loan.",
     // Two arrows passing a book back and forth.
     d: "M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3-3m-3 3 3 3",
+  },
+  {
+    title: "Your reading, in a widget.",
+    body: "Make a read-only key and show what you’re reading and your progress toward this year’s goal anywhere. A ready-made Scriptable widget is included.",
+    // A phone with a widget on its screen.
+    d: "M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2ZM8.5 6h7v5h-7zM11 18.5h2",
   },
 ];
 
