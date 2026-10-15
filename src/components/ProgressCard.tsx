@@ -53,7 +53,7 @@ export function ProgressCard({ bookId, pages: pageCount, onKindle, shelves, read
       <div className="card space-y-3 p-4">
         {shown && (
           <>
-            <div className="h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={Math.round(shown.percent)} aria-valuemin={0} aria-valuemax={100}>
+            <div className="h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-label={abandoned ? "Where you stopped" : "Reading progress"} aria-valuenow={Math.round(shown.percent)} aria-valuemin={0} aria-valuemax={100}>
               <div className="h-full rounded-full bg-ink" style={{ width: `${shown.percent}%` }} />
             </div>
             <p className="flex flex-wrap items-baseline justify-between gap-x-3 text-[0.8125rem]">

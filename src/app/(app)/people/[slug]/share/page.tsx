@@ -1,10 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ShareEditor } from "@/components/ShareEditor";
 import { getPerson } from "@/lib/books";
 import { ACCENTS, defaultTitle, getShareSettings } from "@/lib/share";
 
-export const metadata = { title: "Share" };
+export async function generateMetadata(props: PageProps<"/people/[slug]/share">): Promise<Metadata> {
+  const data = await getPerson(decodeURIComponent((await props.params).slug));
+  return { title: data ? `Share with ${`${data.person.first} ${data.person.last}`.trim()}` : "Share" };
+}
 
 export default async function SharePage(props: PageProps<"/people/[slug]/share">) {
   const { slug } = await props.params;

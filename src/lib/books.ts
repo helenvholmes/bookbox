@@ -223,7 +223,7 @@ export const getSearchEntries = cache(async (): Promise<SearchEntry[]> => {
   }));
 });
 
-export async function getBook(id: number): Promise<Book | null> {
+export const getBook = cache(async (id: number): Promise<Book | null> => {
   await connection();
   const row = (await db.prepare(`SELECT b.*, ${summaryColumns()} FROM books b WHERE b.id = ?`).get(id)) as
     | (SummaryRow & Record<string, unknown>)
@@ -280,7 +280,7 @@ export async function getBook(id: number): Promise<Book | null> {
     recommendedFor: recs.filter((r) => r.kind === "for").map(({ id, slug, name }) => ({ id, slug, name })),
     recommendedBy: recs.filter((r) => r.kind === "by").map(({ id, slug, name }) => ({ id, slug, name })),
   };
-}
+});
 
 export type Facets = {
   shelves: (Named & { count: number })[];
@@ -452,7 +452,7 @@ export async function deleteBook(id: number) {
 export type Person = { id: number; slug: string; first: string; last: string; relationship: string };
 
 /** Looks a person up by slug, or by id for old /people/12 links. */
-export async function getPerson(slugOrId: string) {
+export const getPerson = cache(async (slugOrId: string) => {
   await connection();
   const byId = /^\d+$/.test(slugOrId);
   const person = (await db
@@ -481,7 +481,7 @@ export async function getPerson(slugOrId: string) {
     // A book they've borrowed more than once shows once, at its latest loan.
     borrowedBefore: lent.filter((b, i) => b.returnedOn && !lent.some((o, j) => j < i && o.id === b.id)),
   };
-}
+});
 
 // Lending your own copies
 
@@ -584,10 +584,10 @@ export async function deleteTag(id: number) {
   });
 }
 
-export async function getTag(id: number) {
+export const getTag = cache(async (id: number) => {
   await connection();
   return (await db.prepare("SELECT id, name, notes FROM tags WHERE id = ?").get(id)) as (Named & { notes: string }) | undefined;
-}
+});
 
 // Lists: your own shelves (Urbanism, Gifts to give…), alongside the reading statuses. A book can be on any number.
 
@@ -866,7 +866,7 @@ export async function listSeries(): Promise<SeriesSummary[]> {
   return rows.map((r) => ({ ...r, covers: (r.covers ?? "").split("|").map((c) => c || null), notOnHardcover: !!r.notOnHardcover }));
 }
 
-export async function getSeries(id: number) {
+export const getSeries = cache(async (id: number) => {
   await connection();
   const series = (await db.prepare("SELECT id, name FROM series WHERE id = ?").get(id)) as Named | undefined;
   if (!series) return null;
@@ -879,7 +879,7 @@ export async function getSeries(id: number) {
       .all(id)) as (SummaryRow & { position: number | null })[]
   ).map((r) => ({ ...toSummary(r), position: r.position }));
   return { series, books };
-}
+});
 
 export async function renameSeries(id: number, name: string) {
   // A new name may be a different series on Hardcover: look it up again.

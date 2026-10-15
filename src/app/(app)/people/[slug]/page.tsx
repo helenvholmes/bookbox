@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { BookGrid } from "@/components/BookGrid";
 import { getPerson } from "@/lib/books";
 import { PersonHeader } from "@/components/PersonHeader";
 import { formatDay } from "@/lib/dates";
+
+export async function generateMetadata(props: PageProps<"/people/[slug]">): Promise<Metadata> {
+  const data = await getPerson(decodeURIComponent((await props.params).slug));
+  return { title: data ? `${data.person.first} ${data.person.last}`.trim() : "Person" };
+}
 
 export default async function PersonPage(props: PageProps<"/people/[slug]">) {
   const { slug } = await props.params;

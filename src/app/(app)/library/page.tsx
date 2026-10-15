@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { BookGrid } from "@/components/BookGrid";
@@ -12,6 +13,22 @@ import { countDuplicates } from "@/lib/duplicates";
 
 /** How many books the page itself renders; the rest load as the grid is scrolled (see LibraryGrid). */
 const FIRST_BATCH = 60;
+
+/** Names the filtered view, so the tab and the screen reader's page announcement say what's shown. */
+export async function generateMetadata(props: PageProps<"/library">): Promise<Metadata> {
+  const sp = await props.searchParams;
+  const one = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
+  const [q, shelf, year, tag, person] = ["q", "shelf", "year", "tag", "person"].map(one);
+  if (q) return { title: `Search: ${q}` };
+  const facets = tag || person ? await getFacets() : null;
+  const parts = [
+    shelf === "none" ? "No shelf" : shelf,
+    year && (year === "none" ? "No year" : `Read in ${year}`),
+    tag && facets?.tags.find((t) => String(t.id) === tag)?.name,
+    person && facets?.people.find((p) => String(p.id) === person || p.slug === person)?.name,
+  ].filter(Boolean);
+  return { title: parts.length ? parts.join(" · ") : "Library" };
+}
 
 export default async function LibraryPage(props: PageProps<"/library">) {
   const sp = await props.searchParams;
@@ -133,7 +150,7 @@ export default async function LibraryPage(props: PageProps<"/library">) {
           <h2 id="reading" className="section-title">
             Currently reading
           </h2>
-          <BookGrid books={reading} />
+          <BookGrid books={reading} priority />
         </section>
       )}
 
@@ -155,6 +172,7 @@ export default async function LibraryPage(props: PageProps<"/library">) {
         {/* Keyed by the filters so a new search starts from its own first batch. */}
         <LibraryGrid
           key={query}
+          priority={filtered}
           initial={books.slice(0, FIRST_BATCH)}
           total={books.length}
           query={query}

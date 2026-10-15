@@ -1,0 +1,23 @@
+# Lint and type-check every push to main and every pull request. Vercel builds and deploys on its
+# own; this catches mistakes the build would let through (lint rules, accessibility lint included).
+name: Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # The route types (PageProps and friends) come from Next.js, not the repo.
+      - run: npx next typegen
+      - run: npx tsc --noEmit
+      - run: npm run lint

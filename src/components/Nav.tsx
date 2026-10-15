@@ -309,7 +309,7 @@ export function Nav({ years, lists, canSignOut }: Props) {
               key={t.href}
               href={t.href}
               aria-current={t.active ? "page" : undefined}
-              className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] ${t.active ? "text-ink" : "text-faint"}`}
+              className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] ${t.active ? "text-ink" : "text-muted"}`}
             >
               <Icon d={t.d} className="size-5" />
               {t.label}
@@ -319,7 +319,7 @@ export function Nav({ years, lists, canSignOut }: Props) {
             type="button"
             onClick={openMenu}
             aria-haspopup="dialog"
-            className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] ${inMenu ? "text-ink" : "text-faint"}`}
+            className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] ${inMenu ? "text-ink" : "text-muted"}`}
           >
             <Icon d={ICONS.menu} className="size-5" />
             Menu

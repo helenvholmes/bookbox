@@ -1,5 +1,28 @@
 import type { NextConfig } from "next";
 
+/**
+ * Where the browser may load things from. Everything BookBox fetches is its own (covers come through
+ * /covers, lookups through /api), so only images may come from elsewhere: Hardcover's and Open
+ * Library's cover suggestions. Inline scripts stay allowed because Next.js streams pages with them
+ * (nonces would need every page, the offline one included, rendered per visit); scripts from other
+ * sites, plugins, framing, and forms posting elsewhere are all refused.
+ */
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "media-src 'self' blob:",
+  "worker-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  ...(process.env.VERCEL ? ["upgrade-insecure-requests"] : []),
+].join("; ");
+
 const nextConfig: NextConfig = {
   // No "N" badge in the corner during development (build and runtime errors still show).
   devIndicators: false,
@@ -20,6 +43,7 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           // The camera is for the barcode scanner on this site only; nothing else is used.
           { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(), payment=()" },
+          { key: "Content-Security-Policy", value: contentSecurityPolicy },
         ],
       },
       // The service worker must always be revalidated, or a stale one keeps serving old pages.

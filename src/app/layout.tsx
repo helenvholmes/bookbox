@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Newsreader } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SPLASH_DEVICES, splashFile } from "@/lib/splash";
 import "./globals.css";
 
@@ -37,7 +38,11 @@ function splashScreens() {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${newsreader.variable} antialiased`}>
-      <body className="min-h-dvh">{children}</body>
+      <body className="min-h-dvh">
+        {children}
+        {/* Real-visit load and responsiveness timings, on Vercel only (the script isn't served elsewhere). */}
+        {process.env.VERCEL && <SpeedInsights />}
+      </body>
     </html>
   );
 }

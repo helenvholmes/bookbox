@@ -44,7 +44,7 @@ export default async function DuplicatesPage() {
                   <div className="min-w-0 space-y-0.5 text-sm">
                     <p className="line-clamp-2 leading-snug font-medium">{b.title}</p>
                     <p className="truncate text-muted">{b.author}</p>
-                    <Stars rating={b.rating} className="text-xs" />
+                    <Stars rating={b.rating} />
                     <p className="text-xs text-muted">{[...b.shelves, ...b.years.map((y) => `Read ${y}`)].join(" · ") || "No shelf"}</p>
                     <p className="text-xs text-muted">
                       #{b.id}

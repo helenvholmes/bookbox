@@ -19,10 +19,12 @@ type Props = {
   /** The page's filters as a query string, passed on to /api/books. */
   query: string;
   empty: ReactNode;
+  /** Nothing sits above the grid (a filtered view), so its first covers are the page's main images. */
+  priority?: boolean;
 };
 
 /** The library grid: the first batch straight away, the rest as you scroll towards the end. */
-export function LibraryGrid({ initial, total, query, empty }: Props) {
+export function LibraryGrid({ initial, total, query, empty, priority }: Props) {
   const [books, setBooks] = useState(() => {
     const kept = loaded.get(query);
     // Only reuse what was kept if it still starts the same way; otherwise the library changed.
@@ -94,7 +96,7 @@ export function LibraryGrid({ initial, total, query, empty }: Props) {
 
   return (
     <>
-      <BookGrid books={books} empty={empty} />
+      <BookGrid books={books} empty={empty} priority={priority} />
       {more && (
         <div ref={sentinel} className="py-6 text-center text-sm text-muted" aria-live="polite">
           {failed ? (

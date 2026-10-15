@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { getFacets, getTag } from "@/lib/books";
 import { deleteTagAction, mergeTagAction, updateTagAction } from "../actions";
+
+export async function generateMetadata(props: PageProps<"/tags/[id]">): Promise<Metadata> {
+  const tag = await getTag(Number((await props.params).id));
+  return { title: tag?.name ?? "Tag" };
+}
 
 export default async function TagPage(props: PageProps<"/tags/[id]">) {
   const { id } = await props.params;

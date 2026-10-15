@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type PointerEvent } from "react";
 
 type Row = { year: number; books: number; reads: number; pages: number };
 
@@ -15,6 +15,10 @@ export function YearChart({ rows, highlight }: { rows: Row[]; highlight: number 
     years.push(rows.find((r) => r.year === y) ?? { year: y, books: 0, reads: 0, pages: 0 });
   }
   const shown = hover === null ? null : years[hover];
+  const indexAt = (e: PointerEvent<HTMLElement>) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    return Math.min(years.length - 1, Math.max(0, Math.floor(((e.clientX - box.left) / box.width) * years.length)));
+  };
 
   return (
     <section className="card space-y-4 p-5">
@@ -47,25 +51,47 @@ export function YearChart({ rows, highlight }: { rows: Row[]; highlight: number 
           </tbody>
         </table>
       ) : (
-        <div className="relative" onMouseLeave={() => setHover(null)}>
-          <div className="flex h-44 items-end gap-[2px] border-b border-line">
+        <div className="relative">
+          {/* One target for the whole chart, not a sliver of a button per year: pointing or tapping anywhere
+              picks the nearest year, and arrow keys step through them like a slider. */}
+          <div
+            role="slider"
+            tabIndex={0}
+            aria-label="Books read per year"
+            aria-valuemin={years[0]?.year}
+            aria-valuemax={years[years.length - 1]?.year}
+            aria-valuenow={(shown ?? years[years.length - 1])?.year}
+            aria-valuetext={describe(shown ?? years[years.length - 1])}
+            className="flex h-44 cursor-default touch-pan-y items-end gap-[2px] rounded-sm border-b border-line focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-muted"
+            onPointerMove={(e) => setHover(indexAt(e))}
+            onPointerDown={(e) => setHover(indexAt(e))}
+            onPointerLeave={(e) => e.pointerType === "mouse" && setHover(null)}
+            onFocus={() => setHover((h) => h ?? Math.max(0, years.findIndex((r) => r.year === highlight)))}
+            onBlur={() => setHover(null)}
+            onKeyDown={(e) => {
+              const last = years.length - 1;
+              const step: Record<string, (h: number) => number> = {
+                ArrowLeft: (h) => h - 1,
+                ArrowDown: (h) => h - 1,
+                ArrowRight: (h) => h + 1,
+                ArrowUp: (h) => h + 1,
+                Home: () => 0,
+                End: () => last,
+              };
+              if (!step[e.key]) return;
+              e.preventDefault();
+              setHover((h) => Math.min(last, Math.max(0, step[e.key](h ?? last))));
+            }}
+          >
             {years.map((r, i) => (
-              <button
-                key={r.year}
-                type="button"
-                onMouseEnter={() => setHover(i)}
-                onFocus={() => setHover(i)}
-                aria-label={`${r.year}: ${r.books} books`}
-                // The hit target is the whole column, taller than the bar itself.
-                className="group flex h-full min-w-0 flex-1 items-end"
-              >
+              <span key={r.year} aria-hidden className="flex h-full min-w-0 flex-1 items-end">
                 <span
                   className={`block w-full rounded-t-[4px] transition-colors ${
                     r.year === highlight ? "bg-ink" : hover === i ? "bg-muted" : "bg-faint"
                   }`}
                   style={{ height: `${(r.books / max) * 100}%`, minHeight: r.books ? 2 : 0 }}
                 />
-              </button>
+              </span>
             ))}
           </div>
           <div className="mt-1.5 flex justify-between text-[0.6875rem] text-faint tabular-nums">
@@ -74,7 +100,7 @@ export function YearChart({ rows, highlight }: { rows: Row[]; highlight: number 
           </div>
           {shown && (
             <div
-              role="status"
+              aria-hidden
               className="pointer-events-none absolute -top-2 z-10 -translate-x-1/2 -translate-y-full rounded-md border border-line bg-raised px-2.5 py-1.5 text-xs whitespace-nowrap text-ink shadow-[0_8px_24px_rgb(0_0_0/0.5)]"
               style={{ left: `${((hover! + 0.5) / years.length) * 100}%` }}
             >
@@ -87,4 +113,14 @@ export function YearChart({ rows, highlight }: { rows: Row[]; highlight: number 
       )}
     </section>
   );
+}
+
+const plural = (n: number, word: string) => `${n.toLocaleString()} ${n === 1 ? word : `${word}s`}`;
+
+/** What a screen reader says for a year: the same facts as the tooltip. */
+function describe(r: Row | undefined) {
+  if (!r) return undefined;
+  return [`${r.year}: ${plural(r.books, "book")}`, r.reads > r.books && plural(r.reads, "read"), r.pages > 0 && plural(r.pages, "page")]
+    .filter(Boolean)
+    .join(", ");
 }

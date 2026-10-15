@@ -10,7 +10,7 @@ const FRAME_RATIO = 2 / 3;
  * below) fill its height and are trimmed at the sides, keeping their proportions; taller or
  * narrower ones are shown whole.
  */
-export function CoverImage({ src, eager, alwaysFill = false }: { src: string; eager: boolean; alwaysFill?: boolean }) {
+export function CoverImage({ src, eager, priority = false, alwaysFill = false }: { src: string; eager: boolean; priority?: boolean; alwaysFill?: boolean }) {
   const [measured, setFit] = useState<"object-contain" | "object-cover">("object-contain");
   const fit = alwaysFill ? "object-cover" : measured;
 
@@ -26,7 +26,8 @@ export function CoverImage({ src, eager, alwaysFill = false }: { src: string; ea
       onLoad={(e) => measure(e.currentTarget)}
       src={src}
       alt=""
-      loading={eager ? "eager" : "lazy"}
+      loading={eager || priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : undefined}
       decoding="async"
       className={`size-full ${fit}`}
     />

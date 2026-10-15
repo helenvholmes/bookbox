@@ -15,6 +15,13 @@ import { getFacets, listLists } from "@/lib/books";
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="min-h-dvh md:flex">
+      {/* The first thing a keyboard reaches, so the sidebar's thirty-odd links can be passed over. */}
+      <a
+        href="#main"
+        className="sr-only rounded-lg bg-accent text-sm font-medium text-accent-ink focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:px-4 focus:py-2.5"
+      >
+        Skip to content
+      </a>
       <OfflineSupport />
       <BackgroundSync />
       {/* Reads the URL's query string, so it needs a Suspense boundary of its own. */}
@@ -34,7 +41,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       >
         <NavWithYears />
       </Suspense>
-      <main className="mx-auto w-full max-w-5xl min-w-0 flex-1 px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-10 md:pt-8 md:pb-12">{children}</main>
+      <main id="main" tabIndex={-1} className="mx-auto outline-none w-full max-w-5xl min-w-0 flex-1 px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-10 md:pt-8 md:pb-12">{children}</main>
     </div>
   );
 }

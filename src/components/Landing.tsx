@@ -268,7 +268,7 @@ function LibraryPreview() {
               <div key={b.title} className="space-y-1.5">
                 <Cover cover={b.cover} srcBase={COVERS} title={b.title} author={b.author} className="rounded-sm" eager />
                 <div className="flex justify-center">
-                  <Stars rating={b.rating} className="size-2" label={false} />
+                  <Stars rating={b.rating} className="h-2" label={false} />
                 </div>
               </div>
             ))}

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -6,6 +7,11 @@ import { SeriesSuggestions } from "@/components/SeriesSuggestions";
 import { getSeries } from "@/lib/books";
 import { HardcoverError, hardcoverSeries, hardcoverToken, missingFromLibrary } from "@/lib/hardcover";
 import { renameSeriesAction } from "../actions";
+
+export async function generateMetadata(props: PageProps<"/series/[id]">): Promise<Metadata> {
+  const data = await getSeries(Number((await props.params).id));
+  return { title: data?.series.name ?? "Series" };
+}
 
 export default async function SeriesDetailPage(props: PageProps<"/series/[id]">) {
   const { id } = await props.params;
@@ -34,7 +40,7 @@ export default async function SeriesDetailPage(props: PageProps<"/series/[id]">)
           <button className="btn rounded-full px-4">Save</button>
         </form>
       </details>
-      <BookGrid books={books} caption={(b) => (position.get(b.id) != null ? `Book ${position.get(b.id)}` : null)} />
+      <BookGrid books={books} priority caption={(b) => (position.get(b.id) != null ? `Book ${position.get(b.id)}` : null)} />
       <Suspense fallback={<p className="text-sm text-muted">Looking up the rest of the series on Hardcover…</p>}>
         <RestOfSeries seriesId={series.id} positions={books.map((b) => b.position)} />
       </Suspense>

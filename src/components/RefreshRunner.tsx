@@ -58,7 +58,7 @@ export function RefreshRunner({ remaining, total }: { remaining: number; total: 
               Stop
             </button>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={done} aria-valuemax={goal}>
+          <div className="h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-label="Books checked" aria-valuenow={done} aria-valuemin={0} aria-valuemax={goal}>
             <div className="h-full rounded-full bg-ink transition-[width]" style={{ width: `${pct}%` }} />
           </div>
           <p className="truncate text-xs text-muted">{current ? `Last: ${current}` : " "}</p>

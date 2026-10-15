@@ -8,6 +8,7 @@ export function Cover({
   author,
   className = "",
   eager = false,
+  priority = false,
   bleed = false,
   srcBase = "/covers",
   transitionName,
@@ -17,6 +18,8 @@ export function Cover({
   author?: string;
   className?: string;
   eager?: boolean;
+  /** The page's main image (usually its largest paint): fetched ahead of everything else. */
+  priority?: boolean;
   /** Edge to edge inside a card: square corners (the card clips them) and always fills the frame. */
   bleed?: boolean;
   /** Where cover files are served from (share pages use their own, token-checked route). */
@@ -29,7 +32,7 @@ export function Cover({
     return (
       // A fixed 2:3 frame the cover fills (see CoverImage for how odd shapes fit).
       <div data-cover className={`aspect-[2/3] w-full overflow-hidden ${rounding} ${className}`} style={{ viewTransitionName: transitionName }}>
-        <CoverImage src={/^https:/.test(cover) ? cover : `${srcBase}/${cover}`} eager={eager} alwaysFill={bleed} />
+        <CoverImage src={/^https:/.test(cover) ? cover : `${srcBase}/${cover}`} eager={eager} priority={priority} alwaysFill={bleed} />
       </div>
     );
   }

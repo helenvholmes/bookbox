@@ -10,11 +10,14 @@ export function BookGrid({
   books,
   empty = "No books here yet.",
   caption,
+  priority = false,
 }: {
   books: BookSummary[];
   empty?: ReactNode;
   /** An extra small line above the title, e.g. "Book 3". */
   caption?: (b: BookSummary) => string | null;
+  /** The grid is the first thing on the page: its first covers are fetched ahead of everything else. */
+  priority?: boolean;
 }) {
   if (books.length === 0) return <p className="py-16 text-center text-muted">{empty}</p>;
   return (
@@ -34,7 +37,7 @@ export function BookGrid({
             data-author={b.author}
             className="card flex h-full flex-col overflow-hidden text-center transition hover:border-line-hover"
           >
-            <Cover cover={b.cover} title={b.title} author={b.author} eager={i < 8} bleed />
+            <Cover cover={b.cover} title={b.title} author={b.author} eager={i < 8} priority={priority && i < 2} bleed />
             {b.progress !== null && b.shelves.includes("Currently Reading") && (
               <div className="h-1.5 bg-line" role="progressbar" aria-label="Progress" aria-valuenow={Math.round(b.progress)} aria-valuemin={0} aria-valuemax={100}>
                 <div className="h-full bg-ink" style={{ width: `${b.progress}%` }} />

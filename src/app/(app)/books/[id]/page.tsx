@@ -80,7 +80,7 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
           {book.borrowed && <BorrowedNote library={book.library} due={book.due_date} />}
         </div>
         <div className="md:row-span-2">
-          <Cover cover={book.cover} title={book.title} author={book.author} eager className="rounded-sm" transitionName={COVER_NAME} />
+          <Cover cover={book.cover} title={book.title} author={book.author} priority className="rounded-sm" transitionName={COVER_NAME} />
         </div>
 
         {/* Full width under the title and cover on phones; beside the cover on desktop. */}

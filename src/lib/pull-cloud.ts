@@ -18,8 +18,8 @@ import { parseEnv } from "node:util";
 import { createClient, type InStatement, type InValue } from "@libsql/client";
 import { get } from "@vercel/blob";
 
-const ROOT = process.cwd();
-const DATA_DIR = path.resolve(process.env.DATA_DIR ?? "data");
+const ROOT = /* turbopackIgnore: true */ process.cwd();
+const DATA_DIR = path.resolve(/* turbopackIgnore: true */ process.env.DATA_DIR ?? "data");
 const LOCAL_DB = path.join(DATA_DIR, "bookbox.db");
 const COVERS_DIR = path.join(DATA_DIR, "covers");
 const BACKUPS = path.join(DATA_DIR, "backups");
