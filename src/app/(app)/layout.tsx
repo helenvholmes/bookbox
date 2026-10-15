@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { LocalCopyBanner } from "@/components/LocalCopyBanner";
 import { Nav } from "@/components/Nav";
 import { OfflineSupport } from "@/components/OfflineSupport";
-import { SpotifySync } from "@/components/SpotifySync";
+import { BackgroundSync } from "@/components/BackgroundSync";
 import { authEnabled } from "@/lib/auth";
 import { getFacets } from "@/lib/books";
 
@@ -15,7 +15,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="min-h-dvh md:flex">
       <OfflineSupport />
-      <SpotifySync />
+      <BackgroundSync />
       {process.env.NODE_ENV === "development" && <LocalCopyNotice />}
       {/* Three steps, so the page never shifts sideways: an empty sidebar of the right size in the first
           bytes, then its links (Nav reads the URL's query string, which needs a Suspense boundary of its

@@ -27,7 +27,7 @@ const STAMP = path.join(DATA_DIR, ".last-pull.json");
 const CLOUD_ENV = path.join(ROOT, ".env.cloud");
 
 /** Tables that are about the server, not the library. */
-const SKIP_TABLES = new Set(["spotify_account", "login_failures", "spotify_adding", "bookbox_meta"]);
+const SKIP_TABLES = new Set(["spotify_account", "libby_account", "login_failures", "spotify_adding", "bookbox_meta"]);
 /** Settings that are secrets for the server's use (the Spotify app keys). */
 const SKIP_SETTINGS = ["spotify_client_id", "spotify_client_secret"];
 
