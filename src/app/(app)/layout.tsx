@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { LocalCopyBanner } from "@/components/LocalCopyBanner";
 import { Nav } from "@/components/Nav";
+import { PageMotion } from "@/components/PageMotion";
 import { OfflineSupport } from "@/components/OfflineSupport";
 import { BackgroundSync } from "@/components/BackgroundSync";
 import { authEnabled } from "@/lib/auth";
@@ -16,6 +17,10 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
     <div className="min-h-dvh md:flex">
       <OfflineSupport />
       <BackgroundSync />
+      {/* Reads the URL's query string, so it needs a Suspense boundary of its own. */}
+      <Suspense>
+        <PageMotion />
+      </Suspense>
       {process.env.NODE_ENV === "development" && <LocalCopyNotice />}
       {/* Three steps, so the page never shifts sideways: an empty sidebar of the right size in the first
           bytes, then its links (Nav reads the URL's query string, which needs a Suspense boundary of its
@@ -37,7 +42,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
 /** Holds the desktop sidebar's place until the real one arrives. Phones have no sidebar, and their tab bar floats. */
 function SidebarShell() {
   return (
-    <aside aria-hidden className="sticky top-0 hidden h-dvh w-56 shrink-0 border-r border-line bg-[#0e0f11] px-3 py-5 md:block">
+    <aside aria-hidden style={{ viewTransitionName: "sidebar" }} className="sticky top-0 hidden h-dvh w-56 shrink-0 border-r border-line bg-[#0e0f11] px-3 py-5 md:block">
       <span className="display px-2.5 text-xl">BookBox</span>
     </aside>
   );

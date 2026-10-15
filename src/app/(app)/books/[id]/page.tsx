@@ -13,6 +13,7 @@ import { CopyCard } from "@/components/CopyCard";
 import { ListsPicker } from "@/components/ListsPicker";
 import { STATUS_SHELVES } from "@/components/ShelfIcon";
 import { getBook, getFacets, listLists, type PersonLink } from "@/lib/books";
+import { COVER_NAME } from "@/lib/cover-handoff";
 
 async function load(params: Promise<{ id: string }>) {
   const { id } = await params;
@@ -40,7 +41,7 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
   return (
     <article className="pb-8">
       <nav className="flex items-center justify-between">
-        <Link href="/library" aria-label="Back to library" className="flex size-9 items-center justify-center rounded-full border border-line text-muted hover:text-ink">
+        <Link href="/library" transitionTypes={["nav-back"]} aria-label="Back to library" className="flex size-9 items-center justify-center rounded-full border border-line text-muted hover:text-ink">
           <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M19 12H5m6-6-6 6 6 6" />
           </svg>
@@ -79,7 +80,7 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
           {book.borrowed && <BorrowedNote library={book.library} due={book.due_date} />}
         </div>
         <div className="md:row-span-2">
-          <Cover cover={book.cover} title={book.title} author={book.author} eager className="rounded-sm" />
+          <Cover cover={book.cover} title={book.title} author={book.author} eager className="rounded-sm" transitionName={COVER_NAME} />
         </div>
 
         {/* Full width under the title and cover on phones; beside the cover on desktop. */}

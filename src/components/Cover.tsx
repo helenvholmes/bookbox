@@ -10,6 +10,7 @@ export function Cover({
   eager = false,
   bleed = false,
   srcBase = "/covers",
+  transitionName,
 }: {
   cover: string | null;
   title: string;
@@ -20,12 +21,14 @@ export function Cover({
   bleed?: boolean;
   /** Where cover files are served from (share pages use their own, token-checked route). */
   srcBase?: string;
+  /** A view-transition-name, for a cover that moves between pages (see src/lib/cover-handoff.ts). */
+  transitionName?: string;
 }) {
   const rounding = bleed ? "" : "rounded-md";
   if (cover) {
     return (
       // A fixed 2:3 frame the cover fills (see CoverImage for how odd shapes fit).
-      <div className={`aspect-[2/3] w-full overflow-hidden ${rounding} ${className}`}>
+      <div data-cover className={`aspect-[2/3] w-full overflow-hidden ${rounding} ${className}`} style={{ viewTransitionName: transitionName }}>
         <CoverImage src={/^https:/.test(cover) ? cover : `${srcBase}/${cover}`} eager={eager} alwaysFill={bleed} />
       </div>
     );
@@ -35,8 +38,9 @@ export function Cover({
   return (
     <div
       aria-hidden
+      data-cover
       className={`flex aspect-[2/3] w-full flex-col justify-between overflow-hidden ${rounding} p-3 text-white ${className}`}
-      style={{ background: `linear-gradient(160deg, ${color}, color-mix(in srgb, ${color} 70%, black))` }}
+      style={{ background: `linear-gradient(160deg, ${color}, color-mix(in srgb, ${color} 70%, black))`, viewTransitionName: transitionName }}
     >
       <span className="line-clamp-4 text-sm leading-tight font-medium">{title}</span>
       {author && <span className="line-clamp-2 text-[0.6875rem] opacity-80">{author}</span>}

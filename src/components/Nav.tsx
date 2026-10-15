@@ -239,7 +239,7 @@ export function Nav({ years, lists, canSignOut }: Props) {
   return (
     <>
       {/* Desktop: Oku-style sidebar. */}
-      <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col gap-6 overflow-y-auto border-r border-line bg-[#0e0f11] px-3 py-5 md:flex">
+      <aside style={{ viewTransitionName: "sidebar" }} className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col gap-6 overflow-y-auto border-r border-line bg-[#0e0f11] px-3 py-5 md:flex">
         <SidebarLinks years={years} lists={lists} canSignOut={canSignOut} />
       </aside>
 
@@ -248,6 +248,7 @@ export function Nav({ years, lists, canSignOut }: Props) {
         ref={menuRef}
         aria-label="Menu"
         data-shown="false"
+        style={{ viewTransitionName: "menu" }}
         // Escape slides it away too, rather than closing it at once.
         onCancel={(e) => {
           e.preventDefault();
@@ -275,6 +276,7 @@ export function Nav({ years, lists, canSignOut }: Props) {
       {/* Phone: bottom tab bar. */}
       <nav
         aria-label="Tabs"
+        style={{ viewTransitionName: "tab-bar" }}
         className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
       >
         <div className="flex">
