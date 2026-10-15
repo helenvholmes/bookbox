@@ -109,13 +109,18 @@ export async function saveBookAction(_prev: SaveState, fd: FormData): Promise<Sa
   redirect(`/books/${bookId}`, RedirectType.replace);
 }
 
+/** Deletes a book, then goes back to `return_to` (the page you were on before it), or the library. */
 export async function deleteBookAction(fd: FormData) {
   const id = Number(fd.get("id"));
   const cover = await getCoverName(id);
   await deleteBook(id);
   await deleteCover(cover);
   revalidatePath("/", "layout");
-  redirect("/library", RedirectType.replace);
+  const back = text(fd, "return_to");
+  // Only a page on this site ("/…" but not "//…", which is another site), and never the deleted book's own.
+  const own = new RegExp(`^/books/${id}(?:[/?]|$)`);
+  const safe = /^\/(?![/\\])/.test(back) && !own.test(back);
+  redirect(safe ? back : "/library", RedirectType.replace);
 }
 
 // Your copy: owned, and lent to people. `date` is the device's day.

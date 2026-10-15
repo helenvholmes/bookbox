@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { SOURCE_URL } from "@/lib/constants";
-import { notePage } from "@/lib/history";
+import { notePage, notePlace } from "@/lib/history";
 import { SignOutButton } from "./SignOutButton";
 import { ShelfIcon, STATUS_SHELVES, shelfLabel } from "./ShelfIcon";
 
@@ -235,6 +235,7 @@ export function Nav({ years, lists, canSignOut }: Props) {
   const location = `${pathname}?${params}`;
   useEffect(() => closeMenu(), [location, closeMenu]);
   useEffect(() => notePage(pathname), [pathname]);
+  useEffect(() => notePlace(params.size ? location : pathname), [location, params.size, pathname]);
 
   if (pathname === "/login") return null;
   const onLibrary = pathname === "/library";
