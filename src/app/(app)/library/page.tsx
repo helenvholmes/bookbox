@@ -6,7 +6,7 @@ import { Greeting } from "@/components/Greeting";
 import { ownerName } from "@/lib/settings";
 import { LibraryGrid } from "@/components/LibraryGrid";
 import { ShelfIcon } from "@/components/ShelfIcon";
-import { countMissingCovers, countMissingIsbns, getContextualFacets, getFacets, getTag, listBooks, listBorrowed, SORTS, STATUS, type Filters } from "@/lib/books";
+import { countMissingCovers, getContextualFacets, getFacets, getTag, listBooks, listBorrowed, SORTS, STATUS, type Filters } from "@/lib/books";
 import { getGoal } from "@/lib/stats";
 import { countDuplicates } from "@/lib/duplicates";
 
@@ -29,13 +29,12 @@ export default async function LibraryPage(props: PageProps<"/library">) {
   const filtered = Object.entries(filters).some(([k, v]) => k !== "sort" && v);
   const query = new URLSearchParams(Object.entries(filters).filter((e): e is [string, string] => !!e[1])).toString();
 
-  const [books, facets, reading, duplicates, missingCovers, missingIsbns, borrowed] = await Promise.all([
+  const [books, facets, reading, duplicates, missingCovers, borrowed] = await Promise.all([
     listBooks(filters),
     getFacets(),
     filtered ? Promise.resolve([]) : listBooks({ shelf: "Currently Reading" }),
     countDuplicates(),
     countMissingCovers(),
-    countMissingIsbns(),
     listBorrowed(),
   ]);
 
@@ -65,16 +64,12 @@ export default async function LibraryPage(props: PageProps<"/library">) {
       ? { href: "/stats", icon: <ShelfIcon shelf="Read" />, value: `${readThisYear} of ${goal}`, label: `read in ${thisYear}`, progress: Math.min(1, readThisYear / goal) }
       : { href: `/library?year=${thisYear}`, icon: <ShelfIcon shelf="Read" />, value: readThisYear, label: `read in ${thisYear}` },
     { href: "/library?shelf=To%20Read", icon: <ShelfIcon shelf="To Read" />, value: shelfCount("To Read"), label: "to read" },
-    { href: "/books/new?scan=1", icon: <ScanIcon />, value: null, label: "Scan a barcode" },
     ...(missingCovers > 0
       ? [{ href: "/missing-covers", icon: <TileIcon d="M4 5h16v14H4zM4 15l4.5-4.5 4 4 2.5-2.5L20 17" />, value: missingCovers, label: "missing covers" }]
       : []),
     // Clean-up tiles only appear when there's something to clean up.
     ...(duplicates > 0
       ? [{ href: "/duplicates", icon: <TileIcon d="M8 8h11v11H8zM5 16V5h11" />, value: duplicates, label: duplicates === 1 ? "duplicate" : "duplicates" }]
-      : []),
-    ...(missingIsbns > 0
-      ? [{ href: "/missing-isbns", icon: <TileIcon d="M4 6v12M7 6v12M10.5 6v12M13 6v12M16.5 6v12M20 6v12" />, value: missingIsbns, label: "missing ISBNs" }]
       : []),
     ...(borrowed.length > 0
       ? [
@@ -187,8 +182,4 @@ function TileIcon({ d }: { d: string }) {
       <path d={d} />
     </svg>
   );
-}
-
-function ScanIcon() {
-  return <TileIcon d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M8 9v6M11 9v6M14 9v6M17 9v6" />;
 }
