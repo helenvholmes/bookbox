@@ -1,5 +1,5 @@
 /**
- * Copies the hosted library (Turso database and Vercel Blob covers) down to this computer, so a
+ * Copies the hosted library (Turso database and R2 or Vercel Blob covers) down to this computer, so a
  * local copy of BookBox matches the real one. Used by `npm run pull:cloud` and by the "Pull latest"
  * banner in local development. Never runs on the hosted site.
  *
@@ -16,7 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseEnv } from "node:util";
 import { createClient, type InStatement, type InValue } from "@libsql/client";
-import { get } from "@vercel/blob";
+import { coverStore } from "./cover-store";
 
 const ROOT = /* turbopackIgnore: true */ process.cwd();
 const DATA_DIR = path.resolve(/* turbopackIgnore: true */ process.env.DATA_DIR ?? "data");
@@ -122,7 +122,8 @@ export async function pullFromCloud(log: (line: string) => void = () => {}): Pro
 
   // 4. Covers this computer doesn't have yet.
   let coversDownloaded = 0;
-  if (env.BLOB_READ_WRITE_TOKEN) {
+  const store = coverStore(env);
+  if (store) {
     fs.mkdirSync(COVERS_DIR, { recursive: true });
     const wanted = (await remote.execute("SELECT cover FROM books WHERE cover IS NOT NULL")).rows.map((r) => String(r.cover));
     const missing = wanted.filter((f) => !fs.existsSync(path.join(COVERS_DIR, f)));
@@ -130,9 +131,9 @@ export async function pullFromCloud(log: (line: string) => void = () => {}): Pro
     await Promise.all(
       Array.from({ length: 6 }, async () => {
         for (let f = queue.shift(); f; f = queue.shift()) {
-          const res = await get(`covers/${f}`, { access: "private", token: env.BLOB_READ_WRITE_TOKEN }).catch(() => null);
-          if (res?.statusCode !== 200) continue;
-          fs.writeFileSync(path.join(COVERS_DIR, f), Buffer.from(await new Response(res.stream).arrayBuffer()));
+          const stream = await store.get(f);
+          if (!stream) continue;
+          fs.writeFileSync(path.join(COVERS_DIR, f), Buffer.from(await new Response(stream).arrayBuffer()));
           coversDownloaded++;
         }
       }),

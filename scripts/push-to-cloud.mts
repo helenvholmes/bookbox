@@ -1,17 +1,21 @@
 /**
  * Copies the local library (data/bookbox.db and data/covers) to the hosted setup: the database
- * to Turso and the covers to a private Vercel Blob store.
+ * to Turso and the covers to Cloudflare R2 (or a private Vercel Blob store; see cover-store.ts).
  *
- *   TURSO_DATABASE_URL=libsql://… TURSO_AUTH_TOKEN=… BLOB_READ_WRITE_TOKEN=… npm run push:cloud
+ *   TURSO_DATABASE_URL=libsql://… TURSO_AUTH_TOKEN=… R2_ACCOUNT_ID=… R2_ACCESS_KEY_ID=… \
+ *   R2_SECRET_ACCESS_KEY=… R2_BUCKET=… npm run push:cloud
  *
  * The Turso database is replaced with the local one, so run it once, before you start using the
  * hosted app (or again if you want to overwrite it). Covers that are already uploaded are skipped.
- * Either half can be run alone: leave out the Turso or Blob variables to skip it.
+ * Either half can be run alone: leave out the Turso or cover variables to skip it. To move covers
+ * from Blob to R2, run `npm run pull:cloud` first (so every cover is local), then this with only
+ * the R2 variables.
  */
 
 import fs from "node:fs";
 import path from "node:path";
 import { createClient, type InStatement, type InValue } from "@libsql/client";
+import { coverStore } from "../src/lib/cover-store";
 
 const DATA_DIR = path.resolve(process.env.DATA_DIR ?? "data");
 const localFile = path.join(DATA_DIR, "bookbox.db");
@@ -58,8 +62,8 @@ if (process.env.TURSO_DATABASE_URL) {
   }
 }
 
-if (process.env.BLOB_READ_WRITE_TOKEN) {
-  const { head, put } = await import("@vercel/blob");
+const store = coverStore(process.env);
+if (store) {
   const coversDir = path.join(DATA_DIR, "covers");
   const referenced = (await local.execute("SELECT cover FROM books WHERE cover IS NOT NULL")).rows.map((r) => String(r.cover));
   let uploaded = 0;
@@ -73,22 +77,18 @@ if (process.env.BLOB_READ_WRITE_TOKEN) {
           console.warn(`missing locally: ${name}`);
           continue;
         }
-        const exists = await head(`covers/${name}`).then(
-          () => true,
-          () => false,
-        );
-        if (exists) {
+        if (await store.has(name)) {
           skipped++;
           continue;
         }
-        await put(`covers/${name}`, fs.readFileSync(file), { access: "private", contentType: "image/webp", addRandomSuffix: false, allowOverwrite: true });
+        await store.put(name, fs.readFileSync(file));
         uploaded++;
       }
     }),
   );
-  console.log(`covers: ${uploaded} uploaded, ${skipped} already there`);
+  console.log(`covers (${store.name}): ${uploaded} uploaded, ${skipped} already there`);
 }
 
-if (!process.env.TURSO_DATABASE_URL && !process.env.BLOB_READ_WRITE_TOKEN) {
-  console.log("Nothing to do: set TURSO_DATABASE_URL/TURSO_AUTH_TOKEN and/or BLOB_READ_WRITE_TOKEN.");
+if (!process.env.TURSO_DATABASE_URL && !store) {
+  console.log("Nothing to do: set TURSO_DATABASE_URL/TURSO_AUTH_TOKEN and/or the R2 (or BLOB_READ_WRITE_TOKEN) keys.");
 }

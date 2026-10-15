@@ -19,6 +19,7 @@
     "@vercel/speed-insights": "^2.0.0",
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.23.0",
+    "aws4fetch": "^1.0.20",
     "csv-parse": "^7.0.2",
     "next": "16.3.8",
     "react": "19.2.8",

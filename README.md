@@ -26,12 +26,14 @@ BookBox is for one reader per copy: you deploy your own, on your own free accoun
 
 ## Deploy your own (free)
 
-BookBox runs within the free tiers of [Vercel](https://vercel.com) (the app and cover storage) and [Turso](https://turso.tech) (the database). You'll need a GitHub account and about ten minutes.
+BookBox runs within the free tiers of [Vercel](https://vercel.com) (the app), [Turso](https://turso.tech) (the database) and [Cloudflare R2](https://developers.cloudflare.com/r2/) or Vercel Blob (cover storage). You'll need a GitHub account and about ten minutes.
 
 1. **Fork this repository** on GitHub.
 2. **Create a Vercel project** from your fork (Vercel → Add New → Project → import the repo). The first deploy will show a locked app until the next steps are done; that's expected.
 3. **Add a database.** In the project, open **Storage → Create Database → Turso**, pick the free plan, and connect it to the project. That sets `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`. (Or create a database at [turso.tech](https://turso.tech) yourself and set those two variables.)
-4. **Add cover storage.** Still under **Storage**, create a **Blob** store with **Private** access and connect it. That sets `BLOB_READ_WRITE_TOKEN`.
+4. **Add cover storage.** Either:
+   - **Cloudflare R2** (more room: 10 GB and millions of reads a month free). In the Cloudflare dashboard, create an R2 bucket (leave public access off), then under **R2 → Manage API tokens** create a token with **Object Read & Write** on that bucket. Add `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET` to the Vercel project's environment variables.
+   - **Vercel Blob** (fewer steps). Still under **Storage**, create a **Blob** store with **Private** access and connect it. That sets `BLOB_READ_WRITE_TOKEN`. Its free tier allows 10,000 reads a month; past that, Vercel blocks the store for 30 days, so this suits a single small library.
 5. **Set a password.** Under **Settings → Environment Variables**, add `BOOKBOX_PASSWORD`. Mark it Sensitive, and use a long passphrase: it's the only thing protecting your library.
 6. **Redeploy** (Deployments → ⋯ → Redeploy), open your site, and sign in. The database is set up on first use. Then open **Settings** in BookBox's sidebar to add your name.
 
@@ -47,7 +49,8 @@ These are for the server: the password and the services BookBox runs on. Prefere
 |---|---|---|
 | `BOOKBOX_PASSWORD` | Yes, when hosted | The password you sign in with. When deployed on Vercel, the app stays locked until it's set. |
 | `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | Yes, when hosted | The database. Without them, BookBox uses a SQLite file in `DATA_DIR`. |
-| `BLOB_READ_WRITE_TOKEN` | Yes, when hosted | Cover storage (a private Vercel Blob store). Without it, covers are files in `DATA_DIR`. |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Yes, when hosted (or Blob) | Cover storage in a Cloudflare R2 bucket. Used over Blob when both are set. Without either, covers are files in `DATA_DIR`. |
+| `BLOB_READ_WRITE_TOKEN` | Yes, when hosted (or R2) | Cover storage in a private Vercel Blob store. |
 | `BOOKBOX_SECRET` | No | Signs the sign-in cookie. Defaults to the password. |
 | `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` | No | Spotify app keys, if you'd rather set them here than in Settings; see below. |
 | `HARDCOVER_TOKEN` | No | A Hardcover API token, if you'd rather set it here than in Settings; see below. |
@@ -103,8 +106,10 @@ The service worker (offline support) only runs in production builds, so `npm run
 If you've been using BookBox locally first, copy it up once, before you start using the hosted copy (this replaces what's in the hosted database, and uploads every cover that isn't there yet):
 
 ```bash
-TURSO_DATABASE_URL=libsql://… TURSO_AUTH_TOKEN=… BLOB_READ_WRITE_TOKEN=… npm run push:cloud
+TURSO_DATABASE_URL=libsql://… TURSO_AUTH_TOKEN=… R2_ACCOUNT_ID=… R2_ACCESS_KEY_ID=… R2_SECRET_ACCESS_KEY=… R2_BUCKET=… npm run push:cloud
 ```
+
+(Use `BLOB_READ_WRITE_TOKEN=…` in place of the R2 variables for Blob.) To move covers from Blob to R2, run `npm run pull:cloud` first so every cover is on your computer, then `push:cloud` with only the R2 variables.
 
 ### Keeping a local copy up to date
 
@@ -114,7 +119,7 @@ To work on BookBox against your real library, copy the hosted one down (the loca
 npm run pull:cloud
 ```
 
-It uses the same keys file as `push:cloud`, saved as `.env.cloud` (git-ignored) with `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` and `BLOB_READ_WRITE_TOKEN`. With that file in place, `npm run dev` also shows a **Pull latest** notice whenever the local copy is more than three days old. Your Spotify sign-in and other server-only records stay on the server.
+It uses the same keys file as `push:cloud`, saved as `.env.cloud` (git-ignored) with `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` and the cover storage keys (the four `R2_` variables, or `BLOB_READ_WRITE_TOKEN`). With that file in place, `npm run dev` also shows a **Pull latest** notice whenever the local copy is more than three days old. Your Spotify sign-in and other server-only records stay on the server.
 
 ### Importing
 
