@@ -2,9 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { getCoverName, setCover, skipCover } from "@/lib/books";
-import { deleteCover, fetchCover, isUsableImage, saveCover } from "@/lib/covers";
+import { coverUploadsPaused, deleteCover, fetchCover, isUsableImage, saveCover } from "@/lib/covers";
+
+const PAUSED = "New covers are paused until the next billing period, to stay within the free storage tier. See Settings.";
 
 export async function applyCoverAction(bookId: number, url: string): Promise<{ error?: string }> {
+  if (await coverUploadsPaused()) return { error: PAUSED };
   const data = await fetchCover(url);
   if (!data || !(await isUsableImage(data))) return { error: "That cover couldn't be downloaded. Try another one." };
   const name = await saveCover(bookId, data);

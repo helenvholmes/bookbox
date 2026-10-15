@@ -51,6 +51,7 @@ These are for the server: the password and the services BookBox runs on. Prefere
 | `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | Yes, when hosted | The database. Without them, BookBox uses a SQLite file in `DATA_DIR`. |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Yes, when hosted (or Blob) | Cover storage in a Cloudflare R2 bucket. Used over Blob when both are set. Without either, covers are files in `DATA_DIR`. |
 | `BLOB_READ_WRITE_TOKEN` | Yes, when hosted (or R2) | Cover storage in a private Vercel Blob store. |
+| `STORAGE_CYCLE_DAY` | No | The day of the month your storage service's billing period starts (Cloudflare's Billing page shows it; default 1). BookBox counts cover uploads and reads per period and pauses them at 80% of the free tier; Settings shows the counts. |
 | `BOOKBOX_SECRET` | No | Signs the sign-in cookie. Defaults to the password. |
 | `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` | No | Spotify app keys, if you'd rather set them here than in Settings; see below. |
 | `HARDCOVER_TOKEN` | No | A Hardcover API token, if you'd rather set it here than in Settings; see below. |

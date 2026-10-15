@@ -35,13 +35,15 @@ if (process.env.TURSO_DATABASE_URL) {
   for (const t of names) {
     parents.set(t, (await local.execute(`SELECT "table" FROM pragma_foreign_key_list('${t}')`)).rows.map((r) => String(r.table)).filter((p) => p !== t));
   }
+  // The hosted copy's own records: its cover storage usage counts must survive a push.
+  const serverOnly = new Set(["storage_usage", "bookbox_meta"]);
   const tables: string[] = [];
   const visit = (t: string) => {
     if (tables.includes(t)) return;
     for (const p of parents.get(t) ?? []) if (names.includes(p)) visit(p);
     tables.push(t);
   };
-  names.forEach(visit);
+  names.filter((t) => !serverOnly.has(t)).forEach(visit);
   const remoteTables = new Set((await db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all()).map((r) => String(r.name)));
 
   // Children first when clearing, so nothing is left pointing at a deleted row.

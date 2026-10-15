@@ -208,6 +208,15 @@ CREATE TABLE IF NOT EXISTS login_failures (
   first_at INTEGER NOT NULL
 );
 
+-- Cover storage uploads and reads per billing period, so BookBox stops short of the free tier (see storage-meter.ts).
+CREATE TABLE IF NOT EXISTS storage_usage (
+  period TEXT NOT NULL,  -- the date the billing period started, YYYY-MM-DD
+  store  TEXT NOT NULL,  -- r2 or blob
+  op     TEXT NOT NULL,  -- upload or read
+  count  INTEGER NOT NULL,
+  PRIMARY KEY (period, store, op)
+);
+
 -- An audiobook whose book is being found or created right now, so two requests at once can't both create it.
 CREATE TABLE IF NOT EXISTS spotify_adding (
   audiobook_id TEXT PRIMARY KEY,

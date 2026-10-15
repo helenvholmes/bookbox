@@ -11,6 +11,7 @@ import { SettingsForm } from "@/components/SettingsForm";
 import { SignOutButton } from "@/components/SignOutButton";
 import { listApiKeys } from "@/lib/api-keys";
 import { authEnabled } from "@/lib/auth";
+import { coverStorageUsage } from "@/lib/covers";
 import { SpotifyKeysForm } from "@/components/SpotifyKeysForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { hardcoverToken } from "@/lib/hardcover";
@@ -41,13 +42,14 @@ const SPOTIFY_MESSAGES: Record<string, { text: string; error?: boolean }> = {
 export default async function SettingsPage(props: PageProps<"/settings">) {
   await connection();
   const sp = await props.searchParams;
-  const [settings, keys, account, hardcover, apiKeys, libby] = await Promise.all([
+  const [settings, keys, account, hardcover, apiKeys, libby, storage] = await Promise.all([
     getSettings(),
     spotifyCredentials(),
     getSpotifyAccount(),
     hardcoverToken(),
     listApiKeys(),
     libbyStatus(),
+    coverStorageUsage(),
   ]);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
@@ -268,6 +270,39 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
         </div>
       </section>
 
+      {storage && (
+        <section id="storage" className="max-w-xl scroll-mt-8 space-y-3">
+          <h2 className="section-title">Cover storage</h2>
+          <p className="text-sm text-muted">
+            Covers are kept in {storage.store === "r2" ? "Cloudflare R2" : "Vercel Blob"}. To stay within its free tier, BookBox stops saving new covers (or
+            showing stored ones) once {Math.round(storage.stopAt * 100)}% of either free amount is used, until the next period starts on{" "}
+            {dayDate(storage.period.next)}.
+          </p>
+          <div className="card divide-y divide-line text-sm">
+            {(["upload", "read"] as const).map((op) => {
+              const used = storage.usage[op];
+              const stop = Math.floor(storage.free[op] * storage.stopAt);
+              const paused = used >= stop;
+              return (
+                <div key={op} className="space-y-2 p-5">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <p className="font-medium">{op === "upload" ? "New covers saved" : "Covers loaded"}</p>
+                    <p className={`tabular-nums ${paused ? "text-danger" : "text-muted"}`}>
+                      {used.toLocaleString("en-US")} of {stop.toLocaleString("en-US")}
+                    </p>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-line" role="img" aria-label={`${Math.round((used / stop) * 100)}% used`}>
+                    <div className={`h-full rounded-full ${paused ? "bg-danger" : "bg-accent"}`} style={{ width: `${Math.min(100, (used / stop) * 100)}%` }} />
+                  </div>
+                  {paused && <p className="text-xs text-danger">Paused until {dayDate(storage.period.next)}.</p>}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-faint">Loads count once per cover per device; browsers keep covers after that. Counts since {dayDate(storage.period.start)}.</p>
+        </section>
+      )}
+
       <GoodreadsImport />
 
       <LibbyImport />
@@ -308,4 +343,9 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
 /** "Oct 14, 2026" from SQLite's UTC "2026-10-14 08:12:00". */
 function shortDate(s: string) {
   return new Date(`${s.replace(" ", "T")}Z`).toLocaleDateString("en-US", { dateStyle: "medium" });
+}
+
+/** A YYYY-MM-DD date, as written. */
+function dayDate(day: string) {
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" });
 }

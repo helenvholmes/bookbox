@@ -4,26 +4,48 @@ import path from "node:path";
 import sharp from "sharp";
 import { coverStore } from "./cover-store";
 import { COVERS_DIR } from "./db";
+import { allowed, billingPeriod, countRead, countUpload, FREE, getUsage, STOP_AT } from "./storage-meter";
 
 /**
  * Covers live in Cloudflare R2 or a private Vercel Blob store when hosted (see cover-store.ts),
  * and in data/covers otherwise. Either way the database stores only the filename and pages load
- * them through /covers/<file>, which is behind the password.
+ * them through /covers/<file>, which is behind the password. Hosted uploads and reads are
+ * counted, and stop short of the free tier (see storage-meter.ts).
  */
 const store = coverStore(process.env);
 
+/** Whether new covers can't be saved right now, because this period's free uploads are nearly used up. */
+export async function coverUploadsPaused() {
+  return !!store && !(await allowed(store.name, "upload"));
+}
+
+/** This billing period's hosted cover uploads and reads against the free tier, for Settings. Null when covers are local files. */
+export async function coverStorageUsage() {
+  if (!store) return null;
+  const usage = await getUsage(store.name, true);
+  return { store: store.name, usage, free: FREE[store.name], stopAt: STOP_AT, period: billingPeriod() };
+}
+
+/** Stores a cover, or returns false when uploads are paused. */
 async function writeCover(filename: string, data: Buffer) {
   if (store) {
+    if (!(await allowed(store.name, "upload"))) return false;
     await store.put(filename, data);
-    return;
+    await countUpload(store.name);
+    return true;
   }
   fs.mkdirSync(COVERS_DIR, { recursive: true });
   fs.writeFileSync(path.join(COVERS_DIR, filename), data);
+  return true;
 }
 
 /** The stored cover as a body for a Response, or null when it doesn't exist. */
 export async function readCover(filename: string): Promise<BodyInit | null> {
-  if (store) return store.get(filename);
+  if (store) {
+    if (!(await allowed(store.name, "read"))) return null;
+    countRead(store.name);
+    return store.get(filename);
+  }
   try {
     return new Uint8Array(await fs.promises.readFile(path.join(COVERS_DIR, path.basename(filename)))) as Uint8Array<ArrayBuffer>;
   } catch {
@@ -34,8 +56,9 @@ export async function readCover(filename: string): Promise<BodyInit | null> {
 const MAX_WIDTH = 600;
 
 /**
- * Resizes and stores a cover image, returning its filename. Filenames include a
- * content hash so a replaced cover gets a new URL and can be cached forever.
+ * Resizes and stores a cover image, returning its filename (or null when it isn't an image, or
+ * uploads are paused). Filenames include a content hash so a replaced cover gets a new URL and can
+ * be cached forever.
  */
 export async function saveCover(bookId: number, input: Buffer): Promise<string | null> {
   const image = sharp(input, { failOn: "none" }).rotate();
@@ -49,8 +72,7 @@ export async function saveCover(bookId: number, input: Buffer): Promise<string |
     .toBuffer();
   const hash = crypto.createHash("sha1").update(out).digest("hex").slice(0, 8);
   const filename = `${bookId}-${hash}.webp`;
-  await writeCover(filename, out);
-  return filename;
+  return (await writeCover(filename, out)) ? filename : null;
 }
 
 export async function isUsableImage(input: Buffer): Promise<boolean> {
