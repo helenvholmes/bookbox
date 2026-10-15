@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { SOURCE_URL } from "@/lib/constants";
 import { notePage } from "@/lib/history";
 import { SignOutButton } from "./SignOutButton";
@@ -18,6 +18,10 @@ const ICONS = {
   calendar: "M4 6h16v14H4zM4 10h16M8 3v4m8-4v4",
   export: "M12 4v11m0 0-4-4m4 4 4-4M5 19h14",
   menu: "M4 7h16M4 12h16M4 17h10",
+  close: "M6 6l12 12M18 6 6 18",
+  list: "M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01",
+  folder: "M3 7a1.5 1.5 0 0 1 1.5-1.5H9l2 2h8.5A1.5 1.5 0 0 1 21 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z",
+  chevron: "m9 6 6 6-6 6",
   signOut: "M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11",
   // Sliders.
   settings: "M4 7h9m4 0h3M4 17h3m4 0h9M15 5v4M9 15v4",
@@ -44,33 +48,50 @@ function YearIcon({ filled }: { filled: boolean }) {
 }
 
 /** `canSignOut` is false when the app has no password (running on your own computer), so there's nothing to sign out of. */
-type Props = { years: { year: number; count: number }[]; canSignOut: boolean };
+type Props = { years: { year: number; count: number }[]; lists: { id: number; name: string; count: number }[]; canSignOut: boolean };
 
 const noSubscribe = () => () => {};
 const deviceYear = () => new Date().getFullYear();
 
 /**
- * The years with reads, plus this year (on the device's calendar) even before its first finished
- * book, so a new year's view is there on January 1st without setting anything up.
+ * This year (on the device's calendar), even before its first finished book so a new year's view
+ * is there on January 1st, and the other years with reads. Until the device's year is known (the
+ * server's render), the latest year with reads stands in for it.
  */
 function useYears(years: Props["years"]) {
   const thisYear = useSyncExternalStore(noSubscribe, deviceYear, () => null);
-  if (!thisYear || years.length === 0 || years.some((y) => y.year === thisYear)) return years;
-  return [{ year: thisYear, count: 0 }, ...years].sort((a, b) => b.year - a.year);
+  const year = thisYear ?? years[0]?.year;
+  if (years.length === 0 || year === undefined) return { current: null, past: [] };
+  return { current: years.find((y) => y.year === year) ?? { year, count: 0 }, past: years.filter((y) => y.year !== year) };
 }
 
-const item = (active: boolean) =>
-  `flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[0.8125rem] transition ${active ? "bg-raised text-ink" : "text-muted hover:text-ink"}`;
+/** Sidebar rows; `large` is the phone menu, which has the whole screen and fingers to fit. */
+const item = (active: boolean, large = false) =>
+  `flex items-center gap-2.5 rounded-md px-2.5 transition ${large ? "py-2.5 text-base" : "py-1.5 text-[0.8125rem]"} ${active ? "bg-raised text-ink" : "text-muted hover:text-ink"}`;
 
-/** Everything in the sidebar: shown beside the page on desktop, and in the Menu drawer on phones. */
-function SidebarLinks({ years: withReads, canSignOut }: Props) {
-  const years = useYears(withReads);
+/**
+ * Everything in the sidebar: shown beside the page on desktop, and in the full-screen Menu on
+ * phones. Shelves and this year come first, then your lists, then earlier years in a folder.
+ */
+function SidebarLinks({ years: withReads, lists, canSignOut, large = false }: Props & { large?: boolean }) {
+  const { current, past } = useYears(withReads);
   const pathname = usePathname();
   const params = useSearchParams();
   const onLibrary = pathname === "/library";
   const shelf = onLibrary ? params.get("shelf") : null;
   const year = onLibrary ? params.get("year") : null;
   const plainLibrary = onLibrary && !shelf && !year;
+  // The folder opens by itself while one of its years is showing, until you open or close it.
+  const [yearsOpen, setYearsOpen] = useState<boolean | null>(null);
+  const showYears = yearsOpen ?? past.some((y) => String(y.year) === year);
+  const row = (active: boolean) => item(active, large);
+  const yearLink = ({ year: y, count }: { year: number; count: number }, nested = false) => (
+    <Link key={y} href={`/library?year=${y}`} className={`${row(year === String(y))} ${nested ? "pl-8" : ""}`}>
+      <YearIcon filled={year === String(y)} />
+      <span className="flex-1">{y}</span>
+      <span className="text-xs text-faint">{count}</span>
+    </Link>
+  );
 
   return (
     <>
@@ -78,25 +99,25 @@ function SidebarLinks({ years: withReads, canSignOut }: Props) {
         BookBox
       </Link>
       <nav aria-label="Main" className="space-y-0.5">
-        <Link href="/library" className={item(plainLibrary || pathname.startsWith("/books/") && pathname !== "/books/new")}>
+        <Link href="/library" className={row(plainLibrary || pathname.startsWith("/books/") && pathname !== "/books/new")}>
           <Icon d={ICONS.library} /> Library
         </Link>
-        <Link href="/books/new" className={item(pathname === "/books/new")}>
+        <Link href="/books/new" className={row(pathname === "/books/new")}>
           <Icon d={ICONS.add} /> Add a book
         </Link>
-        <Link href="/people" className={item(pathname.startsWith("/people"))}>
+        <Link href="/people" className={row(pathname.startsWith("/people"))}>
           <Icon d={ICONS.people} /> People
         </Link>
-        <Link href="/tags" className={item(pathname.startsWith("/tags"))}>
+        <Link href="/tags" className={row(pathname.startsWith("/tags"))}>
           <Icon d={ICONS.tags} /> Tags
         </Link>
-        <Link href="/series" className={item(pathname.startsWith("/series"))}>
+        <Link href="/series" className={row(pathname.startsWith("/series"))}>
           <Icon d={ICONS.series} /> Series
         </Link>
-        <Link href="/stats" className={item(pathname.startsWith("/stats"))}>
+        <Link href="/stats" className={row(pathname.startsWith("/stats"))}>
           <Icon d={ICONS.stats} /> Stats
         </Link>
-        <Link href="/calendar" className={item(pathname.startsWith("/calendar"))}>
+        <Link href="/calendar" className={row(pathname.startsWith("/calendar"))}>
           <Icon d={ICONS.calendar} /> Calendar
         </Link>
       </nav>
@@ -104,35 +125,57 @@ function SidebarLinks({ years: withReads, canSignOut }: Props) {
       <div className="space-y-0.5">
         <p className="px-2.5 pb-1 text-xs text-faint">Shelves</p>
         {STATUS_SHELVES.map((s) => (
-          <Link key={s} href={`/library?shelf=${encodeURIComponent(s)}`} className={item(shelf === s)}>
+          <Link key={s} href={`/library?shelf=${encodeURIComponent(s)}`} className={row(shelf === s)}>
             <ShelfIcon shelf={s} /> {shelfLabel(s)}
           </Link>
         ))}
+        {current && yearLink(current)}
       </div>
 
-      {years.length > 0 && (
+      <div className="space-y-0.5">
+        <div className="flex items-center justify-between px-2.5 pb-1">
+          <Link href="/lists" className="text-xs text-faint hover:text-muted">
+            Lists
+          </Link>
+          <Link href="/lists" aria-label="Lists: make or edit one" className="text-faint hover:text-ink">
+            <Icon d={ICONS.add} className="size-3.5" />
+          </Link>
+        </div>
+        {lists.map((l) => (
+          <Link key={l.id} href={`/library?shelf=${encodeURIComponent(l.name)}`} className={row(shelf === l.name)}>
+            <Icon d={ICONS.list} />
+            <span className="min-w-0 flex-1 truncate">{l.name}</span>
+            <span className="text-xs text-faint">{l.count}</span>
+          </Link>
+        ))}
+        {lists.length === 0 && (
+          <Link href="/lists" className={row(pathname === "/lists")}>
+            <Icon d={ICONS.add} /> New list
+          </Link>
+        )}
+      </div>
+
+      {past.length > 0 && (
         <div className="space-y-0.5">
-          <p className="px-2.5 pb-1 text-xs text-faint">Years</p>
-          {years.map(({ year: y, count }) => (
-            <Link key={y} href={`/library?year=${y}`} className={item(year === String(y))}>
-              <YearIcon filled={year === String(y)} />
-              <span className="flex-1">{y}</span>
-              <span className="text-xs text-faint">{count}</span>
-            </Link>
-          ))}
+          <button type="button" className={`${row(false)} w-full`} aria-expanded={showYears} onClick={() => setYearsOpen(!showYears)}>
+            <Icon d={ICONS.folder} />
+            <span className="flex-1 text-left">Years</span>
+            <Icon d={ICONS.chevron} className={`size-3.5 text-faint transition-transform ${showYears ? "rotate-90" : ""}`} />
+          </button>
+          {showYears && past.map((y) => yearLink(y, true))}
         </div>
       )}
 
       <div className="mt-auto space-y-0.5">
-        <a href="/export/books.csv" download className={item(false)}>
+        <a href="/export/books.csv" download className={row(false)}>
           <Icon d={ICONS.export} /> Export CSV
         </a>
-        <Link href="/settings" className={item(SETTINGS_PAGES.includes(pathname))}>
+        <Link href="/settings" className={row(SETTINGS_PAGES.includes(pathname))}>
           <Icon d={ICONS.settings} /> Settings
         </Link>
         {canSignOut && (
           <SignOutButton
-            className={`${item(false)} w-full`}
+            className={`${row(false)} w-full`}
             label={
               <>
                 <Icon d={ICONS.signOut} /> Sign out
@@ -148,7 +191,7 @@ function SidebarLinks({ years: withReads, canSignOut }: Props) {
   );
 }
 
-export function Nav({ years, canSignOut }: Props) {
+export function Nav({ years, lists, canSignOut }: Props) {
   const pathname = usePathname();
   const params = useSearchParams();
   const menu = useRef<HTMLDialogElement>(null);
@@ -162,27 +205,35 @@ export function Nav({ years, canSignOut }: Props) {
 
   if (pathname === "/login") return null;
   const onLibrary = pathname === "/library";
-  const inMenu = ["/series", "/calendar", "/missing-covers", "/missing-isbns", "/duplicates", "/refresh", "/spotify", "/settings"].some((p) => pathname.startsWith(p));
+  const inMenu = ["/lists", "/series", "/calendar", "/missing-covers", "/missing-isbns", "/duplicates", "/refresh", "/spotify", "/settings"].some((p) => pathname.startsWith(p));
 
   return (
     <>
       {/* Desktop: Oku-style sidebar. */}
       <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col gap-6 overflow-y-auto border-r border-line bg-[#0e0f11] px-3 py-5 md:flex">
-        <SidebarLinks years={years} canSignOut={canSignOut} />
+        <SidebarLinks years={years} lists={lists} canSignOut={canSignOut} />
       </aside>
 
-      {/* Phone: the same links in a drawer from the left, opened by the Menu tab. */}
+      {/* Phone: the same links on a full-screen panel that slides in from the right, opened by the Menu tab. */}
       <dialog
         ref={menu}
         aria-label="Menu"
-        // Tapping the backdrop (the dialog itself, outside its content) or any link closes it.
+        // Picking any link closes it.
         onClick={(e) => {
-          if (e.target === e.currentTarget || (e.target as Element).closest("a")) menu.current?.close();
+          if ((e.target as Element).closest("a")) menu.current?.close();
         }}
-        className="m-0 h-dvh max-h-none w-[min(18rem,85vw)] max-w-none -translate-x-full overflow-y-auto overscroll-contain border-r border-line bg-[#0e0f11] p-0 text-ink transition-[translate,display,overlay] transition-discrete duration-200 ease-out backdrop:bg-black/60 backdrop:opacity-0 backdrop:transition-opacity backdrop:duration-200 open:translate-x-0 open:backdrop:opacity-100 md:hidden starting:open:-translate-x-full starting:open:backdrop:opacity-0"
+        className="m-0 h-dvh max-h-none w-full max-w-none translate-x-full overflow-y-auto overscroll-contain bg-[#0e0f11] p-0 text-ink transition-[translate,display,overlay] transition-discrete duration-200 ease-out open:translate-x-0 md:hidden starting:open:translate-x-full"
       >
-        <div className="flex min-h-full flex-col gap-6 px-3 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-          <SidebarLinks years={years} canSignOut={canSignOut} />
+        <button
+          type="button"
+          onClick={() => menu.current?.close()}
+          aria-label="Close menu"
+          className="absolute top-[max(0.75rem,env(safe-area-inset-top))] right-3 flex size-10 items-center justify-center rounded-full text-muted hover:text-ink"
+        >
+          <Icon d={ICONS.close} className="size-5" />
+        </button>
+        <div className="flex min-h-full flex-col gap-6 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          <SidebarLinks years={years} lists={lists} canSignOut={canSignOut} large />
         </div>
       </dialog>
 

@@ -392,7 +392,7 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
 
           <section className="space-y-5 card p-4">
             <div>
-              <span className="mb-1.5 block text-sm font-medium">Shelves</span>
+              <span className="mb-1.5 block text-sm font-medium">Shelves and lists</span>
               {shelves.map((s) => (
                 <input key={s} type="hidden" name="shelves" value={s} />
               ))}

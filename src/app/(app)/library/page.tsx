@@ -6,7 +6,7 @@ import { Greeting } from "@/components/Greeting";
 import { ownerName } from "@/lib/settings";
 import { LibraryGrid } from "@/components/LibraryGrid";
 import { ShelfIcon } from "@/components/ShelfIcon";
-import { countMissingCovers, countMissingIsbns, getContextualFacets, getFacets, listBooks, listBorrowed, SORTS, type Filters } from "@/lib/books";
+import { countMissingCovers, countMissingIsbns, getContextualFacets, getFacets, getTag, listBooks, listBorrowed, SORTS, STATUS, type Filters } from "@/lib/books";
 import { getGoal } from "@/lib/stats";
 import { countDuplicates } from "@/lib/duplicates";
 
@@ -42,6 +42,16 @@ export default async function LibraryPage(props: PageProps<"/library">) {
   // The tabs and dropdowns count within the other active filters; the tiles above show library totals.
   const filterFacets = filtered ? await getContextualFacets(filters, facets) : facets;
 
+  // A tag or a list (rather than a reading status) gets a page header with its name.
+  const tag = filters.tag && /^\d+$/.test(filters.tag) ? await getTag(Number(filters.tag)) : undefined;
+  const list = filters.shelf ? facets.shelves.find((s) => s.name === filters.shelf && !STATUS.includes(s.name)) : undefined;
+  const heading = tag
+    ? { kind: "Tag", name: tag.name, notes: tag.notes, edit: `/tags/${tag.id}`, key: "tag" }
+    : list
+      ? { kind: "List", name: list.name, notes: "", edit: `/lists/${list.id}`, key: "shelf" }
+      : null;
+  // Narrowed further than the tag or list itself (a search, a year…): the books are results.
+  const narrowed = Object.entries(filters).some(([k, v]) => v && k !== "sort" && k !== heading?.key);
   const shelfCount = (name: string) => facets.shelves.find((s) => s.name === name)?.count ?? 0;
   const thisYear = new Date().getFullYear();
   const readThisYear = facets.years.find((y) => y.year === thisYear)?.count ?? 0;
@@ -110,6 +120,19 @@ export default async function LibraryPage(props: PageProps<"/library">) {
         </ul>
       )}
 
+      {heading && (
+        <header className="space-y-2 pt-2">
+          <p className="text-xs text-faint">{heading.kind}</p>
+          <div className="flex items-end justify-between gap-4">
+            <h1 className="display min-w-0 text-3xl break-words">{heading.name}</h1>
+            <Link href={heading.edit} className="btn shrink-0">
+              Edit
+            </Link>
+          </div>
+          {heading.notes && <p className="max-w-2xl text-sm whitespace-pre-line text-muted">{heading.notes}</p>}
+        </header>
+      )}
+
       {reading.length > 0 && (
         <section aria-labelledby="reading" className="space-y-3">
           <h2 id="reading" className="section-title">
@@ -126,7 +149,7 @@ export default async function LibraryPage(props: PageProps<"/library">) {
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="section-title">
-            {filtered ? "Results" : "All books"} <span className="count">{books.length}</span>
+            {heading ? (narrowed ? "Results" : "Books") : filtered ? "Results" : "All books"} <span className="count">{books.length}</span>
           </h2>
           {filters.year && /^\d{4}$/.test(filters.year) && (
             <Link href={`/stats/${filters.year}`} className="text-xs text-muted hover:text-ink">

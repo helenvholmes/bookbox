@@ -4,6 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { Facets } from "@/lib/books";
 import { SearchBox } from "./SearchBox";
+import { STATUS_SHELVES } from "./ShelfIcon";
 
 type Props = {
   facets: Facets;
@@ -38,7 +39,8 @@ export function FilterBar({ facets, sorts }: Props) {
       <div role="tablist" aria-label="Shelves" className="no-scrollbar -mx-4 flex gap-5 overflow-x-auto border-b border-line px-4">
         {[
           { key: "", label: "All", count: facets.total },
-          ...facets.shelves.map((s) => ({ key: s.name, label: s.name === "Currently Reading" ? "Reading" : s.name, count: s.count })),
+          // Reading statuses, plus the list you're looking at (lists are in the sidebar and menu).
+          ...facets.shelves.filter((s) => (STATUS_SHELVES as readonly string[]).includes(s.name) || s.name === shelf).map((s) => ({ key: s.name, label: s.name === "Currently Reading" ? "Reading" : s.name, count: s.count })),
           { key: "none", label: "No shelf", count: facets.noShelf },
         ].map((t) => {
           const selected = shelf === t.key;

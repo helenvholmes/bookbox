@@ -10,7 +10,8 @@ BookBox is for one reader per copy: you deploy your own, on your own free accoun
 
 - **Add books in seconds**: search OpenLibrary by title, author or ISBN, or scan the barcode on the back with your phone's camera. The title, author, description, publisher, year, pages and cover fill in automatically.
 - **Search as you type**: titles, authors (including names in their original script), series, tags, ISBNs, and your reviews, quotes and notes. Accents don't matter, words match by their start, and small typos are forgiven ("kill crek" finds *Kill Creek*).
-- **Shelves and filters**: Currently Reading, To Read, Read, Abandoned and your own shelves, plus year read, tag, person, rating, and owned/Kindle/borrowed.
+- **Shelves and filters**: Currently Reading, To Read, Read and Abandoned, plus year read, tag, person, rating, and owned/Kindle/borrowed.
+- **Lists**: your own collections, like Urbanism or Gifts to give, in the sidebar. Add a book from its page; a book can be on any number. A tag (such as an imported Goodreads shelf) can be turned into a list in one step.
 - **Reads and progress**: every read is logged separately, so re-reads are tracked. Progress is set by page (or by percentage for Kindle books) and shows on your Currently Reading shelf.
 - **Spotify audiobooks** (optional): when you start or resume an audiobook on Spotify, its book moves to Currently Reading (and is added if it isn't in your library yet), with your listening progress.
 - **Libby loans** (optional): connect Libby once with a code from the app, and books you borrow move to Currently Reading with their library and due date, then to Read when they go back. Holds you don't have yet go on To Read.
