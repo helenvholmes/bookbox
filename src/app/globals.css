@@ -193,3 +193,128 @@ body {
     scrollbar-width: none;
   }
 }
+
+/*
+ * Page transitions (src/components/PageMotion.tsx). Every page change crossfades; going into a book
+ * from a grid also slides the page left (and the back button slides it right), while the tapped
+ * cover flies to its place on the book's page (src/lib/cover-handoff.ts). The sidebar, tab bar and
+ * menu stay put.
+ */
+:root {
+  --vt-ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Taps during a transition reach the page underneath instead of being lost. */
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-old(root) {
+  animation: 140ms ease-out both vt-fade-out;
+}
+::view-transition-new(root) {
+  animation: 220ms ease-out 60ms both vt-fade-in;
+}
+
+html:active-view-transition-type(nav-forward)::view-transition-old(root) {
+  animation:
+    160ms ease-in both vt-fade-out,
+    380ms var(--vt-ease) both vt-out-left;
+}
+html:active-view-transition-type(nav-forward)::view-transition-new(root) {
+  animation:
+    240ms ease-out 80ms both vt-fade-in,
+    380ms var(--vt-ease) both vt-in-right;
+}
+html:active-view-transition-type(nav-back)::view-transition-old(root) {
+  animation:
+    160ms ease-in both vt-fade-out,
+    380ms var(--vt-ease) both vt-out-right;
+}
+html:active-view-transition-type(nav-back)::view-transition-new(root) {
+  animation:
+    240ms ease-out 80ms both vt-fade-in,
+    380ms var(--vt-ease) both vt-in-left;
+}
+
+/* The invisible marker that starts each one. */
+::view-transition-group(*.page) {
+  animation: none;
+}
+
+/* A loading skeleton fades out as its page arrives. */
+::view-transition-old(*.skeleton-out) {
+  animation: 180ms ease-out both vt-fade-out;
+}
+
+/* The tapped book's cover, on its way to the book's page. */
+::view-transition-group(book-cover) {
+  z-index: 50;
+  animation-duration: 420ms;
+  animation-timing-function: var(--vt-ease);
+}
+::view-transition-old(book-cover),
+::view-transition-new(book-cover) {
+  animation-duration: 200ms;
+}
+
+/* Anchors: no sliding or fading, and above the moving page. */
+::view-transition-group(sidebar),
+::view-transition-group(tab-bar),
+::view-transition-group(menu) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-group(menu) {
+  z-index: 101;
+}
+::view-transition-old(sidebar),
+::view-transition-old(tab-bar),
+::view-transition-old(menu) {
+  display: none;
+}
+::view-transition-new(sidebar),
+::view-transition-new(tab-bar),
+::view-transition-new(menu) {
+  animation: none;
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-out-left {
+  to {
+    translate: -32px 0;
+  }
+}
+@keyframes vt-in-right {
+  from {
+    translate: 32px 0;
+  }
+}
+@keyframes vt-out-right {
+  to {
+    translate: 32px 0;
+  }
+}
+@keyframes vt-in-left {
+  from {
+    translate: -32px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}

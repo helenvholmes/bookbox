@@ -1,3 +1,6 @@
+import { ViewTransition } from "react";
+import { PendingCover } from "./PendingCover";
+
 /**
  * Placeholders shown the moment a page is opened, while its data loads (each route's loading.tsx
  * picks one). They mirror the real layouts so nothing jumps when the content arrives.
@@ -5,13 +8,21 @@
 
 const Bar = ({ className = "" }: { className?: string }) => <div className={`rounded-md bg-raised ${className}`} />;
 
-function Shell({ label, children }: { label: string; children: React.ReactNode }) {
+/**
+ * `pulse` is off for a skeleton that pulses its parts itself (the book's, whose cover may be the
+ * real one). Each skeleton fades away when its page arrives, rather than vanishing.
+ */
+function Shell({ label, children, pulse = true }: { label: string; children: React.ReactNode; pulse?: boolean }) {
   return (
-    <div role="status" aria-label={label} className="animate-pulse space-y-8 pb-6 motion-reduce:animate-none">
-      {children}
-    </div>
+    <ViewTransition exit="skeleton-out" default="none">
+      <div role="status" aria-label={label} className={`space-y-8 pb-6 ${pulse ? "animate-pulse motion-reduce:animate-none" : ""}`}>
+        {children}
+      </div>
+    </ViewTransition>
   );
 }
+
+const PULSE = "animate-pulse motion-reduce:animate-none";
 
 function CardGrid({ count }: { count: number }) {
   return (
@@ -53,13 +64,13 @@ export function LibrarySkeleton() {
 /** A book: title and status on the left, cover on the right, then text and the side cards. */
 export function BookSkeleton() {
   return (
-    <Shell label="Loading book">
-      <div className="flex items-center justify-between">
+    <Shell label="Loading book" pulse={false}>
+      <div className={`flex items-center justify-between ${PULSE}`}>
         <div className="size-9 rounded-full bg-raised" />
         <Bar className="h-9 w-16 rounded-full" />
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)_7rem] items-start gap-x-5 sm:grid-cols-[minmax(0,1fr)_9rem] md:grid-cols-[minmax(0,1fr)_11rem] md:gap-x-12">
-        <div className="space-y-3 md:pt-8">
+        <div className={`space-y-3 md:pt-8 ${PULSE}`}>
           <Bar className="h-8 w-4/5" />
           <Bar className="h-4 w-2/5" />
           <div className="flex gap-2.5 pt-6">
@@ -68,9 +79,9 @@ export function BookSkeleton() {
             ))}
           </div>
         </div>
-        <div className="aspect-[2/3] rounded-sm bg-raised" />
+        <PendingCover />
       </div>
-      <div className="grid gap-10 border-t border-line pt-8 md:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className={`grid gap-10 border-t border-line pt-8 md:grid-cols-[minmax(0,1fr)_17rem] ${PULSE}`}>
         <div className="space-y-3">
           <Bar className="h-4 w-24" />
           {Array.from({ length: 6 }, (_, i) => (
