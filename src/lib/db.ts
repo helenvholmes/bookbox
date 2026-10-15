@@ -218,6 +218,28 @@ CREATE TABLE IF NOT EXISTS spotify_adding (
 CREATE TABLE IF NOT EXISTS spotify_ignored (
   audiobook_id TEXT PRIMARY KEY
 );
+
+-- The Libby account BookBox reads loans and holds from: a device identity linked to your library
+-- cards with Libby's "Copy To Another Device" code (see src/lib/libby-sync.ts).
+CREATE TABLE IF NOT EXISTS libby_account (
+  id             INTEGER PRIMARY KEY CHECK (id = 1),
+  token          TEXT NOT NULL,
+  libraries      TEXT NOT NULL DEFAULT '', -- your cards' library names, for Settings
+  time_zone      TEXT,                     -- the device's, for the days books are borrowed and due
+  attempted_at   INTEGER,                  -- ms since the epoch: the last sync, whether or not it worked
+  running_since  INTEGER,                  -- set while a sync runs, so two can't run at once
+  last_synced_at INTEGER,                  -- the last sync that worked
+  error          TEXT                      -- why the last sync failed, until one works
+);
+
+-- Each title on your Libby shelf at the last sync, and the book it is. A null book_id is a book you
+-- deleted, left alone from then on.
+CREATE TABLE IF NOT EXISTS libby_titles (
+  title_id TEXT PRIMARY KEY,
+  book_id  INTEGER,
+  state    TEXT NOT NULL CHECK (state IN ('loan', 'hold', 'gone'))
+);
+CREATE INDEX IF NOT EXISTS libby_titles_book ON libby_titles(book_id);
 `;
 
 // Columns added after the first release. Added in place so existing databases keep their data.
@@ -393,6 +415,8 @@ export async function deleteBookRows(id: number) {
   await transaction(async () => {
     for (const table of BOOK_CHILDREN) await db.prepare(`DELETE FROM ${table} WHERE book_id = ?`).run(id);
     await db.prepare("DELETE FROM not_duplicates WHERE book_a = ? OR book_b = ?").run(id, id);
+    // Kept, without its book, so the Libby sync doesn't add the book back.
+    await db.prepare("UPDATE libby_titles SET book_id = NULL WHERE book_id = ?").run(id);
     await db.prepare("DELETE FROM books WHERE id = ?").run(id);
   });
 }

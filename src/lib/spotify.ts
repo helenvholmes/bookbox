@@ -1,5 +1,5 @@
 import "server-only";
-import { addRead, getSearchEntries, saveBook, setCover, setReadDates, setStatus } from "./books";
+import { finishReading, getSearchEntries, saveBook, setCover, setStatus } from "./books";
 import { todayLocal } from "./dates";
 import { fetchCover, fetchSpotifyImage, isUsableImage, saveCover } from "./covers";
 import { db, transaction } from "./db";
@@ -260,27 +260,11 @@ export async function syncSpotify(force = false, today = todayLocal()): Promise<
     // you're reading moves to Read, with a read logged for this year unless one already is. Books on any
     // other shelf are left as they are.
     if (p.percent >= FINISHED_PERCENT && (await isReading(link.book_id))) {
-      await markFinished(link.book_id, link.audiobook_id, today);
+      await finishReading(link.book_id, today, `spotify-${link.audiobook_id}-${today.slice(0, 4)}`);
       changed.add(link.book_id);
     }
   }
   return { synced: true, changed: [...changed] };
-}
-
-/** Like finishing a book on its page (changeStatus in src/lib/book-state.ts): the read is logged with its days. */
-async function markFinished(bookId: number, audiobookId: string, today: string) {
-  const year = Number(today.slice(0, 4));
-  await transaction(async () => {
-    const { started_on } = (await db.prepare("SELECT started_on FROM books WHERE id = ?").get(bookId)) as { started_on: string | null };
-    await setStatus(bookId, "Read");
-    const logged = (await db.prepare("SELECT id, started_on, finished_on FROM book_reads WHERE book_id = ? AND year = ? ORDER BY id DESC").get(bookId, year)) as
-      | { id: number; started_on: string | null; finished_on: string | null }
-      | undefined;
-    // The client id makes a retried sync harmless (see addRead).
-    if (!logged) await addRead(bookId, year, "", `spotify-${audiobookId}-${year}`, { startedOn: started_on, finishedOn: today });
-    else if (!logged.finished_on) await setReadDates({ id: logged.id }, logged.started_on ?? started_on, today);
-    await db.prepare("UPDATE books SET started_on = NULL WHERE id = ?").run(bookId);
-  });
 }
 
 /** "Diavola: A Novel" and "Diavola (Unabridged)" -> "diavola", for comparing titles across catalogues. */

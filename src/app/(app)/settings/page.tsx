@@ -5,6 +5,7 @@ import { ApiKeyOriginsForm, NewApiKeyForm } from "@/components/ApiKeyForms";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { GoodreadsImport } from "@/components/GoodreadsImport";
 import { HardcoverTokenForm } from "@/components/HardcoverTokenForm";
+import { LibbyConnectForm } from "@/components/LibbyConnectForm";
 import { LibbyImport } from "@/components/LibbyImport";
 import { SettingsForm } from "@/components/SettingsForm";
 import { SignOutButton } from "@/components/SignOutButton";
@@ -13,10 +14,11 @@ import { authEnabled } from "@/lib/auth";
 import { SpotifyKeysForm } from "@/components/SpotifyKeysForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { hardcoverToken } from "@/lib/hardcover";
+import { libbyStatus } from "@/lib/libby-sync";
 import { getSettings } from "@/lib/settings";
 import { callbackUrl, getSpotifyAccount, spotifyCredentials } from "@/lib/spotify";
 import { disconnectAction, syncNowAction } from "../spotify/actions";
-import { deleteApiKeyAction, removeHardcoverTokenAction, removeSpotifyKeysAction } from "./actions";
+import { deleteApiKeyAction, disconnectLibbyAction, removeHardcoverTokenAction, removeSpotifyKeysAction, syncLibbyNowAction } from "./actions";
 
 export const metadata = { title: "Settings" };
 
@@ -38,7 +40,14 @@ const SPOTIFY_MESSAGES: Record<string, { text: string; error?: boolean }> = {
 export default async function SettingsPage(props: PageProps<"/settings">) {
   await connection();
   const sp = await props.searchParams;
-  const [settings, keys, account, hardcover, apiKeys] = await Promise.all([getSettings(), spotifyCredentials(), getSpotifyAccount(), hardcoverToken(), listApiKeys()]);
+  const [settings, keys, account, hardcover, apiKeys, libby] = await Promise.all([
+    getSettings(),
+    spotifyCredentials(),
+    getSpotifyAccount(),
+    hardcoverToken(),
+    listApiKeys(),
+    libbyStatus(),
+  ]);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
   const message = typeof sp.spotify === "string" ? SPOTIFY_MESSAGES[sp.spotify] : undefined;
@@ -132,6 +141,58 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
                 )}
               </>
             )}
+          </div>
+        </div>
+      </section>
+
+      <section id="libby-sync" className="max-w-xl scroll-mt-8 space-y-3">
+        <h2 className="section-title">Libby</h2>
+        <p className="text-sm text-muted">
+          Follow your library loans: a book you borrow moves to Currently Reading with its library and due date, and when it goes back it moves to Read. Holds
+          you don&rsquo;t have yet go on To Read.
+        </p>
+        <div className="card divide-y divide-line text-sm">
+          {libby && (
+            <div className="space-y-4 p-5">
+              <p>
+                Connected{libby.libraries ? ` to ${libby.libraries}` : ""}.{" "}
+                <span className="text-muted">
+                  {libby.loans} {libby.loans === 1 ? "loan" : "loans"}, {libby.holds} {libby.holds === 1 ? "hold" : "holds"}.
+                  {libby.lastSyncedAt && <> Last synced {new Date(libby.lastSyncedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.</>}
+                </span>
+              </p>
+              {libby.error && <p className="text-danger">{libby.error}</p>}
+              <div className="flex flex-wrap items-center gap-2">
+                <form action={syncLibbyNowAction}>
+                  <SubmitButton className="btn rounded-full px-4" pending="Syncing…">
+                    Sync now
+                  </SubmitButton>
+                </form>
+                <form action={disconnectLibbyAction}>
+                  <ConfirmButton className="btn rounded-full px-4" message="Disconnect Libby? Your books stay as they are." confirmLabel="Disconnect">
+                    Disconnect
+                  </ConfirmButton>
+                </form>
+              </div>
+            </div>
+          )}
+          <div className="space-y-4 p-5">
+            {libby && <h3 className="font-medium">Connect again</h3>}
+            <ol className="list-decimal space-y-2 pl-5 text-muted">
+              <li>
+                In the Libby app, open <span className="text-ink">Settings → Copy To Another Device</span> and pick the option that shows a code (
+                <a href="https://help.libbyapp.com/en-us/6070.htm" target="_blank" rel="noreferrer" className="text-ink underline">
+                  Libby&rsquo;s help
+                </a>{" "}
+                has the steps).
+              </li>
+              <li>Type the 8-digit code here within a minute.</li>
+            </ol>
+            <p className="text-xs text-faint">
+              Libby has no API for other apps, so this uses the private one the Libby app uses, and may stop working if Libby changes it. BookBox only reads your
+              loans and holds. Returned books count as read, so change any you didn&rsquo;t finish to Abandoned.
+            </p>
+            <LibbyConnectForm reconnecting={!!libby} />
           </div>
         </div>
       </section>

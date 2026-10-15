@@ -13,6 +13,7 @@ BookBox is for one reader per copy: you deploy your own, on your own free accoun
 - **Shelves and filters**: Currently Reading, To Read, Read, Abandoned and your own shelves, plus year read, tag, person, rating, and owned/Kindle/borrowed.
 - **Reads and progress**: every read is logged separately, so re-reads are tracked. Progress is set by page (or by percentage for Kindle books) and shows on your Currently Reading shelf.
 - **Spotify audiobooks** (optional): when you start or resume an audiobook on Spotify, its book moves to Currently Reading (and is added if it isn't in your library yet), with your listening progress.
+- **Libby loans** (optional): connect Libby once with a code from the app, and books you borrow move to Currently Reading with their library and due date, then to Read when they go back. Holds you don't have yet go on To Read.
 - **Offline**: once opened online, the home screen app keeps working without a connection. Search, covers and the main pages stay available, and changes to status, ratings, reads, progress and notes are saved on your device and sync when you're back online.
 - **People and sharing**: note who recommended a book and who it's for, and give anyone a read-only page ("Books for Sam") at an unguessable link, with its own title, message, layout, accent colour, and whether your ratings and reviews show. Private notes and spoilers are never shared.
 - **Stats**: a reading goal per year, books per year, ratings, top tags and authors, and whose recommendations you rate highest, plus a reading calendar and a year in review for every year.
@@ -65,6 +66,17 @@ Spotify only lets each developer app serve a handful of users, so everyone uses 
 BookBox only reads your saved audiobooks and listening positions; it never plays or changes anything. It checks when you open the app, at most every few minutes. The first check only records where each audiobook stands, so audiobooks you'd already started aren't all pulled in at once. Add any of them from the **Spotify** page (linked from Settings), which lists your audiobooks and what they're linked to.
 
 (You can set the keys as `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` on the host instead; those win over Settings.)
+
+### Libby (optional)
+
+Libby has no API for other apps, so BookBox uses the private one the Libby app itself uses (as [odmpy](https://github.com/ping/odmpy) and the [Libby plugin for Calibre](https://github.com/ping/libby-calibre-plugin) do). It can stop working whenever Libby changes it.
+
+1. In the Libby app, open **Settings → Copy To Another Device** and pick the option that shows an 8-digit code ([Libby's help](https://help.libbyapp.com/en-us/6070.htm) has the steps).
+2. In BookBox, open **Settings → Libby**, type the code within a minute, and tap **Connect Libby**.
+
+BookBox checks your shelf when you open the app, at most every ten minutes. A new loan moves its book to Currently Reading (adding it if it isn't in your library yet) with its library and due date. When a loan goes back, by you or because it was due, the book moves to Read that day if it's still Currently Reading: Libby doesn't say whether you finished, so change any you didn't to Abandoned. New holds you don't have yet go on To Read. The first check takes your shelf as it is, but leaves books you've already marked Read or Abandoned alone. Magazines are skipped.
+
+BookBox only reads your loans and holds. The connection could borrow and return on your cards, though, so it's kept on the server and never copied by `pull:cloud`. If Libby signs BookBox out, Settings says so; connect again with a new code. For your history from before you connected, use the timeline import below it.
 
 ### Hardcover (optional)
 

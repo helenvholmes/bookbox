@@ -702,6 +702,25 @@ export async function addRead(
   await db.prepare(`UPDATE books SET updated_at = datetime('now')${dates.finishedOn ? ", started_on = NULL" : ""} WHERE id = ?`).run(bookId);
 }
 
+/**
+ * Finishes the read in progress, like finishing a book on its page (changeStatus in
+ * src/lib/book-state.ts): the book moves to Read, with a read logged for `today`'s year from its
+ * start day unless one already is. `clientId` makes a retried sync harmless (see addRead).
+ */
+export async function finishReading(bookId: number, today: string, clientId: string) {
+  const year = Number(today.slice(0, 4));
+  await transaction(async () => {
+    const { started_on } = (await db.prepare("SELECT started_on FROM books WHERE id = ?").get(bookId)) as { started_on: string | null };
+    await setStatus(bookId, "Read");
+    const logged = (await db.prepare("SELECT id, started_on, finished_on FROM book_reads WHERE book_id = ? AND year = ? ORDER BY id DESC").get(bookId, year)) as
+      | { id: number; started_on: string | null; finished_on: string | null }
+      | undefined;
+    if (!logged) await addRead(bookId, year, "", clientId, { startedOn: started_on, finishedOn: today });
+    else if (!logged.finished_on) await setReadDates({ id: logged.id }, logged.started_on ?? started_on, today);
+    await db.prepare("UPDATE books SET started_on = NULL WHERE id = ?").run(bookId);
+  });
+}
+
 /** Sets a read's start and finish days; a finish day moves the read to that day's year. */
 export async function setReadDates(ref: { id: number } | { clientId: string }, startedOn: string | null, finishedOn: string | null) {
   const [where, arg] = "id" in ref ? ["id = ?", ref.id] : ["client_id = ?", ref.clientId];

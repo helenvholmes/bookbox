@@ -60,6 +60,34 @@ export async function removeHardcoverTokenAction() {
   revalidatePath("/", "layout");
 }
 
+export type LibbyConnectState = { error?: string } | null;
+
+/** Links Libby with the code from its Copy To Another Device screen, then runs the first sync. */
+export async function connectLibbyAction(_prev: LibbyConnectState, fd: FormData): Promise<LibbyConnectState> {
+  const { cleanTimeZone, connectLibby, LibbyError } = await import("@/lib/libby-sync");
+  const code = String(fd.get("code") ?? "").replace(/\D/g, "");
+  try {
+    await connectLibby(code, cleanTimeZone(fd.get("time_zone")));
+  } catch (e) {
+    return { error: e instanceof LibbyError ? e.message : "Couldn’t connect to Libby. Try again in a minute." };
+  } finally {
+    revalidatePath("/", "layout");
+  }
+  return null;
+}
+
+export async function syncLibbyNowAction() {
+  const { syncLibby } = await import("@/lib/libby-sync");
+  await syncLibby({ force: true }).catch(() => {}); // the error is saved and shown in Settings
+  revalidatePath("/", "layout");
+}
+
+export async function disconnectLibbyAction() {
+  const { disconnectLibby } = await import("@/lib/libby-sync");
+  await disconnectLibby();
+  revalidatePath("/", "layout");
+}
+
 // API keys for other apps (see src/lib/api-keys.ts).
 
 export type ApiKeyState = { key?: string; name?: string; error?: string } | null;
