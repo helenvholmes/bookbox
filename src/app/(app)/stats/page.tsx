@@ -5,13 +5,13 @@ import { GoalCard } from "@/components/GoalCard";
 import { RankList } from "@/components/RankList";
 import { Stars } from "@/components/Stars";
 import { YearChart } from "@/components/YearChart";
-import { genderBreakdown } from "@/lib/author-genders";
+import { genderBreakdown, genderByYear } from "@/lib/author-genders";
 import { getStats } from "@/lib/stats";
 
 export const metadata = { title: "Stats" };
 
 export default async function StatsPage() {
-  const [s, authors] = await Promise.all([getStats(), genderBreakdown()]);
+  const [s, authors, authorsByYear] = await Promise.all([getStats(), genderBreakdown(), genderByYear()]);
   const maxRating = Math.max(1, ...s.ratings.map((r) => r.count));
 
   const tiles = [
@@ -63,7 +63,7 @@ export default async function StatsPage() {
       </section>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <GenderCard breakdown={authors} scope="all time" />
+        <GenderCard breakdown={authors} scope="all time" years={authorsByYear} />
 
         <section className="card space-y-3 p-5">
           <h2 className="section-title">Your ratings</h2>
