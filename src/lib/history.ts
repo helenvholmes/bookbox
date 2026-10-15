@@ -15,3 +15,21 @@ export function notePage(pathname: string) {
 }
 
 export const hasPageBefore = () => pages > 1;
+
+/** The pages you've been on since the app loaded, with their filters ("/library?shelf=To+Read"), newest last. */
+const places: string[] = [];
+
+export function notePlace(href: string) {
+  if (places.at(-1) === href) return;
+  places.push(href);
+  if (places.length > 50) places.shift();
+}
+
+/**
+ * The last page you were on that isn't under `prefix` (a book's own page and its edit form, say),
+ * for where to go once that book is deleted. Null when there's none, like after a reload.
+ */
+export function lastPlaceOutside(prefix: string): string | null {
+  const inside = (href: string) => href === prefix || href.startsWith(`${prefix}/`) || href.startsWith(`${prefix}?`);
+  return places.findLast((href) => !inside(href)) ?? null;
+}
