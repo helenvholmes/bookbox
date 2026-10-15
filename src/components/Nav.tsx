@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { SOURCE_URL } from "@/lib/constants";
 import { notePage } from "@/lib/history";
 import { SignOutButton } from "./SignOutButton";
@@ -191,16 +191,45 @@ function SidebarLinks({ years: withReads, lists, canSignOut, large = false }: Pr
   );
 }
 
+/** How long the phone menu takes to slide in or out; matches its duration-300 class. */
+const SLIDE_MS = 300;
+
+/**
+ * Opens and closes the phone menu with a slide from the right. It's driven from here rather than
+ * with CSS alone (@starting-style and transitioning `overlay`), which Safari on iPhone doesn't fully
+ * support: there the menu appeared without sliding in, and left the screen before sliding out.
+ * Opening shows the dialog off-screen first, then slides it in; closing slides it out, then closes it.
+ */
+function useSlidingDialog() {
+  const ref = useRef<HTMLDialogElement>(null);
+  const closing = useRef<number | undefined>(undefined);
+  const open = useCallback(() => {
+    const d = ref.current;
+    if (!d) return;
+    window.clearTimeout(closing.current);
+    if (!d.open) d.showModal();
+    // Lay it out off-screen first, so the browser has somewhere to slide from.
+    void d.offsetWidth;
+    d.dataset.shown = "true";
+  }, []);
+  const close = useCallback(() => {
+    const d = ref.current;
+    if (!d?.open || d.dataset.shown !== "true") return;
+    d.dataset.shown = "false";
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    closing.current = window.setTimeout(() => d.close(), still ? 0 : SLIDE_MS);
+  }, []);
+  return { ref, open, close };
+}
+
 export function Nav({ years, lists, canSignOut }: Props) {
   const pathname = usePathname();
   const params = useSearchParams();
-  const menu = useRef<HTMLDialogElement>(null);
+  const { ref: menuRef, open: openMenu, close: closeMenu } = useSlidingDialog();
 
   // Close the drawer once something in it is picked (the page or its filters change).
   const location = `${pathname}?${params}`;
-  useEffect(() => {
-    menu.current?.close();
-  }, [location]);
+  useEffect(() => closeMenu(), [location, closeMenu]);
   useEffect(() => notePage(pathname), [pathname]);
 
   if (pathname === "/login") return null;
@@ -216,17 +245,23 @@ export function Nav({ years, lists, canSignOut }: Props) {
 
       {/* Phone: the same links on a full-screen panel that slides in from the right, opened by the Menu tab. */}
       <dialog
-        ref={menu}
+        ref={menuRef}
         aria-label="Menu"
+        data-shown="false"
+        // Escape slides it away too, rather than closing it at once.
+        onCancel={(e) => {
+          e.preventDefault();
+          closeMenu();
+        }}
         // Picking any link closes it.
         onClick={(e) => {
-          if ((e.target as Element).closest("a")) menu.current?.close();
+          if ((e.target as Element).closest("a")) closeMenu();
         }}
-        className="m-0 h-dvh max-h-none w-full max-w-none translate-x-full overflow-y-auto overscroll-contain bg-[#0e0f11] p-0 text-ink transition-[translate,display,overlay] transition-discrete duration-200 ease-out open:translate-x-0 md:hidden starting:open:translate-x-full"
+        className="m-0 h-dvh max-h-none w-full max-w-none [transform:translate3d(100%,0,0)] overflow-y-auto overscroll-contain bg-[#0e0f11] p-0 text-ink transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform backdrop:bg-transparent data-[shown=true]:[transform:translate3d(0,0,0)] motion-reduce:transition-none md:hidden"
       >
         <button
           type="button"
-          onClick={() => menu.current?.close()}
+          onClick={closeMenu}
           aria-label="Close menu"
           className="absolute top-[max(0.75rem,env(safe-area-inset-top))] right-3 flex size-10 items-center justify-center rounded-full text-muted hover:text-ink"
         >
@@ -262,7 +297,7 @@ export function Nav({ years, lists, canSignOut }: Props) {
           ))}
           <button
             type="button"
-            onClick={() => menu.current?.showModal()}
+            onClick={openMenu}
             aria-haspopup="dialog"
             className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] ${inMenu ? "text-ink" : "text-faint"}`}
           >
