@@ -589,6 +589,71 @@ export async function getTag(id: number) {
   return (await db.prepare("SELECT id, name, notes FROM tags WHERE id = ?").get(id)) as (Named & { notes: string }) | undefined;
 }
 
+// Lists: your own shelves (Urbanism, Gifts to give…), alongside the reading statuses. A book can be on any number.
+
+export type List = Named & { count: number };
+
+const isStatus = (name: string) => STATUS.some((s) => s.toLowerCase() === name.trim().toLowerCase());
+
+/** Your lists, A to Z, with how many books each has. */
+export async function listLists(): Promise<List[]> {
+  const { shelves } = await getFacets();
+  return shelves.filter((s) => !isStatus(s.name)).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+}
+
+export async function getList(id: number) {
+  await connection();
+  const row = (await db.prepare("SELECT id, name FROM shelves WHERE id = ?").get(id)) as Named | undefined;
+  return row && !isStatus(row.name) ? row : undefined;
+}
+
+/** Makes a list, or returns null when the name is taken (by a list or a reading status, ignoring case). */
+export async function createList(name: string): Promise<number | null> {
+  if (isStatus(name) || (await db.prepare("SELECT id FROM shelves WHERE name = ?").get(name))) return null;
+  return findOrCreate("shelves", name);
+}
+
+/** Renames a list. Returns false when the name is taken. */
+export async function renameList(id: number, name: string): Promise<boolean> {
+  if (!(await getList(id)) || isStatus(name)) return false;
+  const taken = (await db.prepare("SELECT id FROM shelves WHERE name = ? AND id != ?").get(name, id)) as { id: number } | undefined;
+  if (taken) return false;
+  await db.prepare("UPDATE shelves SET name = ? WHERE id = ?").run(name, id);
+  return true;
+}
+
+/** Deletes a list. Its books stay in your library. */
+export async function deleteList(id: number) {
+  if (!(await getList(id))) return;
+  await transaction(async () => {
+    await db.prepare("DELETE FROM book_shelves WHERE shelf_id = ?").run(id);
+    await db.prepare("DELETE FROM shelves WHERE id = ?").run(id);
+  });
+}
+
+/** Adds a book to a list, or takes it off. */
+export async function setOnList(bookId: number, listId: number, on: boolean) {
+  if (!(await getList(listId))) return;
+  if (on) await db.prepare("INSERT OR IGNORE INTO book_shelves (book_id, shelf_id) VALUES (?, ?)").run(bookId, listId);
+  else await db.prepare("DELETE FROM book_shelves WHERE book_id = ? AND shelf_id = ?").run(bookId, listId);
+  await db.prepare("UPDATE books SET updated_at = datetime('now') WHERE id = ?").run(bookId);
+}
+
+/**
+ * Turns a tag into a list of the same name (joining a list that already has it), then deletes the
+ * tag. Returns the list's id, or null when the tag is gone or is named after a reading status.
+ */
+export async function listFromTag(tagId: number): Promise<number | null> {
+  const tag = (await db.prepare("SELECT id, name FROM tags WHERE id = ?").get(tagId)) as Named | undefined;
+  if (!tag || isStatus(tag.name)) return null;
+  return transaction(async () => {
+    const listId = await findOrCreate("shelves", tag.name);
+    await db.prepare("INSERT OR IGNORE INTO book_shelves (book_id, shelf_id) SELECT book_id, ? FROM book_tags WHERE tag_id = ?").run(listId, tagId);
+    await deleteTag(tagId);
+    return listId;
+  });
+}
+
 // Missing covers
 
 export async function listMissingCovers() {

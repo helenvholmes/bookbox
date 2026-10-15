@@ -1,12 +1,13 @@
 import Link from "next/link";
 
 const TABS = [
+  { href: "/lists", label: "Lists" },
   { href: "/tags", label: "Tags" },
   { href: "/series", label: "Series" },
   { href: "/stats", label: "Stats" },
 ] as const;
 
-/** Underline tabs shared by the Tags, Series and Stats pages. */
+/** Underline tabs shared by the Lists, Tags, Series and Stats pages. */
 export function CollectionTabs({ current }: { current: (typeof TABS)[number]["href"] }) {
   return (
     <nav aria-label="Collections" className="-mx-4 flex gap-5 border-b border-line px-4">

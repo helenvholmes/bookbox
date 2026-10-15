@@ -10,8 +10,9 @@ import { ReadsCard } from "@/components/ReadsCard";
 import { BookStatus, RatingPicker } from "@/components/BookStatus";
 import { BookTexts } from "@/components/BookTexts";
 import { CopyCard } from "@/components/CopyCard";
+import { ListsPicker } from "@/components/ListsPicker";
 import { STATUS_SHELVES } from "@/components/ShelfIcon";
-import { getBook, getFacets, type PersonLink } from "@/lib/books";
+import { getBook, getFacets, listLists, type PersonLink } from "@/lib/books";
 
 async function load(params: Promise<{ id: string }>) {
   const { id } = await params;
@@ -26,7 +27,7 @@ export async function generateMetadata(props: PageProps<"/books/[id]">): Promise
 }
 
 export default async function BookPage(props: PageProps<"/books/[id]">) {
-  const [book, { people }] = await Promise.all([load(props.params), getFacets()]);
+  const [book, { people }, lists] = await Promise.all([load(props.params), getFacets(), listLists()]);
   const otherShelves = book.shelves.filter((s) => !(STATUS_SHELVES as readonly string[]).includes(s));
 
   const details = [
@@ -123,22 +124,24 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
             <h2 className="section-title">Rating</h2>
             <div className="card space-y-3 p-4">
               <RatingPicker bookId={book.id} rating={book.rating} />
-              {(book.tags.length > 0 || otherShelves.length > 0 || book.owned || book.on_kindle) && (
+              {(book.tags.length > 0 || book.owned || book.on_kindle) && (
                 <div className="flex flex-wrap gap-1.5">
                   {book.tags.map((t) => (
                     <Link key={t.id} href={`/library?tag=${t.id}`} className="chip hover:text-ink">
                       {t.name}
                     </Link>
                   ))}
-                  {otherShelves.map((s) => (
-                    <Link key={s} href={`/library?shelf=${encodeURIComponent(s)}`} className="chip hover:text-ink">
-                      {s}
-                    </Link>
-                  ))}
                   {book.owned && <span className="chip">Owned</span>}
                   {book.on_kindle && <span className="chip">Kindle</span>}
                 </div>
               )}
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="section-title">Lists</h2>
+            <div className="card p-4">
+              <ListsPicker bookId={book.id} lists={lists} on={otherShelves} />
             </div>
           </section>
 

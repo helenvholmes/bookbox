@@ -4,7 +4,7 @@ import { Nav } from "@/components/Nav";
 import { OfflineSupport } from "@/components/OfflineSupport";
 import { BackgroundSync } from "@/components/BackgroundSync";
 import { authEnabled } from "@/lib/auth";
-import { getFacets } from "@/lib/books";
+import { getFacets, listLists } from "@/lib/books";
 
 /**
  * The signed-in app: sidebar (or bottom tabs on phones) around every page. Nothing here waits on
@@ -19,11 +19,11 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       {process.env.NODE_ENV === "development" && <LocalCopyNotice />}
       {/* Three steps, so the page never shifts sideways: an empty sidebar of the right size in the first
           bytes, then its links (Nav reads the URL's query string, which needs a Suspense boundary of its
-          own), then the years once their query returns. */}
+          own), then the years and lists once their query returns. */}
       <Suspense
         fallback={
           <Suspense fallback={<SidebarShell />}>
-            <Nav years={[]} canSignOut={authEnabled()} />
+            <Nav years={[]} lists={[]} canSignOut={authEnabled()} />
           </Suspense>
         }
       >
@@ -51,6 +51,6 @@ async function LocalCopyNotice() {
 }
 
 async function NavWithYears() {
-  const { years } = await getFacets();
-  return <Nav years={years} canSignOut={authEnabled()} />;
+  const [{ years }, lists] = await Promise.all([getFacets(), listLists()]);
+  return <Nav years={years} lists={lists} canSignOut={authEnabled()} />;
 }
