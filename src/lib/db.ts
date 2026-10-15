@@ -219,6 +219,17 @@ CREATE TABLE IF NOT EXISTS spotify_ignored (
   audiobook_id TEXT PRIMARY KEY
 );
 
+-- Each author's gender, for the Stats breakdown (see src/lib/author-genders.ts): looked up on
+-- Wikidata, or set by you, which a lookup never overwrites. A null gender is not known: Wikidata had
+-- nothing certain, or you said so.
+CREATE TABLE IF NOT EXISTS author_genders (
+  name        TEXT PRIMARY KEY COLLATE NOCASE, -- as written on books (books.author)
+  gender      TEXT CHECK (gender IN ('woman', 'man', 'nonbinary')),
+  source      TEXT NOT NULL CHECK (source IN ('wikidata', 'you')),
+  wikidata_id TEXT,
+  checked_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- The Libby account BookBox reads loans and holds from: a device identity linked to your library
 -- cards with Libby's "Copy To Another Device" code (see src/lib/libby-sync.ts).
 CREATE TABLE IF NOT EXISTS libby_account (

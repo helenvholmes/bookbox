@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Cover } from "@/components/Cover";
+import { GenderCard } from "@/components/GenderCard";
 import { RankList } from "@/components/RankList";
+import { genderBreakdown } from "@/lib/author-genders";
 import { formatSpan } from "@/lib/dates";
 import { getYearReview, type ReviewBook } from "@/lib/stats";
 import { validYear } from "@/lib/sync-ops";
@@ -22,7 +24,7 @@ export async function generateMetadata(props: PageProps<"/stats/[year]">): Promi
 /** A year in books: there for every year without setting anything up. */
 export default async function YearReviewPage(props: PageProps<"/stats/[year]">) {
   const year = parseYear((await props.params).year);
-  const r = await getYearReview(year);
+  const [r, authors] = await Promise.all([getYearReview(year), genderBreakdown(year)]);
   const n = r.books.length;
   const plural = (count: number, one: string, many = `${one}s`) => `${count.toLocaleString()} ${count === 1 ? one : many}`;
   const maxMonth = Math.max(1, ...r.perMonth);
@@ -138,6 +140,7 @@ export default async function YearReviewPage(props: PageProps<"/stats/[year]">) 
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
+            <GenderCard breakdown={authors} scope={`in ${year}`} />
             <RankList
               title="Authors"
               rows={r.topAuthors.map((a) => ({ key: a.label, label: a.label, href: `/library?q=${encodeURIComponent(a.label)}`, value: `${a.count} books${a.avg ? ` · ${a.avg}★` : ""}` }))}

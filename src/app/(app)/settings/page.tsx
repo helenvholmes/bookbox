@@ -26,6 +26,7 @@ const TIDY_UP = [
   { href: "/missing-covers", title: "Missing covers", text: "Books without a cover, with ISBN matches first." },
   { href: "/missing-isbns", title: "Missing ISBNs", text: "Books without an ISBN, which OpenLibrary needs to look them up." },
   { href: "/duplicates", title: "Duplicates", text: "Books that share an ISBN or title." },
+  { href: "/authors", title: "Authors", text: "Each author’s gender, from Wikidata, for the Stats breakdown." },
   { href: "/refresh", title: "OpenLibrary refresh", text: "Fills empty details from OpenLibrary and lists differences to review." },
 ];
 
