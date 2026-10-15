@@ -71,7 +71,7 @@ const item = (active: boolean, large = false) =>
 
 /**
  * Everything in the sidebar: shown beside the page on desktop, and in the full-screen Menu on
- * phones. Shelves and this year come first, then your lists, then earlier years in a folder.
+ * phones. Shelves come first, then this year with earlier years in a folder under it, then your lists.
  */
 function SidebarLinks({ years: withReads, lists, canSignOut, large = false }: Props & { large?: boolean }) {
   const { current, past } = useYears(withReads);
@@ -129,8 +129,23 @@ function SidebarLinks({ years: withReads, lists, canSignOut, large = false }: Pr
             <ShelfIcon shelf={s} /> {shelfLabel(s)}
           </Link>
         ))}
-        {current && yearLink(current)}
       </div>
+
+      {current && (
+        <div className="space-y-0.5">
+          {yearLink(current)}
+          {past.length > 0 && (
+            <>
+              <button type="button" className={`${row(false)} w-full`} aria-expanded={showYears} onClick={() => setYearsOpen(!showYears)}>
+                <Icon d={ICONS.folder} />
+                <span className="flex-1 text-left">Years</span>
+                <Icon d={ICONS.chevron} className={`size-3.5 text-faint transition-transform ${showYears ? "rotate-90" : ""}`} />
+              </button>
+              {showYears && past.map((y) => yearLink(y, true))}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="space-y-0.5">
         <div className="flex items-center justify-between px-2.5 pb-1">
@@ -154,17 +169,6 @@ function SidebarLinks({ years: withReads, lists, canSignOut, large = false }: Pr
           </Link>
         )}
       </div>
-
-      {past.length > 0 && (
-        <div className="space-y-0.5">
-          <button type="button" className={`${row(false)} w-full`} aria-expanded={showYears} onClick={() => setYearsOpen(!showYears)}>
-            <Icon d={ICONS.folder} />
-            <span className="flex-1 text-left">Years</span>
-            <Icon d={ICONS.chevron} className={`size-3.5 text-faint transition-transform ${showYears ? "rotate-90" : ""}`} />
-          </button>
-          {showYears && past.map((y) => yearLink(y, true))}
-        </div>
-      )}
 
       <div className="mt-auto space-y-0.5">
         <a href="/export/books.csv" download className={row(false)}>
