@@ -1,15 +1,20 @@
 "use client";
 
 import { deleteBookAction } from "@/app/(app)/books/actions";
-import { lastPlaceOutside } from "@/lib/history";
+import { lastPlaceOutside, scrollBackOnArrival } from "@/lib/history";
 import { ConfirmButton } from "./ConfirmButton";
 
-/** "Delete book", which then goes back to the page you were on before the book (a shelf, a list, a search). */
+/**
+ * "Delete book", which then goes back to the page you were on before the book (a shelf, a list, a
+ * search), scrolled to where you were.
+ */
 export function DeleteBookForm({ id, title }: { id: number; title: string }) {
   return (
     <form
       action={(fd) => {
-        fd.set("return_to", lastPlaceOutside(`/books/${id}`) ?? "/library");
+        const back = lastPlaceOutside(`/books/${id}`);
+        fd.set("return_to", back ?? "/library");
+        if (back) scrollBackOnArrival(back);
         return deleteBookAction(fd);
       }}
       className="border-t border-line pt-6 text-center"

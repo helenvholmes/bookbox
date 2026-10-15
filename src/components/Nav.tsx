@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { SOURCE_URL } from "@/lib/constants";
-import { notePage, notePlace } from "@/lib/history";
+import { arrivedAt, notePage, notePlace, rememberScroll } from "@/lib/history";
 import { SignOutButton } from "./SignOutButton";
 import { ShelfIcon, STATUS_SHELVES, shelfLabel } from "./ShelfIcon";
 
@@ -235,7 +235,20 @@ export function Nav({ years, lists, canSignOut }: Props) {
   const location = `${pathname}?${params}`;
   useEffect(() => closeMenu(), [location, closeMenu]);
   useEffect(() => notePage(pathname), [pathname]);
-  useEffect(() => notePlace(params.size ? location : pathname), [location, params.size, pathname]);
+  useEffect(() => {
+    const place = params.size ? location : pathname;
+    notePlace(place);
+    arrivedAt(place);
+  }, [location, params.size, pathname]);
+  // Before a link takes you away, note how far down this page you were (capture: before the navigation starts).
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const link = (e.target as Element | null)?.closest?.("a[href]");
+      if (link) rememberScroll(link);
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, []);
 
   if (pathname === "/login") return null;
   const onLibrary = pathname === "/library";
