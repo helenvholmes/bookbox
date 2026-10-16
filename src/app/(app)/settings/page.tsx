@@ -446,7 +446,10 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
               <ChangePasswordForm />
             </div>
             <div className="flex flex-wrap items-center justify-between gap-4 p-5">
-              <p className="max-w-sm text-muted">Signs out this device and removes the copy of your library it keeps for offline use.</p>
+              {/* Explained only on a copy run for one person (no invites), where whoever reads it set it up. */}
+              {!process.env.TURSO_API_TOKEN && (
+                <p className="max-w-sm text-muted">Signs out this device and removes the copy of your library it keeps for offline use.</p>
+              )}
               <SignOutButton className="btn rounded-full px-4" />
             </div>
           </div>
