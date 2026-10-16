@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element -- covers are resized WebP served from our own route */
 import Link from "next/link";
+import { connection } from "next/server";
 import { CollectionTabs } from "@/components/CollectionTabs";
 import { detectSeriesFromTitles, listSeries } from "@/lib/books";
 import { checkSeriesOnHardcover } from "@/lib/hardcover";
@@ -8,6 +9,8 @@ import { applyDetectedSeriesAction } from "./actions";
 export const metadata = { title: "Series" };
 
 export default async function SeriesPage() {
+  // Your library is per visit (and per person), never built ahead of time.
+  await connection();
   // Series Hardcover doesn't have are left out. New ones are checked a few per visit; until then they show.
   await checkSeriesOnHardcover();
   const [all, detected] = await Promise.all([listSeries(), detectSeriesFromTitles()]);
