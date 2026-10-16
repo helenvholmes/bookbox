@@ -142,11 +142,10 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
               </a>
             </div>
             <p className="text-xs text-faint">
-              Free. Invite-only for now, while it&rsquo;s small. Or{" "}
+              Invite-only, or{" "}
               <a href="#run-your-own" className="underline decoration-line underline-offset-2 hover:text-muted">
                 run your own copy
               </a>
-              .
             </p>
           </div>
 
