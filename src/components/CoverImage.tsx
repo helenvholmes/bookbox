@@ -13,11 +13,12 @@ const FRAME_RATIO = 2 / 3;
 export function CoverImage({ src, eager, priority = false, alwaysFill = false }: { src: string; eager: boolean; priority?: boolean; alwaysFill?: boolean }) {
   const [measured, setFit] = useState<"object-contain" | "object-cover">("object-contain");
   // A cover that won't load (deleted, or paused at the storage limit) leaves the frame empty, not a broken-image icon.
+  // Only the error event says so: "complete" with no size can't, because Safari reports a lazy image it hasn't
+  // fetched yet that way, and would hide every cover below the fold.
   const [failed, setFailed] = useState(false);
   const fit = alwaysFill ? "object-cover" : measured;
 
   const measure = useCallback((img: HTMLImageElement | null) => {
-    if (img?.complete && !img.naturalWidth) setFailed(true); // failed before hydration, so onError never ran
     if (!img?.naturalWidth) return;
     setFit(img.naturalWidth / img.naturalHeight > FRAME_RATIO + 0.005 ? "object-cover" : "object-contain");
   }, []);
