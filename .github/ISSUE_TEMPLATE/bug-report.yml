@@ -1,0 +1,55 @@
+name: 🐛 Report a bug
+description: Something in BookBox isn't working the way it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this! Please [search existing issues](https://github.com/helenvholmes/bookbox/issues?q=is%3Aissue) first, in case it's already known.
+
+        Have an idea rather than a bug? Post it in [Feature requests](https://github.com/helenvholmes/bookbox/discussions/categories/feature-requests) instead.
+
+        **Never paste your password, tokens or environment variable values here.** Issues are public.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What went wrong, and what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can it be reproduced?
+      description: The steps that lead to it, if you know them.
+      placeholder: |
+        1. Open a book
+        2. Tap Read
+        3. …
+    validations:
+      required: false
+  - type: dropdown
+    id: hosting
+    attributes:
+      label: Where is your BookBox running?
+      options:
+        - Vercel + Turso
+        - Another host
+        - On my computer (npm run dev or npm start)
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      description: And whether you were using the home screen app.
+      placeholder: iPhone 15, home screen app
+    validations:
+      required: false
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, error messages, or whether you were offline at the time.
+    validations:
+      required: false
