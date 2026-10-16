@@ -79,6 +79,9 @@ const SPOTIFY_MESSAGES: Record<string, { text: string; error?: boolean }> = {
 export default async function SettingsPage(props: PageProps<"/settings">) {
   await connection();
   const sp = await props.searchParams;
+  // A copy run for one person (it can't invite anyone), so whoever reads Settings set it up: the running
+  // details (cover storage, what signing out clears) are shown only there.
+  const personalCopy = !process.env.TURSO_API_TOKEN;
   const [settings, keys, spotifyAccount, hardcover, apiKeys, libby, storage, account] = await Promise.all([
     getSettings(),
     spotifyCredentials(),
@@ -86,7 +89,7 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
     hardcoverToken(),
     listApiKeys(),
     libbyStatus(),
-    coverStorageUsage(),
+    personalCopy ? coverStorageUsage() : null,
     currentAccount(),
   ]);
   // Without accounts (a copy on your own computer) you're the owner of the only library.
@@ -446,8 +449,7 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
               <ChangePasswordForm />
             </div>
             <div className="flex flex-wrap items-center justify-between gap-4 p-5">
-              {/* Explained only on a copy run for one person (no invites), where whoever reads it set it up. */}
-              {!process.env.TURSO_API_TOKEN && (
+              {personalCopy && (
                 <p className="max-w-sm text-muted">Signs out this device and removes the copy of your library it keeps for offline use.</p>
               )}
               <SignOutButton className="btn rounded-full px-4" />
