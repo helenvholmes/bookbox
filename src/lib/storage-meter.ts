@@ -1,10 +1,11 @@
 import "server-only";
 import { after } from "next/server";
 import type { CoverStore } from "./cover-store";
-import { db } from "./db";
+import { accountsDb } from "./accounts";
 
 /**
  * Counts cover uploads and reads against the storage service's free tier, and stops at 80% of it.
+ * The counts are for every library together (they share one bucket), kept with the accounts.
  * Neither Cloudflare nor Vercel will stop at the free amount for us: Cloudflare bills past it, and
  * Vercel blocks the Blob store for 30 days. Past the stop, new covers aren't saved (books keep
  * their placeholder) and stored ones aren't served, until the next billing period starts.
@@ -49,16 +50,20 @@ const g = globalThis as unknown as {
 const state = (g.bookboxMeter ??= { pending: 0, pendingSince: 0, flushing: false });
 
 async function add(period: string, store: string, op: Op, n: number) {
-  await db
-    .prepare("INSERT INTO storage_usage (period, store, op, count) VALUES (?, ?, ?, ?) ON CONFLICT(period, store, op) DO UPDATE SET count = count + excluded.count")
-    .run(period, store, op, n);
+  await accountsDb.run(
+    "INSERT INTO storage_usage (period, store, op, count) VALUES (?, ?, ?, ?) ON CONFLICT(period, store, op) DO UPDATE SET count = count + excluded.count",
+    period,
+    store,
+    op,
+    n,
+  );
 }
 
 export async function getUsage(store: CoverStore["name"], fresh = false): Promise<Usage> {
   const period = billingPeriod().start;
   const key = `${period}:${store}`;
   if (!fresh && state.cached?.key === key && Date.now() - state.cached.at < CACHE_MS) return state.cached.usage;
-  const rows = (await db.prepare("SELECT op, count FROM storage_usage WHERE period = ? AND store = ?").all(period, store)) as { op: Op; count: number }[];
+  const rows = (await accountsDb.all("SELECT op, count FROM storage_usage WHERE period = ? AND store = ?", period, store)) as { op: Op; count: number }[];
   const usage: Usage = { upload: 0, read: 0 };
   for (const r of rows) usage[r.op] = r.count;
   state.cached = { key, usage, at: Date.now() };

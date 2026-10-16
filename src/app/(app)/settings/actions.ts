@@ -214,3 +214,31 @@ export async function changePasswordAction(_prev: AccountState, fd: FormData): P
   await startSession(account.id, now);
   return { savedAt: now };
 }
+
+export type InviteState = { error?: string; link?: string } | null;
+
+/** The signed-in account when it owns the main library (only the owner manages invites), or null. */
+async function ownerAccount() {
+  const { isOwner } = await import("@/lib/accounts");
+  const { currentAccount } = await import("@/lib/session");
+  const account = await currentAccount();
+  return account && isOwner(account) ? account : null;
+}
+
+export async function createInviteAction(_prev: InviteState, fd: FormData): Promise<InviteState> {
+  const account = await ownerAccount();
+  if (!account) return { error: "Only the owner of this BookBox can invite people." };
+  const { createInvite } = await import("@/lib/invites");
+  const { headers } = await import("next/headers");
+  const code = await createInvite(account.id, String(fd.get("note") ?? ""));
+  const h = await headers();
+  revalidatePath("/settings");
+  return { link: `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}/join/${code}` };
+}
+
+export async function revokeInviteAction(fd: FormData) {
+  if (!(await ownerAccount())) return;
+  const { revokeInvite } = await import("@/lib/invites");
+  await revokeInvite(String(fd.get("id") ?? ""));
+  revalidatePath("/settings");
+}

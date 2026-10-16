@@ -6,8 +6,9 @@ import { useOutbox } from "@/lib/outbox";
 
 /**
  * Signs this device out. First it clears what the app keeps on the device for offline use (saved
- * pages, covers, the search index, edits waiting to sync), so nothing private stays readable after
- * signing out. Edits that haven't synced would be lost, so it asks first when there are any.
+ * pages, covers, the search index, edits waiting to sync) and the browser's cache, so nothing private
+ * stays readable after signing out, or shows up for the next person to sign in. Edits that haven't
+ * synced would be lost, so it asks first when there are any.
  */
 export function SignOutButton({ className = "", label = "Sign out" }: { className?: string; label?: React.ReactNode }) {
   const { ops } = useOutbox();
@@ -24,6 +25,8 @@ export function SignOutButton({ className = "", label = "Sign out" }: { classNam
       for (const k of Object.keys(localStorage)) if (k.startsWith("bookbox:")) localStorage.removeItem(k);
       sessionStorage.clear();
     } catch {}
+    // The browser's own cache too (covers are kept there for a year): see api/clear-cache.
+    await fetch("/api/clear-cache", { method: "POST" }).catch(() => {});
     await signOutAction();
     // A full page load, so nothing from the library stays in memory either.
     location.replace("/");

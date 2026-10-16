@@ -6,9 +6,10 @@ import { libraryConnection } from "./db";
  * Who can sign in. Each account has an email, a password hash and the library database it reads
  * (db_url; null means the main library, from TURSO_DATABASE_URL or DATA_DIR).
  *
- * Accounts live in their own database when ACCOUNTS_DATABASE_URL is set (a copy with several
- * people), and otherwise in the main library's database (a copy for one person, so it needs no
- * extra setup). Failed sign-ins are counted here too (see login-limit.ts).
+ * Accounts live in their own database when ACCOUNTS_DATABASE_URL is set, and otherwise in the main
+ * library's database (so a copy needs no extra setup). Everything shared between libraries is kept
+ * here too: invites, which account owns each share link and API key, cover storage usage, and
+ * failed sign-ins (see login-limit.ts).
  */
 
 const SCHEMA = `
@@ -22,6 +23,40 @@ CREATE TABLE IF NOT EXISTS accounts (
   created_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Invite links (see invites.ts). Only a hash of each code is kept.
+CREATE TABLE IF NOT EXISTS invites (
+  code_hash   TEXT PRIMARY KEY,
+  note        TEXT NOT NULL DEFAULT '', -- who it's for, to tell them apart in Settings
+  created_by  INTEGER NOT NULL,
+  created_at  INTEGER NOT NULL,
+  expires_at  INTEGER NOT NULL,
+  used_by     INTEGER,
+  used_at     INTEGER
+);
+
+-- Which account a public share link or API key belongs to, so a request with one can find the right
+-- library before anyone is signed in. Links and keys made before accounts aren't listed: they're the
+-- main library's.
+CREATE TABLE IF NOT EXISTS share_owners (
+  token       TEXT PRIMARY KEY,
+  account_id  INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS api_key_owners (
+  hash        TEXT PRIMARY KEY,  -- SHA-256 of the whole key, as in the library's api_keys
+  account_id  INTEGER NOT NULL,
+  origins     TEXT NOT NULL DEFAULT '' -- as in api_keys, for answering browsers' preflight checks
+);
+
+-- Cover storage uploads and reads per billing period, for every library together, since the free
+-- tier is shared (see storage-meter.ts).
+CREATE TABLE IF NOT EXISTS storage_usage (
+  period TEXT NOT NULL,  -- the date the billing period started, YYYY-MM-DD
+  store  TEXT NOT NULL,  -- r2 or blob
+  op     TEXT NOT NULL,  -- upload or read
+  count  INTEGER NOT NULL,
+  PRIMARY KEY (period, store, op)
+);
+
 -- Failed sign-ins per network address (hashed, never stored as-is), to slow down password guessing.
 CREATE TABLE IF NOT EXISTS login_failures (
   key      TEXT PRIMARY KEY,
@@ -32,7 +67,10 @@ CREATE TABLE IF NOT EXISTS login_failures (
 
 export type Account = { id: number; email: string; dbUrl: string | null; dbToken: string | null; signedOutAt: number };
 
-const g = globalThis as unknown as { bookboxAccounts?: Client; bookboxAccountsReady?: Promise<void> };
+/** The owner of the main library, who can invite people. */
+export const isOwner = (account: Account) => account.dbUrl === null;
+
+const g = globalThis as unknown as { bookboxAccounts?: Client; bookboxAccountsReady?: Promise<void>; bookboxAccountsSchema?: string };
 
 function client(): Client {
   g.bookboxAccounts ??= process.env.ACCOUNTS_DATABASE_URL
@@ -42,6 +80,11 @@ function client(): Client {
 }
 
 async function run(sql: string, ...args: InValue[]) {
+  if (g.bookboxAccountsSchema !== SCHEMA) {
+    // A running dev server picks up a schema edit.
+    g.bookboxAccountsSchema = SCHEMA;
+    g.bookboxAccountsReady = undefined;
+  }
   g.bookboxAccountsReady ??= client()
     .executeMultiple(SCHEMA)
     .catch((err) => {
@@ -53,12 +96,14 @@ async function run(sql: string, ...args: InValue[]) {
 }
 
 export const accountsDb = {
+  all: async (sql: string, ...args: InValue[]): Promise<Record<string, unknown>[]> => (await run(sql, ...args)).rows.map((r) => ({ ...r })),
   get: async (sql: string, ...args: InValue[]): Promise<Record<string, unknown> | undefined> => {
     const row = (await run(sql, ...args)).rows[0];
     return row && { ...row };
   },
   run: async (sql: string, ...args: InValue[]) => {
-    await run(sql, ...args);
+    const r = await run(sql, ...args);
+    return { changes: r.rowsAffected };
   },
 };
 
@@ -114,3 +159,9 @@ export async function emailTaken(email: string, exceptId?: number): Promise<bool
 
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 export const looksLikeEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+/** Everyone with an account, oldest first, for the owner's People list in Settings. */
+export async function listAccounts(): Promise<{ id: number; email: string; createdAt: string; owner: boolean }[]> {
+  const rows = await accountsDb.all("SELECT id, email, created_at, db_url IS NULL AS owner FROM accounts ORDER BY id");
+  return rows.map((r) => ({ id: Number(r.id), email: String(r.email), createdAt: String(r.created_at), owner: !!r.owner }));
+}

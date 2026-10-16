@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Landing, LANDING_METADATA } from "@/components/Landing";
 import { authEnabled, isValidSession, SESSION_COOKIE } from "@/lib/auth";
+import { mainLibrary, withLibrary } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 
 export const metadata = LANDING_METADATA;
@@ -15,6 +16,6 @@ export const metadata = LANDING_METADATA;
 export default async function About() {
   await connection();
   const signedIn = !authEnabled() || (await isValidSession((await cookies()).get(SESSION_COOKIE)?.value));
-  if (!signedIn && !(await getSettings()).publicHome) redirect("/login");
+  if (!signedIn && !(await withLibrary(mainLibrary(), getSettings)).publicHome) redirect("/login");
   return <Landing signedIn={signedIn} />;
 }

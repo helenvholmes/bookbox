@@ -36,7 +36,7 @@ if (process.env.TURSO_DATABASE_URL) {
     parents.set(t, (await local.execute(`SELECT "table" FROM pragma_foreign_key_list('${t}')`)).rows.map((r) => String(r.table)).filter((p) => p !== t));
   }
   // The hosted copy's own records: its accounts and cover storage usage counts must survive a push.
-  const serverOnly = new Set(["storage_usage", "bookbox_meta", "accounts", "login_failures"]);
+  const serverOnly = new Set(["storage_usage", "bookbox_meta", "accounts", "login_failures", "invites", "share_owners", "api_key_owners"]);
   const tables: string[] = [];
   const visit = (t: string) => {
     if (tables.includes(t)) return;
