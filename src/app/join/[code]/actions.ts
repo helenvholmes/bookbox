@@ -29,7 +29,7 @@ export async function joinAction(code: string, _prev: JoinState, fd: FormData): 
     db = await createLibraryDatabase();
     const accountId = await createAccount(email, await hashPassword(password), { url: db.url, token: db.token });
     await inviteUsedBy(code, accountId);
-    if (name) await withLibrary(asLibrary(db, accountId), () => saveSettings({ ownerName: name, publicHome: false }));
+    if (name) await withLibrary(asLibrary(db, accountId), () => saveSettings({ ownerName: name }));
     await startSession(accountId);
   } catch (err) {
     console.error("join", err);

@@ -5,8 +5,7 @@ import { Cover } from "./Cover";
 import { Stars } from "./Stars";
 
 /**
- * The public page about BookBox, shown at the site's address to visitors who aren't signed in
- * (when Settings allows). It leads with signing up to this copy; running your own copy comes
+ * The public page about BookBox, shown at the site's address to visitors who aren't signed in. It leads with signing up to this copy; running your own copy comes
  * further down, for people who want more control. The library preview uses first editions of public-domain books (images
  * from Wikimedia Commons, credited in public/landing/CREDITS.md), so nothing from anyone's real
  * library appears here.
