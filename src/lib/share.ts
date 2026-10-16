@@ -2,6 +2,7 @@ import "server-only";
 import crypto from "node:crypto";
 import { connection } from "next/server";
 import { db } from "./db";
+import { shareTokenGone, shareTokenMade } from "./owners";
 
 export const ACCENTS = ["#ececed", "#e9b872", "#e58f8f", "#9bc59d", "#8fb8e5", "#b9a3e3"] as const;
 
@@ -51,6 +52,7 @@ const newToken = () => crypto.randomBytes(12).toString("base64url");
 export async function saveShareSettings(personId: number, s: Omit<ShareSettings, "token">): Promise<string> {
   const existing = (await db.prepare("SELECT token FROM share_pages WHERE person_id = ?").get(personId)) as { token: string } | undefined;
   const token = existing?.token ?? newToken();
+  if (!existing) await shareTokenMade(token);
   (await db.prepare(
     `INSERT INTO share_pages (person_id, token, enabled, list, show_theirs, title, message, layout, show_ratings, show_reviews, accent)
      VALUES (?, ?, ?, 'for', ?, ?, ?, ?, ?, ?, ?)
@@ -64,7 +66,10 @@ export async function saveShareSettings(personId: number, s: Omit<ShareSettings,
 /** Replaces the link, so anyone holding the old one loses access. */
 export async function regenerateShareToken(personId: number): Promise<string> {
   const token = newToken();
+  const old = (await db.prepare("SELECT token FROM share_pages WHERE person_id = ?").get(personId)) as { token: string } | undefined;
   (await db.prepare("UPDATE share_pages SET token = ? WHERE person_id = ?").run(token, personId));
+  await shareTokenMade(token);
+  if (old) await shareTokenGone(old.token);
   return token;
 }
 

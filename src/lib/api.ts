@@ -1,7 +1,7 @@
 import "server-only";
 import { after, type NextRequest } from "next/server";
 import { allAllowedOrigins, findApiKey, touchApiKey } from "./api-keys";
-import { db } from "./db";
+import { db, withLibrary } from "./db";
 import { goalPace } from "./goal";
 import { booksReadIn, getGoal, getStats } from "./stats";
 
@@ -34,11 +34,11 @@ export function apiRoute<C>(handler: (request: NextRequest, ctx: C) => Promise<R
     if (origin && !key.origins.includes(origin)) {
       return apiError(403, "origin_not_allowed", `This key isn’t allowed on ${origin}. Add the website to the key in BookBox’s Settings.`);
     }
-    after(() => touchApiKey(key.id));
+    after(() => withLibrary(key.library, () => touchApiKey(key.id)));
 
     let response: Response;
     try {
-      response = await handler(request, ctx);
+      response = await withLibrary(key.library, () => handler(request, ctx));
     } catch (e) {
       console.error("api/v1", request.nextUrl.pathname, e);
       response = apiError(500, "server_error", "Something went wrong reading your library.");

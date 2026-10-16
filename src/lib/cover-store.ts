@@ -19,7 +19,11 @@ export type CoverStore = {
 
 type Env = Record<string, string | undefined>;
 
-const key = (file: string) => `covers/${file.replace(/^.*\//, "")}`;
+/** A cover's key in the bucket: covers/<file>, or covers/a<account id>/<file> for a person's own library. */
+const key = (file: string) => {
+  if (!/^(a\d+\/)?[\w-]+\.webp$/.test(file)) throw new Error(`Not a cover name: ${file}`);
+  return `covers/${file}`;
+};
 
 export function r2Configured(env: Env) {
   return !!(env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_BUCKET);

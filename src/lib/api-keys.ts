@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { db } from "./db";
+import { db, mainLibrary, withLibrary, type Library } from "./db";
+import { apiKeyGone, apiKeyLibrary, apiKeyMade, apiKeyOriginsChanged, listedOrigins } from "./owners";
 
 /**
  * Keys for /api/v1, made and revoked in Settings, one per app (the Scriptable widget, another site…).
@@ -29,23 +30,37 @@ export async function listApiKeys(): Promise<ApiKey[]> {
 export async function createApiKey(name: string, origins: string[]): Promise<string> {
   const key = `bbx_${randomBytes(24).toString("base64url")}`;
   await db.prepare("INSERT INTO api_keys (name, hash, prefix, origins) VALUES (?, ?, ?, ?)").run(name, hash(key), key.slice(0, 10), origins.join(" "));
+  await apiKeyMade(hash(key), origins);
   return key;
 }
 
+const hashOf = async (id: number) => ((await db.prepare("SELECT hash FROM api_keys WHERE id = ?").get(id)) as { hash: string } | undefined)?.hash;
+
 export async function setApiKeyOrigins(id: number, origins: string[]) {
   await db.prepare("UPDATE api_keys SET origins = ? WHERE id = ?").run(origins.join(" "), id);
+  const h = await hashOf(id);
+  if (h) await apiKeyOriginsChanged(h, origins);
 }
 
 export async function deleteApiKey(id: number) {
+  const h = await hashOf(id);
   await db.prepare("DELETE FROM api_keys WHERE id = ?").run(id);
+  if (h) await apiKeyGone(h);
 }
 
-/** The key's row, from an "Authorization: Bearer bbx_…" header, or null. */
-export async function findApiKey(authorization: string | null): Promise<{ id: number; origins: string[] } | null> {
+/**
+ * The key's row and the library it belongs to, from an "Authorization: Bearer bbx_…" header, or
+ * null. Runs before anything else in the request, so it looks the library up itself.
+ */
+export async function findApiKey(authorization: string | null): Promise<{ id: number; origins: string[]; library: Library } | null> {
   const key = authorization?.match(/^Bearer\s+(bbx_[\w-]{20,})$/i)?.[1];
   if (!key) return null;
-  const row = (await db.prepare("SELECT id, origins FROM api_keys WHERE hash = ?").get(hash(key))) as { id: number; origins: string } | undefined;
-  return row ? { id: row.id, origins: splitOrigins(row.origins) } : null;
+  const library = await apiKeyLibrary(hash(key));
+  if (!library) return null;
+  const row = (await withLibrary(library, () => db.prepare("SELECT id, origins FROM api_keys WHERE hash = ?").get(hash(key)))) as
+    | { id: number; origins: string }
+    | undefined;
+  return row ? { id: row.id, origins: splitOrigins(row.origins), library } : null;
 }
 
 /** Notes that a key was used, at most once an hour, so Settings can show which keys are still in use. */
@@ -55,8 +70,9 @@ export async function touchApiKey(id: number) {
 
 /** Every website any key allows, for answering browsers' preflight checks (which arrive without the key). */
 export async function allAllowedOrigins(): Promise<Set<string>> {
-  const rows = (await db.prepare("SELECT origins FROM api_keys").all()) as { origins: string }[];
-  return new Set(rows.flatMap((r) => splitOrigins(r.origins)));
+  // Keys listed with their account, and the main library's own (including keys made before accounts).
+  const rows = (await withLibrary(mainLibrary(), () => db.prepare("SELECT origins FROM api_keys").all())) as { origins: string }[];
+  return new Set([...rows.flatMap((r) => splitOrigins(r.origins)), ...(await listedOrigins())]);
 }
 
 /** Cleans up what was typed in Settings: one website per line or separated by spaces, as https://example.com. */

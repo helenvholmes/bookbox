@@ -39,6 +39,12 @@ BookBox runs within the free tiers of [Vercel](https://vercel.com) (the app), [T
 
 Your library is at `/library`. Visitors who aren't signed in get the sign-in page, or a page about BookBox if you turn that on in Settings.
 
+### Inviting family and friends
+
+The owner (the first account) can invite people from **Settings → People**: each invite link works once, for two weeks. Everyone who joins gets an empty library of their own, in a Turso database BookBox makes for them, which nobody else can see. That needs a Turso Platform API token: in Turso's dashboard (from Vercel, open your database and choose **Open in Turso**), make one under **Settings → API Tokens**, and set `TURSO_API_TOKEN` (Sensitive) and `TURSO_ORG` (the name in the dashboard's address) in Vercel. Turso's free plan has room for a few hundred databases.
+
+Covers for everyone share your cover storage and its free tier. Each library can keep up to 5,000 covers. To connect Spotify, each person needs adding to your Spotify app's users (up to 25).
+
 On iPhone, open your site in the browser, tap Share, then **Add to Home Screen**. The home screen app keeps its own sign-in, so you sign in once inside it.
 
 ### Environment variables
@@ -54,6 +60,7 @@ These are for the server: the password and the services BookBox runs on. Prefere
 | `STORAGE_CYCLE_DAY` | No | The day of the month your storage service's billing period starts (Cloudflare's Billing page shows it; default 1). BookBox counts cover uploads and reads per period and pauses them at 80% of the free tier; Settings shows the counts. |
 | `BOOKBOX_SECRET` | Recommended | Signs the sign-in cookie. Defaults to `BOOKBOX_PASSWORD`; changing it signs everyone out. |
 | `ACCOUNTS_DATABASE_URL`, `ACCOUNTS_AUTH_TOKEN` | No | A separate Turso database for accounts. Without them, accounts are kept in the library's database. |
+| `TURSO_API_TOKEN`, `TURSO_ORG`, `TURSO_GROUP` | To invite people | A Turso Platform API token and your organization's name (and its group, `default` if unset), so BookBox can make a database for each person who joins. |
 | `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` | No | Spotify app keys, if you'd rather set them here than in Settings; see below. |
 | `HARDCOVER_TOKEN` | No | A Hardcover API token, if you'd rather set it here than in Settings; see below. |
 | `DATA_DIR` | No | Where the local database and covers live (default `./data`). |

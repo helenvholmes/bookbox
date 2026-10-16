@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect, RedirectType } from "next/navigation";
 import { deleteBook, deleteLoan, getCoverName, lendBook, returnLoan, saveBook, setCover, setOwned, type BookInput } from "@/lib/books";
 import { isDay } from "@/lib/dates";
-import { coverUploadsPaused, deleteCover, fetchCover, isUsableImage, saveCover } from "@/lib/covers";
+import { coverLimitReached, coverUploadsPaused, MAX_COVERS, deleteCover, fetchCover, isUsableImage, saveCover } from "@/lib/covers";
 import { toIsbn13 } from "@/lib/names";
 
 /** `saved`: an edit was saved and the form steps back to the page it was opened from. */
@@ -66,6 +66,7 @@ async function readCoverChange(fd: FormData): Promise<CoverChange | string> {
   if (file instanceof File && file.size > 0) {
     if (file.size > 9.5 * 1024 * 1024) return "That image is too big (10 MB max).";
     if (await coverUploadsPaused()) return "New covers are paused until the next billing period, to stay within the free storage tier. See Settings.";
+    if (await coverLimitReached()) return `Your library has ${MAX_COVERS.toLocaleString("en-US")} covers, as many as it can keep. Remove some to add more.`;
     const data = Buffer.from(await file.arrayBuffer());
     return (await isUsableImage(data)) ? { set: data } : "That image couldn't be used as a cover.";
   }

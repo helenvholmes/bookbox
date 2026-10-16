@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Landing, LANDING_METADATA } from "@/components/Landing";
 import { authEnabled, isValidSession, SESSION_COOKIE } from "@/lib/auth";
+import { mainLibrary, withLibrary } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 
 export const metadata = LANDING_METADATA;
@@ -22,6 +23,7 @@ export default async function Home(props: PageProps<"/">) {
   }
   // Without a password there's no signing in (a copy running on your own computer): always the library.
   if (!authEnabled()) redirect("/library");
-  if (!(await getSettings()).publicHome) redirect("/login");
+  // The site's own setting, from the main library: visitors aren't signed in to any library.
+  if (!(await withLibrary(mainLibrary(), getSettings)).publicHome) redirect("/login");
   return <Landing signedIn={false} />;
 }
