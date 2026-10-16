@@ -28,8 +28,9 @@ const toggle = (set: Set<number>, row: number) => {
 };
 
 /**
- * Settings → Import from Libby: pick the timeline export, see what's coming in, mark any returned
- * books you didn't finish, then add them a batch at a time and fetch their covers.
+ * Settings → Libby → Import your past loans: pick the timeline export, see what's coming in, mark
+ * any returned books you didn't finish, then add them a batch at a time and fetch their covers.
+ * Sits inside the Libby section's card, under connecting with a code.
  */
 export function LibbyImport() {
   const [step, setStep] = useState<Step>({ kind: "pick" });
@@ -84,10 +85,10 @@ export function LibbyImport() {
   }
 
   return (
-    <section id="libby" className="max-w-xl scroll-mt-8 space-y-3">
-      <h2 className="section-title">Import from Libby</h2>
-      <div className="space-y-2 text-sm text-muted">
-        <p>Brings in the books you&rsquo;ve borrowed and placed holds on, with the dates you returned them. To get the file, in the Libby app:</p>
+    <div id="libby-import" className="scroll-mt-8 space-y-4 p-5">
+      <h3 className="font-medium">Import your past loans</h3>
+      <div className="space-y-2 text-muted">
+        <p>Brings in the books you&rsquo;ve borrowed and placed holds on before, with the dates you returned them. To get the file, in the Libby app:</p>
         <ol className="list-decimal space-y-1 pl-5">
           <li>
             Tap <span className="text-ink">Shelf</span>, then <span className="text-ink">Timeline</span> at the top.
@@ -107,7 +108,7 @@ export function LibbyImport() {
         </p>
       </div>
 
-      <div className="card p-5 text-sm">
+      <div>
         {step.kind === "pick" || step.kind === "reading" ? (
           <div className="flex flex-wrap items-center gap-3">
             <input
@@ -194,7 +195,7 @@ export function LibbyImport() {
         )}
         {error && <p className="mt-3 text-sm text-danger">{error}</p>}
       </div>
-    </section>
+    </div>
   );
 }
 
