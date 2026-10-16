@@ -226,7 +226,8 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
       </main>
 
       <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-8 text-xs text-faint sm:px-8">
+        {/* Top-aligned, so the links sit on the same line as the first line beside them. */}
+        <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-3 px-5 py-8 text-xs text-faint sm:px-8">
           <span className="space-y-1">
             <span className="block">
               BookBox is open source under the AGPL-3.0. Covers shown are{" "}
