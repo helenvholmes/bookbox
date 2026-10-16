@@ -7,6 +7,7 @@ import { ApiKeyOriginsForm, NewApiKeyForm } from "@/components/ApiKeyForms";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { GoodreadsImport } from "@/components/GoodreadsImport";
 import { HardcoverTokenForm } from "@/components/HardcoverTokenForm";
+import { HomeScreenHelp } from "@/components/HomeScreenHelp";
 import { LibbyConnectForm } from "@/components/LibbyConnectForm";
 import { LibbyImport } from "@/components/LibbyImport";
 import { SettingsForm } from "@/components/SettingsForm";
@@ -103,6 +104,8 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
       </header>
 
       <SettingsForm settings={settings} />
+
+      <HomeScreenHelp />
 
       <section id="spotify" className="max-w-xl scroll-mt-8 space-y-3">
         <h2 className="section-title">Spotify</h2>
