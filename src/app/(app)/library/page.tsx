@@ -182,7 +182,7 @@ export default async function LibraryPage(props: PageProps<"/library">) {
             ) : (
               <>
                 No books yet. Import from{" "}
-                <Link href="/settings#libby" className="underline hover:text-ink">Libby</Link>,{" "}
+                <Link href="/settings#libby-import" className="underline hover:text-ink">Libby</Link>,{" "}
                 <Link href="/settings#goodreads" className="underline hover:text-ink">Goodreads</Link>, or{" "}
                 <Link href="/books/new" className="underline hover:text-ink">add a new book</Link>.
               </>
