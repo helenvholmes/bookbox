@@ -3,13 +3,10 @@
 import { useActionState, useState } from "react";
 import { saveSettingsAction, type SettingsState } from "@/app/(app)/settings/actions";
 import type { Settings } from "@/lib/settings";
-import { Toggle } from "./inputs";
 
-/** `siteOwner`: whether this is the main library's owner, who also decides what visitors see at the site's address. */
-export function SettingsForm({ settings, siteOwner }: { settings: Settings; siteOwner: boolean }) {
+export function SettingsForm({ settings }: { settings: Settings }) {
   const [state, action, pending] = useActionState(saveSettingsAction, null as SettingsState);
   const [name, setName] = useState(settings.ownerName);
-  const [publicHome, setPublicHome] = useState(settings.publicHome);
   const shown = name.trim();
 
   return (
@@ -32,23 +29,6 @@ export function SettingsForm({ settings, siteOwner }: { settings: Settings; site
           &rdquo; on the pages you share. Leave it empty for neutral wording.
         </p>
       </section>
-
-      {siteOwner ? (
-        <section className="card space-y-1 px-5 py-3">
-          <Toggle name="public_home" label="Show a page about BookBox to visitors" checked={publicHome} onChange={setPublicHome} />
-          <p className="pb-2 text-xs text-muted">
-            {publicHome
-              ? "People who aren’t signed in see a page about BookBox at your site’s address, with a link to sign in. Your library stays private."
-              : "People who aren’t signed in go straight to the sign-in page."}{" "}
-            <a href="/about" target="_blank" rel="noreferrer" className="text-ink underline">
-              Preview the page
-            </a>
-          </p>
-        </section>
-
-      ) : (
-        <input type="hidden" name="public_home" value={publicHome ? "on" : ""} />
-      )}
 
       <div className="flex items-center gap-3">
         <button className="btn btn-primary rounded-full px-5" disabled={pending}>

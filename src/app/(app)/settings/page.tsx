@@ -127,7 +127,7 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
         </p>
       </header>
 
-      <SettingsForm settings={settings} siteOwner={siteOwner} />
+      <SettingsForm settings={settings} />
 
       <section id="spotify" className="max-w-xl scroll-mt-8 space-y-3">
         <h2 className="section-title">Spotify</h2>

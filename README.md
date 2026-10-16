@@ -37,7 +37,7 @@ BookBox runs within the free tiers of [Vercel](https://vercel.com) (the app), [T
 5. **Set a setup password and a secret.** Under **Settings → Environment Variables**, add `BOOKBOX_PASSWORD` (a long passphrase) and `BOOKBOX_SECRET` (a long random string, for example from `openssl rand -base64 32`). Mark both Sensitive.
 6. **Redeploy** (Deployments → ⋯ → Redeploy), open your site, and sign in with your email and that password. The first sign-in creates your account; after that the email and password are your sign-in, and the password can be changed in **Settings**. The database is set up on first use. Then add your name in **Settings** too.
 
-Your library is at `/library`. Visitors who aren't signed in get the sign-in page, or a page about BookBox if you turn that on in Settings.
+Your library is at `/library`. Visitors who aren't signed in get a page about BookBox, with links to sign in and sign up.
 
 ### Inviting family and friends
 

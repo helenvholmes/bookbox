@@ -3,15 +3,12 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Landing, LANDING_METADATA } from "@/components/Landing";
 import { authEnabled, isValidSession, SESSION_COOKIE } from "@/lib/auth";
-import { mainLibrary, withLibrary } from "@/lib/db";
-import { getSettings } from "@/lib/settings";
 
 export const metadata = LANDING_METADATA;
 
 /**
  * The site's front page. Signed in, it's your library (keeping any filters, so old links like
- * "/?shelf=Read" still work). Signed out, it's the page about BookBox when that's turned on in
- * Settings, and the sign-in page when it isn't.
+ * "/?shelf=Read" still work). Signed out, it's the page about BookBox.
  */
 export default async function Home(props: PageProps<"/">) {
   await connection();
@@ -23,7 +20,5 @@ export default async function Home(props: PageProps<"/">) {
   }
   // Without a password there's no signing in (a copy running on your own computer): always the library.
   if (!authEnabled()) redirect("/library");
-  // The site's own setting, from the main library: visitors aren't signed in to any library.
-  if (!(await withLibrary(mainLibrary(), getSettings)).publicHome) redirect("/login");
   return <Landing signedIn={false} />;
 }

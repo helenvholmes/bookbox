@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { isValidSession, SESSION_COOKIE } from "@/lib/auth";
-import { INVITE_REQUEST_EMAIL, SOURCE_URL } from "@/lib/constants";
+import { INVITE_REQUEST_EMAIL } from "@/lib/constants";
 
 export const metadata = { title: "Sign up" };
 
@@ -40,9 +40,9 @@ export default async function SignUpPage() {
       </div>
       <p className="text-center text-sm text-muted">
         Rather not wait?{" "}
-        <a href={`${SOURCE_URL}#deploy-your-own-free`} className="text-ink underline">
+        <Link href="/about#run-your-own" className="text-ink underline">
           Run your own copy
-        </a>
+        </Link>
         . It&rsquo;s free and open source. Have an account?{" "}
         <Link href="/login" className="text-ink underline">
           Sign in
