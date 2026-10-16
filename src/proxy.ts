@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isValidSession, SESSION_COOKIE } from "@/lib/auth";
+import { SESSION_COOKIE } from "@/lib/auth";
+import { sessionIsCurrent } from "@/lib/session";
 
 export async function proxy(request: NextRequest) {
-  if (await isValidSession(request.cookies.get(SESSION_COOKIE)?.value)) return NextResponse.next();
+  if (await sessionIsCurrent(request.cookies.get(SESSION_COOKIE)?.value)) return NextResponse.next();
 
   if (request.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });

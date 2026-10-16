@@ -34,8 +34,8 @@ BookBox runs within the free tiers of [Vercel](https://vercel.com) (the app), [T
 4. **Add cover storage.** Either:
    - **Cloudflare R2** (more room: 10 GB and millions of reads a month free). In the Cloudflare dashboard, create an R2 bucket (leave public access off), then under **R2 → Manage API tokens** create a token with **Object Read & Write** on that bucket. Add `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET` to the Vercel project's environment variables.
    - **Vercel Blob** (fewer steps). Still under **Storage**, create a **Blob** store with **Private** access and connect it. That sets `BLOB_READ_WRITE_TOKEN`. Its free tier allows 10,000 reads a month; past that, Vercel blocks the store for 30 days, so this suits a single small library.
-5. **Set a password.** Under **Settings → Environment Variables**, add `BOOKBOX_PASSWORD`. Mark it Sensitive, and use a long passphrase: it's the only thing protecting your library.
-6. **Redeploy** (Deployments → ⋯ → Redeploy), open your site, and sign in. The database is set up on first use. Then open **Settings** in BookBox's sidebar to add your name.
+5. **Set a setup password and a secret.** Under **Settings → Environment Variables**, add `BOOKBOX_PASSWORD` (a long passphrase) and `BOOKBOX_SECRET` (a long random string, for example from `openssl rand -base64 32`). Mark both Sensitive.
+6. **Redeploy** (Deployments → ⋯ → Redeploy), open your site, and sign in with your email and that password. The first sign-in creates your account; after that the email and password are your sign-in, and the password can be changed in **Settings**. The database is set up on first use. Then add your name in **Settings** too.
 
 Your library is at `/library`. Visitors who aren't signed in get the sign-in page, or a page about BookBox if you turn that on in Settings.
 
@@ -47,17 +47,18 @@ These are for the server: the password and the services BookBox runs on. Prefere
 
 | Variable | Required | What it's for |
 |---|---|---|
-| `BOOKBOX_PASSWORD` | Yes, when hosted | The password you sign in with. When deployed on Vercel, the app stays locked until it's set. |
+| `BOOKBOX_PASSWORD` | Yes, when hosted | The password for the first sign-in, which creates your account (with the email you enter). Not used once an account exists. When deployed on Vercel, the app stays locked until it's set. |
 | `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` | Yes, when hosted | The database. Without them, BookBox uses a SQLite file in `DATA_DIR`. |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Yes, when hosted (or Blob) | Cover storage in a Cloudflare R2 bucket. Used over Blob when both are set. Without either, covers are files in `DATA_DIR`. |
 | `BLOB_READ_WRITE_TOKEN` | Yes, when hosted (or R2) | Cover storage in a private Vercel Blob store. |
 | `STORAGE_CYCLE_DAY` | No | The day of the month your storage service's billing period starts (Cloudflare's Billing page shows it; default 1). BookBox counts cover uploads and reads per period and pauses them at 80% of the free tier; Settings shows the counts. |
-| `BOOKBOX_SECRET` | No | Signs the sign-in cookie. Defaults to the password. |
+| `BOOKBOX_SECRET` | Recommended | Signs the sign-in cookie. Defaults to `BOOKBOX_PASSWORD`; changing it signs everyone out. |
+| `ACCOUNTS_DATABASE_URL`, `ACCOUNTS_AUTH_TOKEN` | No | A separate Turso database for accounts. Without them, accounts are kept in the library's database. |
 | `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` | No | Spotify app keys, if you'd rather set them here than in Settings; see below. |
 | `HARDCOVER_TOKEN` | No | A Hardcover API token, if you'd rather set it here than in Settings; see below. |
 | `DATA_DIR` | No | Where the local database and covers live (default `./data`). |
 
-Changing the password signs out every device.
+Changing your password in Settings signs out your other devices.
 
 ### Spotify (optional)
 

@@ -8,7 +8,8 @@
  * - Replaces the local rows in one transaction, in the database file itself, so a running dev
  *   server sees the new data straight away.
  * - Leaves behind things that only belong on the server: the Spotify sign-in, failed sign-in
- *   counts, in-progress claims, cover storage usage, and the schema stamp.
+ *   counts, in-progress claims, cover storage usage, accounts (with their password hashes), and
+ *   the schema stamp.
  * - Downloads only the covers this computer doesn't have.
  */
 
@@ -27,7 +28,7 @@ const STAMP = path.join(DATA_DIR, ".last-pull.json");
 const CLOUD_ENV = path.join(ROOT, ".env.cloud");
 
 /** Tables that are about the server, not the library. */
-const SKIP_TABLES = new Set(["spotify_account", "libby_account", "login_failures", "spotify_adding", "bookbox_meta", "storage_usage"]);
+const SKIP_TABLES = new Set(["spotify_account", "libby_account", "login_failures", "spotify_adding", "bookbox_meta", "storage_usage", "accounts"]);
 /** Settings that are secrets for the server's use (the Spotify app keys). */
 const SKIP_SETTINGS = ["spotify_client_id", "spotify_client_secret"];
 

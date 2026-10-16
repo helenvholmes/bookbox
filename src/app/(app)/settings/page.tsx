@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { connection } from "next/server";
+import { ChangeEmailForm, ChangePasswordForm } from "@/components/AccountForms";
 import { ApiKeyOriginsForm, NewApiKeyForm } from "@/components/ApiKeyForms";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { GoodreadsImport } from "@/components/GoodreadsImport";
@@ -10,12 +11,12 @@ import { LibbyImport } from "@/components/LibbyImport";
 import { SettingsForm } from "@/components/SettingsForm";
 import { SignOutButton } from "@/components/SignOutButton";
 import { listApiKeys } from "@/lib/api-keys";
-import { authEnabled } from "@/lib/auth";
 import { coverStorageUsage } from "@/lib/covers";
 import { SpotifyKeysForm } from "@/components/SpotifyKeysForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { hardcoverToken } from "@/lib/hardcover";
 import { libbyStatus } from "@/lib/libby-sync";
+import { currentAccount } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
 import { callbackUrl, getSpotifyAccount, spotifyCredentials } from "@/lib/spotify";
 import { disconnectAction, syncNowAction } from "../spotify/actions";
@@ -42,7 +43,7 @@ const SPOTIFY_MESSAGES: Record<string, { text: string; error?: boolean }> = {
 export default async function SettingsPage(props: PageProps<"/settings">) {
   await connection();
   const sp = await props.searchParams;
-  const [settings, keys, account, hardcover, apiKeys, libby, storage] = await Promise.all([
+  const [settings, keys, spotifyAccount, hardcover, apiKeys, libby, storage, account] = await Promise.all([
     getSettings(),
     spotifyCredentials(),
     getSpotifyAccount(),
@@ -50,6 +51,7 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
     listApiKeys(),
     libbyStatus(),
     coverStorageUsage(),
+    currentAccount(),
   ]);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
@@ -72,14 +74,14 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
         {message && <p className={`card p-4 text-sm ${message.error ? "border-danger/40 text-danger" : ""}`}>{message.text}</p>}
 
         <div className="card divide-y divide-line">
-          {account ? (
+          {spotifyAccount ? (
             <div className="space-y-4 p-5">
               <p className="text-sm">
-                Connected{account.display_name ? ` as ${account.display_name}` : ""}.
-                {account.last_synced_at && (
+                Connected{spotifyAccount.display_name ? ` as ${spotifyAccount.display_name}` : ""}.
+                {spotifyAccount.last_synced_at && (
                   <span className="text-muted">
                     {" "}
-                    Last synced {new Date(account.last_synced_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.
+                    Last synced {new Date(spotifyAccount.last_synced_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.
                   </span>
                 )}
               </p>
@@ -324,15 +326,22 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
         </div>
       </section>
 
-      {authEnabled() && (
-        <section className="max-w-xl space-y-3">
-          <h2 className="section-title">Sign out</h2>
-          <div className="card flex flex-wrap items-center justify-between gap-4 p-5">
-            <p className="max-w-sm text-sm text-muted">
-              Signs out this device and removes the copy of your library it keeps for offline use. To sign out every device at once, change your password
-              (BOOKBOX_PASSWORD) on your host.
-            </p>
-            <SignOutButton className="btn rounded-full px-4" />
+      {account && (
+        <section id="account" className="max-w-xl scroll-mt-8 space-y-3">
+          <h2 className="section-title">Account</h2>
+          <div className="card divide-y divide-line text-sm">
+            <div className="p-5">
+              <ChangeEmailForm email={account.email} />
+            </div>
+            <div className="space-y-3 p-5">
+              <h3 className="font-medium">Password</h3>
+              <p className="text-muted">Changing it signs out your other devices.</p>
+              <ChangePasswordForm />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-4 p-5">
+              <p className="max-w-sm text-muted">Signs out this device and removes the copy of your library it keeps for offline use.</p>
+              <SignOutButton className="btn rounded-full px-4" />
+            </div>
           </div>
         </section>
       )}

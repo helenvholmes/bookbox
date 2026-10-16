@@ -172,3 +172,45 @@ export async function libbyCoversAction(books: { id: number; isbn13: string | nu
     }));
   return fetchLibbyCovers(clean);
 }
+
+export type AccountState = { error?: string; savedAt?: number } | null;
+
+/** Checks the signed-in account's current password, for changes that need it. */
+async function accountWithPassword(fd: FormData) {
+  const { passwordHashFor } = await import("@/lib/accounts");
+  const { verifyPassword } = await import("@/lib/passwords");
+  const { currentAccount } = await import("@/lib/session");
+  const account = await currentAccount();
+  if (!account) return { error: "You’re signed out. Sign in again to change this." };
+  const hash = await passwordHashFor(account.id);
+  if (!hash || !(await verifyPassword(String(fd.get("current_password") ?? ""), hash))) return { error: "Your current password isn’t right." };
+  return { account };
+}
+
+export async function changeEmailAction(_prev: AccountState, fd: FormData): Promise<AccountState> {
+  const { emailTaken, looksLikeEmail, setEmail } = await import("@/lib/accounts");
+  const email = String(fd.get("email") ?? "").trim();
+  if (!looksLikeEmail(email)) return { error: "That doesn’t look like an email address." };
+  const { account, error } = await accountWithPassword(fd);
+  if (!account) return { error };
+  if (await emailTaken(email, account.id)) return { error: "Another account already uses that email." };
+  await setEmail(account.id, email);
+  revalidatePath("/settings");
+  return { savedAt: Date.now() };
+}
+
+/** Changes the password, signs out every other device, and keeps this one signed in. */
+export async function changePasswordAction(_prev: AccountState, fd: FormData): Promise<AccountState> {
+  const { setPassword } = await import("@/lib/accounts");
+  const { hashPassword, MIN_PASSWORD_LENGTH } = await import("@/lib/passwords");
+  const { startSession } = await import("@/lib/session");
+  const next = String(fd.get("new_password") ?? "");
+  if (next.length < MIN_PASSWORD_LENGTH) return { error: `Use at least ${MIN_PASSWORD_LENGTH} characters.` };
+  if (next !== String(fd.get("confirm_password") ?? "")) return { error: "The new passwords don’t match." };
+  const { account, error } = await accountWithPassword(fd);
+  if (!account) return { error };
+  const now = Date.now();
+  await setPassword(account.id, await hashPassword(next), now);
+  await startSession(account.id, now);
+  return { savedAt: now };
+}

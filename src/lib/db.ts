@@ -317,9 +317,13 @@ async function migrate(c: Client) {
   await c.execute("CREATE UNIQUE INDEX IF NOT EXISTS book_reads_client ON book_reads(client_id)");
 }
 
+/** Where the library lives: Turso when TURSO_DATABASE_URL is set, otherwise a file in DATA_DIR. */
+export function libraryConnection() {
+  return { url: process.env.TURSO_DATABASE_URL ?? `file:${path.join(DATA_DIR, "bookbox.db")}`, authToken: process.env.TURSO_AUTH_TOKEN };
+}
+
 function open(): Client {
-  const url = process.env.TURSO_DATABASE_URL ?? `file:${path.join(DATA_DIR, "bookbox.db")}`;
-  return createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
+  return createClient(libraryConnection());
 }
 
 // Reuse one client (and one schema check) across hot reloads in dev and warm serverless invocations.
