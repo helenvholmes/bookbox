@@ -8,8 +8,8 @@ import { INVITE_REQUEST_EMAIL } from "@/lib/constants";
 export const metadata = { title: "Sign up" };
 
 /**
- * Where "Sign up" leads. Accounts come from invite links (Settings → People), so this says how to
- * get one, and points to running your own copy for anyone who'd rather not wait.
+ * Where "Sign up" leads. BookBox is in private beta: accounts come from invite links (Settings →
+ * People), so this says how to get one, and points to running your own copy for anyone who'd rather not wait.
  */
 export default async function SignUpPage() {
   await connection();
@@ -22,7 +22,7 @@ export default async function SignUpPage() {
         <h1 className="mt-4 display text-3xl">Join BookBox</h1>
       </div>
       <div className="card space-y-3 p-5 text-sm leading-relaxed">
-        <p className="font-medium">BookBox is invite-only for now.</p>
+        <p className="font-medium">BookBox is in private beta.</p>
         <p className="text-muted">
           {INVITE_REQUEST_EMAIL ? (
             <>
