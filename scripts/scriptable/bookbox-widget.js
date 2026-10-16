@@ -72,7 +72,7 @@ async function summary(key) {
     if (req.response.statusCode !== 200) throw new Error(data?.error?.message ?? `HTTP ${req.response.statusCode}`);
     files.writeString(cachePath, JSON.stringify(data));
     return data;
-  } catch (e) {
+  } catch {
     if (files.fileExists(cachePath)) return { ...JSON.parse(files.readString(cachePath)), stale: true };
     return { error: "Can’t reach BookBox." };
   }
