@@ -16,12 +16,12 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Everything except the front page and /about (they check the session themselves: your library or the page
-  // about BookBox when signed in, otherwise the page about BookBox or sign-in), the login page, invite links
-  // (/join/…, which check their own code), public share links (/s/…), the offline page and service
+  // about BookBox when signed in, otherwise the page about BookBox or sign-in), the login and sign-up pages,
+  // invite links (/join/…, which check their own code), public share links (/s/…), the offline page and service
   // worker (which hold no data themselves), the assets the home screen needs before signing in, the
   // public-domain covers on the page about BookBox, Vercel's Speed Insights script and reports (/_vercel/…), and
   // the API for other apps (/api/v1/…), which checks its own keys (src/lib/api.ts).
   matcher: [
-    "/((?!$|about$|login|join/|s/|offline|sw\\.js|_next/static|_next/image|manifest.webmanifest|favicon.ico|icon|apple-icon|icons/|splash/|landing/|_vercel/|api/v1/).*)",
+    "/((?!$|about$|login|signup$|join/|s/|offline|sw\\.js|_next/static|_next/image|manifest.webmanifest|favicon.ico|icon|apple-icon|icons/|splash/|landing/|_vercel/|api/v1/).*)",
   ],
 };
