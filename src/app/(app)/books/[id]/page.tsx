@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
+import { BookBackLink } from "@/components/BookBackLink";
 import { BorrowedNote } from "@/components/BorrowedNote";
 import { Cover } from "@/components/Cover";
 import { ExpandableText } from "@/components/ExpandableText";
@@ -41,11 +42,7 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
   return (
     <article className="pb-8">
       <nav className="flex items-center justify-between">
-        <Link href="/library" transitionTypes={["nav-back"]} aria-label="Back to library" className="flex size-9 items-center justify-center rounded-full border border-line text-muted hover:text-ink">
-          <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M19 12H5m6-6-6 6 6 6" />
-          </svg>
-        </Link>
+        <BookBackLink bookId={book.id} />
         <Link href={`/books/${book.id}/edit`} className="btn rounded-full px-4">
           Edit
         </Link>
