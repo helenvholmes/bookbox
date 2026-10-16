@@ -92,12 +92,6 @@ const FEATURES: { title: string; body: string; d: string }[] = [
     // Two arrows passing a book back and forth.
     d: "M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3-3m-3 3 3 3",
   },
-  {
-    title: "Your reading, in a widget.",
-    body: "Make a read-only key and show what you’re reading and your progress toward this year’s goal anywhere. A ready-made Scriptable widget is included.",
-    // A phone with a widget on its screen.
-    d: "M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2ZM8.5 6h7v5h-7zM11 18.5h2",
-  },
 ];
 
 /** `signedIn` swaps "Sign in" and "Sign up" for a way back to the library. */
@@ -146,6 +140,7 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
               <a href="#run-your-own" className="underline decoration-line underline-offset-2 hover:text-muted">
                 run your own copy
               </a>
+              .
             </p>
           </div>
 
