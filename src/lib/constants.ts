@@ -6,6 +6,9 @@ export const SOURCE_URL = "https://github.com/helenvholmes/bookbox";
 /** Where to suggest and upvote ideas for BookBox itself. Points at the original project, not a fork, so forks can keep it. */
 export const FEATURE_REQUESTS_URL = "https://github.com/helenvholmes/bookbox/discussions/categories/feature-requests";
 
+/** Who made BookBox, credited on the page about it. Like FEATURE_REQUESTS_URL, forks can keep it. */
+export const AUTHOR = { handle: "@helenvholmes", url: "https://helenvholmes.com" };
+
 /** Where to tip the original project's author. Like FEATURE_REQUESTS_URL, forks can keep it. */
 export const SUPPORT_URL = "https://ko-fi.com/helenvholmes";
 

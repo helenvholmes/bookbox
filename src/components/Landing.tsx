@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FEATURE_REQUESTS_URL, SOURCE_URL, SUPPORT_URL } from "@/lib/constants";
+import { AUTHOR, FEATURE_REQUESTS_URL, SOURCE_URL, SUPPORT_URL } from "@/lib/constants";
 import { Cover } from "./Cover";
 import { Stars } from "./Stars";
 
@@ -228,12 +228,20 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
 
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-8 text-xs text-faint sm:px-8">
-          <span>
-            BookBox is open source under the AGPL-3.0. Covers shown are{" "}
-            <a href={`${SOURCE_URL}/blob/main/public/landing/CREDITS.md`} className="underline decoration-line underline-offset-2 hover:text-muted">
-              public-domain first editions
-            </a>
-            .
+          <span className="space-y-1">
+            <span className="block">
+              Built with <span aria-label="love">♥</span> by{" "}
+              <a href={AUTHOR.url} className="underline decoration-line underline-offset-2 hover:text-muted">
+                {AUTHOR.handle}
+              </a>
+            </span>
+            <span className="block">
+              BookBox is open source under the AGPL-3.0. Covers shown are{" "}
+              <a href={`${SOURCE_URL}/blob/main/public/landing/CREDITS.md`} className="underline decoration-line underline-offset-2 hover:text-muted">
+                public-domain first editions
+              </a>
+              .
+            </span>
           </span>
           <span className="flex flex-wrap gap-x-4 gap-y-2 whitespace-nowrap">
             <a href={SOURCE_URL} className="hover:text-muted">
