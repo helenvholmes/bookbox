@@ -1,0 +1,321 @@
+@import "tailwindcss";
+
+/* Dark-only, after Oku: near-black surfaces, hairline borders, no shadows, white for emphasis. */
+:root {
+  --paper: #111214;
+  --card: #17181b;
+  --raised: #1d1e22;
+  --ink: #ececed;
+  /* Muted and faint text both clear WCAG AA (4.5:1) on every surface from --paper to --pill. */
+  --muted: #a1a3a9;
+  --faint: #84868c;
+  --line: #26272b;
+  /* A step brighter than --line: the border of a card or button you're hovering over. */
+  --line-hover: #38393e;
+  --pill: #1f2024;
+  --pill-ink: #a4a6ac;
+  --accent: #ffffff;
+  --accent-soft: #26272c;
+  --accent-ink: #111214;
+  --star: #e9e2d0;
+  --danger: #f28b82;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-line-hover: var(--line-hover);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-star: var(--star);
+  --color-pill: var(--pill);
+  --color-pill-ink: var(--pill-ink);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-newsreader);
+}
+
+html {
+  background: var(--paper);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.9375rem;
+  /* Room for the fixed tab bar and the iPhone home indicator. */
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  overscroll-behavior-y: none;
+}
+
+@media (min-width: 768px) {
+  body {
+    padding-bottom: 0;
+  }
+}
+
+@layer components {
+  /* A quiet surface with a hairline border. */
+  .card {
+    border-radius: 0.75rem;
+    border: 1px solid var(--line);
+    background: var(--card);
+  }
+
+  /* Serif for titles, light and roomy. */
+  .display {
+    font-family: var(--font-newsreader), Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  /* Form controls share one look. */
+  .field {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid var(--line);
+    background: var(--card);
+    padding: 0.6rem 0.75rem;
+    font-size: 1rem; /* 16px stops iOS zooming into inputs */
+    color: var(--ink);
+    outline: none;
+  }
+  .field::placeholder {
+    color: var(--faint);
+  }
+  .field:focus {
+    border-color: var(--muted);
+  }
+  textarea.field {
+    min-height: 7rem;
+    line-height: 1.55;
+  }
+  select.field {
+    color-scheme: dark;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--line);
+    padding: 0.5rem 0.9rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    background: var(--card);
+    color: var(--ink);
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .btn:hover {
+    background: var(--raised);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+  }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+  .btn-primary:hover {
+    background: #e2e2e4;
+  }
+  .btn-danger {
+    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  }
+  .btn-danger:hover {
+    background: color-mix(in srgb, var(--danger) 10%, var(--card));
+  }
+  /* The final "Delete" in a confirmation. */
+  .btn-danger-solid {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #1a0f0e;
+  }
+  .btn-danger-solid:hover {
+    background: color-mix(in srgb, var(--danger) 85%, white);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+    border-radius: 0.375rem;
+    border: 1px solid var(--line);
+    background: var(--pill);
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    color: var(--pill-ink);
+  }
+  .chip[aria-pressed="true"],
+  .chip[aria-current="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  /* Small, plain section headings ("Description", "Details"). */
+  .section-title {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .section-title .count {
+    font-weight: 400;
+    font-size: 0.8125rem;
+    color: var(--faint);
+    margin-left: 0.4rem;
+  }
+
+  .prose-text {
+    white-space: pre-wrap;
+    line-height: 1.7;
+    font-size: 0.875rem;
+    color: #c9cacd;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+}
+
+/*
+ * Page transitions (src/components/PageMotion.tsx). Every page change crossfades; going into a book
+ * from a grid also slides the page left (and the back button slides it right), while the tapped
+ * cover flies to its place on the book's page (src/lib/cover-handoff.ts). The sidebar, tab bar and
+ * menu stay put.
+ */
+:root {
+  --vt-ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Taps during a transition reach the page underneath instead of being lost. */
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-old(root) {
+  animation: 140ms ease-out both vt-fade-out;
+}
+::view-transition-new(root) {
+  animation: 220ms ease-out 60ms both vt-fade-in;
+}
+
+html:active-view-transition-type(nav-forward)::view-transition-old(root) {
+  animation:
+    160ms ease-in both vt-fade-out,
+    380ms var(--vt-ease) both vt-out-left;
+}
+html:active-view-transition-type(nav-forward)::view-transition-new(root) {
+  animation:
+    240ms ease-out 80ms both vt-fade-in,
+    380ms var(--vt-ease) both vt-in-right;
+}
+html:active-view-transition-type(nav-back)::view-transition-old(root) {
+  animation:
+    160ms ease-in both vt-fade-out,
+    380ms var(--vt-ease) both vt-out-right;
+}
+html:active-view-transition-type(nav-back)::view-transition-new(root) {
+  animation:
+    240ms ease-out 80ms both vt-fade-in,
+    380ms var(--vt-ease) both vt-in-left;
+}
+
+/* The invisible marker that starts each one. */
+::view-transition-group(*.page) {
+  animation: none;
+}
+
+/* A loading skeleton fades out as its page arrives. */
+::view-transition-old(*.skeleton-out) {
+  animation: 180ms ease-out both vt-fade-out;
+}
+
+/* The tapped book's cover, on its way to the book's page. */
+::view-transition-group(book-cover) {
+  z-index: 50;
+  animation-duration: 420ms;
+  animation-timing-function: var(--vt-ease);
+}
+::view-transition-old(book-cover),
+::view-transition-new(book-cover) {
+  animation-duration: 200ms;
+}
+
+/* Anchors: no sliding or fading, and above the moving page. */
+::view-transition-group(sidebar),
+::view-transition-group(tab-bar),
+::view-transition-group(menu) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-group(menu) {
+  z-index: 101;
+}
+::view-transition-old(sidebar),
+::view-transition-old(tab-bar),
+::view-transition-old(menu) {
+  display: none;
+}
+::view-transition-new(sidebar),
+::view-transition-new(tab-bar),
+::view-transition-new(menu) {
+  animation: none;
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-out-left {
+  to {
+    translate: -32px 0;
+  }
+}
+@keyframes vt-in-right {
+  from {
+    translate: 32px 0;
+  }
+}
+@keyframes vt-out-right {
+  to {
+    translate: 32px 0;
+  }
+}
+@keyframes vt-in-left {
+  from {
+    translate: -32px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
