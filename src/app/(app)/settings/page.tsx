@@ -357,55 +357,49 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
         </div>
       </section>
 
-      <section id="hardcover" className="max-w-xl scroll-mt-8 space-y-3">
-        <h2 className="section-title">Hardcover</h2>
-        <p className="text-sm text-muted">
-          Shows the books in each of your series that you don&rsquo;t have yet,
-          on its series page, ready to add to To Read.
-        </p>
-        <div className="card space-y-4 p-5 text-sm">
-          {hardcover?.from === "environment" ? (
-            <p className="text-muted">
-              Set on the host (HARDCOVER_TOKEN), so there&rsquo;s nothing to
-              enter here.
-            </p>
-          ) : (
-            <>
-              {hardcover ? (
-                <p className="text-muted">
-                  Saved. The token isn&rsquo;t shown again; paste a new one to
-                  replace it.
-                </p>
-              ) : (
-                <p className="text-muted">
-                  Sign in to Hardcover (a free account is fine), open{" "}
-                  <a
-                    href="https://hardcover.app/account/api"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-ink underline"
-                  >
-                    Hardcover API
-                  </a>{" "}
-                  in your account settings, make a token, and paste it here.
-                </p>
-              )}
-              <HardcoverTokenForm replacing={!!hardcover} />
-              {hardcover && (
-                <form action={removeHardcoverTokenAction}>
-                  <ConfirmButton
-                    className="text-xs text-faint hover:text-danger"
-                    message="Remove the Hardcover token?"
-                    confirmLabel="Remove"
-                  >
-                    Remove token
-                  </ConfirmButton>
-                </form>
-              )}
-            </>
-          )}
-        </div>
-      </section>
+      {/* A token set on the host covers every library, so there's nothing for anyone to do here. */}
+      {hardcover?.from !== "environment" && (
+        <section id="hardcover" className="max-w-xl scroll-mt-8 space-y-3">
+          <h2 className="section-title">Hardcover</h2>
+          <p className="text-sm text-muted">
+            Shows the books in each of your series that you don&rsquo;t have
+            yet, on its series page, ready to add to To Read.
+          </p>
+          <div className="card space-y-4 p-5 text-sm">
+            {hardcover ? (
+              <p className="text-muted">
+                Saved. The token isn&rsquo;t shown again; paste a new one to
+                replace it.
+              </p>
+            ) : (
+              <p className="text-muted">
+                Sign in to Hardcover (a free account is fine), open{" "}
+                <a
+                  href="https://hardcover.app/account/api"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-ink underline"
+                >
+                  Hardcover API
+                </a>{" "}
+                in your account settings, make a token, and paste it here.
+              </p>
+            )}
+            <HardcoverTokenForm replacing={!!hardcover} />
+            {hardcover && (
+              <form action={removeHardcoverTokenAction}>
+                <ConfirmButton
+                  className="text-xs text-faint hover:text-danger"
+                  message="Remove the Hardcover token?"
+                  confirmLabel="Remove"
+                >
+                  Remove token
+                </ConfirmButton>
+              </form>
+            )}
+          </div>
+        </section>
+      )}
 
       <section id="api" className="max-w-xl scroll-mt-8 space-y-3">
         <h2 className="section-title">API keys</h2>
