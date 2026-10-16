@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Newsreader } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SPLASH_DEVICES, splashFile } from "@/lib/splash";
 import "./globals.css";
@@ -40,8 +41,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${inter.variable} ${newsreader.variable} antialiased`}>
       <body className="min-h-dvh">
         {children}
-        {/* Real-visit load and responsiveness timings, on Vercel only (the script isn't served elsewhere). */}
-        {process.env.VERCEL && <SpeedInsights />}
+        {/* Page views (no cookies) and real-visit load and responsiveness timings, on Vercel only (the scripts aren't served elsewhere). */}
+        {process.env.VERCEL && (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        )}
       </body>
     </html>
   );

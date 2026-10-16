@@ -8,3 +8,9 @@ export const FEATURE_REQUESTS_URL = "https://github.com/helenvholmes/bookbox/dis
 
 /** Where to tip the original project's author. Like FEATURE_REQUESTS_URL, forks can keep it. */
 export const SUPPORT_URL = "https://ko-fi.com/helenvholmes";
+
+/**
+ * Where people can ask the owner of this copy for an invite (shown on /signup). An email address,
+ * or empty to suggest asking whoever told them about BookBox.
+ */
+export const INVITE_REQUEST_EMAIL = "";

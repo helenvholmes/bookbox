@@ -6,18 +6,19 @@ import { Stars } from "./Stars";
 
 /**
  * The public page about BookBox, shown at the site's address to visitors who aren't signed in
- * (when Settings allows). The library preview uses first editions of public-domain books (images
+ * (when Settings allows). It leads with signing up to this copy; running your own copy comes
+ * further down, for people who want more control. The library preview uses first editions of public-domain books (images
  * from Wikimedia Commons, credited in public/landing/CREDITS.md), so nothing from anyone's real
  * library appears here.
  */
 
 export const LANDING_METADATA: Metadata = {
-  title: { absolute: "BookBox · A free reading log you host yourself" },
+  title: { absolute: "BookBox · A free, private reading log" },
   description:
-    "Track what you read, re-read, and want to read. Instant search, offline mode, barcode scanning, shareable lists, and Spotify audiobook progress. Open source, and free to host.",
+    "Track what you read, re-read, and want to read. Instant search, offline mode, barcode scanning, shareable lists, and Spotify audiobook progress. Free, private, and open source.",
   openGraph: {
     title: "BookBox",
-    description: "A free reading log you host yourself: instant search, offline mode, shareable lists, and Spotify audiobook progress.",
+    description: "A free, private reading log: instant search, offline mode, shareable lists, and Spotify audiobook progress.",
     type: "website",
   },
 };
@@ -99,19 +100,22 @@ const FEATURES: { title: string; body: string; d: string }[] = [
   },
 ];
 
-/** `signedIn` swaps "Sign in" for a way back to the library. */
+/** `signedIn` swaps "Sign in" and "Sign up" for a way back to the library. */
 export function Landing({ signedIn }: { signedIn: boolean }) {
   const account = signedIn ? { href: "/library", label: "Open your library" } : { href: "/login", label: "Sign in" };
+  const start = signedIn ? account : { href: "/signup", label: "Sign up" };
   return (
     <div className="min-h-dvh bg-paper text-ink">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-5 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8">
         <span className="display text-xl">BookBox</span>
-        <nav aria-label="Site" className="flex items-center gap-5 text-sm">
-          <a href={SOURCE_URL} className="text-muted hover:text-ink">
-            GitHub
-          </a>
-          <Link href={account.href} className="btn rounded-full px-4">
-            {account.label}
+        <nav aria-label="Site" className="flex items-center gap-4 text-sm">
+          {!signedIn && (
+            <Link href={account.href} className="text-muted hover:text-ink">
+              {account.label}
+            </Link>
+          )}
+          <Link href={start.href} className="btn btn-primary rounded-full px-4">
+            {start.label}
           </Link>
         </nav>
       </header>
@@ -126,24 +130,30 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
             </p>
             <h1 className="display text-[2.75rem] leading-[1.05] sm:text-6xl">A reading log that&rsquo;s yours.</h1>
             <p className="max-w-lg text-[1.0625rem] leading-relaxed text-muted">
-              Own your own reading data. Handles what you&rsquo;re reading, want to read, recommendations, and reviews. Ships on free tiers of Vercel and
-              Turso with no ads, no feeds, and nobody else&rsquo;s algorithm.
+              Keep track of what you&rsquo;re reading, what you want to read, what friends recommend, and what you thought. Your library is private to you,
+              with no ads, no feeds, and nobody else&rsquo;s algorithm.
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <a href={DEPLOY_URL} className="btn btn-primary rounded-full px-5">
-                Deploy your own
-              </a>
-              <a href={SOURCE_URL} className="btn rounded-full px-5">
-                View the code
+              <Link href={start.href} className="btn btn-primary rounded-full px-5">
+                {start.label}
+              </Link>
+              <a href="#features" className="btn rounded-full px-5">
+                See what it does
               </a>
             </div>
-            <p className="text-xs text-faint">Takes about ten minutes to set up. Costs nothing to run. Spotify and Hardcover are optional extras.</p>
+            <p className="text-xs text-faint">
+              Free. Invite-only for now, while it&rsquo;s small. Or{" "}
+              <a href="#run-your-own" className="underline decoration-line underline-offset-2 hover:text-muted">
+                run your own copy
+              </a>
+              .
+            </p>
           </div>
 
           <LibraryPreview />
         </section>
 
-        <section aria-labelledby="features" className="border-t border-line">
+        <section aria-labelledby="features" className="scroll-mt-8 border-t border-line">
           <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8">
             <h2 id="features" className="display max-w-xl text-3xl leading-tight sm:text-4xl">
               Everything a reading log should do.
@@ -164,21 +174,48 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
           </div>
         </section>
 
-        <section aria-labelledby="yours" className="border-t border-line">
+        <section className="border-t border-line">
+          <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-5 py-20 sm:px-8 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-3">
+              <h2 className="display text-3xl leading-tight sm:text-4xl">Start your library.</h2>
+              <p className="max-w-md leading-relaxed text-muted">Your books stay yours: export them as a CSV whenever you like.</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link href={start.href} className="btn btn-primary rounded-full px-5">
+                {start.label}
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section id="run-your-own" aria-labelledby="run-your-own-title" className="scroll-mt-8 border-t border-line">
           <div className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 md:grid-cols-2">
             <div className="space-y-4">
-              <h2 id="yours" className="display text-3xl leading-tight sm:text-4xl">
-                One reader per copy.
+              <p className="flex items-center gap-2 text-sm text-muted">
+                <span className="size-1.5 rounded-full bg-accent" aria-hidden />
+                Open source
+              </p>
+              <h2 id="run-your-own-title" className="display text-3xl leading-tight sm:text-4xl">
+                Or run your own copy.
               </h2>
               <p className="max-w-md leading-relaxed text-muted">
-                BookBox isn&rsquo;t a service you sign up for. You run your own copy, on your own free accounts, and your library never sits in anyone
-                else&rsquo;s database. Export it as a CSV whenever you like.
+                Want more control? BookBox is open source, so you can fork it and run it yourself on the free tiers of Vercel and Turso. Your library lives in
+                your own database, on your own accounts, and you can change anything you like.
               </p>
+              <div className="flex flex-wrap gap-3 pt-2">
+                <a href={DEPLOY_URL} className="btn rounded-full px-5">
+                  Deploy your own
+                </a>
+                <a href={SOURCE_URL} className="btn rounded-full px-5">
+                  View the code
+                </a>
+              </div>
+              <p className="text-xs text-faint">Takes about ten minutes to set up. Costs nothing to run. Spotify and Hardcover are optional extras.</p>
             </div>
             <ol className="space-y-6">
               {[
                 ["Fork it", "Copy the code to your GitHub account."],
-                ["Deploy it", "Connect it to Vercel with a free database and cover storage, then set a password."],
+                ["Deploy it", "Connect it to Vercel with a free database and cover storage, then set a password and sign in."],
                 ["Add your books", "Search, scan, or import from Goodreads or Libby, then open it on your phone."],
               ].map(([t, b], i) => (
                 <li key={t} className="flex gap-4">
@@ -193,19 +230,6 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
           </div>
         </section>
 
-        <section className="border-t border-line">
-          <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-5 py-20 sm:px-8 md:flex-row md:items-center md:justify-between">
-            <h2 className="display text-3xl leading-tight sm:text-4xl">Start your library.</h2>
-            <div className="flex flex-wrap gap-3">
-              <a href={DEPLOY_URL} className="btn btn-primary rounded-full px-5">
-                Deploy your own
-              </a>
-              <a href={SOURCE_URL} className="btn rounded-full px-5">
-                Read the guide
-              </a>
-            </div>
-          </div>
-        </section>
       </main>
 
       <footer className="border-t border-line">
