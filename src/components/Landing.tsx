@@ -102,14 +102,13 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
     <div className="min-h-dvh bg-paper text-ink">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-5 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8">
         <span className="display text-xl">BookBox</span>
+        {/* Always both, in the same words; signed in, they lead straight to the library. */}
         <nav aria-label="Site" className="flex items-center gap-4 text-sm">
-          {!signedIn && (
-            <Link href={account.href} className="text-muted hover:text-ink">
-              {account.label}
-            </Link>
-          )}
-          <Link href={start.href} className="btn btn-primary rounded-full px-4">
-            {start.label}
+          <Link href={signedIn ? "/library" : "/login"} className="text-muted hover:text-ink">
+            Sign in
+          </Link>
+          <Link href={signedIn ? "/library" : "/signup"} className="btn btn-primary rounded-full px-4">
+            Sign up
           </Link>
         </nav>
       </header>
