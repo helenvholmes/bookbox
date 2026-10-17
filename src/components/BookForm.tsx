@@ -222,7 +222,7 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
         <section className="space-y-4">
           <div>
             <h1 className="display text-3xl">Add a book</h1>
-            <p className="mt-1 text-muted">Search OpenLibrary or scan the barcode on the back, and the details fill themselves in.</p>
+            <p className="mt-1 text-muted">Search for a book or scan the barcode on the back, and the details fill themselves in.</p>
             {/* Up here so search results don't push it out of sight. */}
             <button type="button" className="mt-2 text-sm font-medium text-accent" onClick={() => setLookupOpen(false)}>
               Enter a book by hand instead
@@ -274,7 +274,7 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
               <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted">{lookupNote ?? (fields.ol_work ? "Linked to OpenLibrary." : "Fill in details from OpenLibrary.")}</p>
                 <button type="button" className="btn shrink-0" onClick={() => setLookupOpen(true)}>
-                  {isNew ? "Search OpenLibrary" : "Refresh from OpenLibrary"}
+                  {isNew ? "Search for a book" : "Refresh from OpenLibrary"}
                 </button>
               </div>
             )}
