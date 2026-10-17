@@ -2,8 +2,8 @@ import type { NextConfig } from "next";
 
 /**
  * Where the browser may load things from. Everything BookBox fetches is its own (covers come through
- * /covers, lookups through /api), so only images may come from elsewhere: Hardcover's and Open
- * Library's cover suggestions. Inline scripts stay allowed because Next.js streams pages with them
+ * /covers, lookups through /api), so only images may come from elsewhere: Hardcover's, Open
+ * Library's and Inventaire's cover suggestions. Inline scripts stay allowed because Next.js streams pages with them
  * (nonces would need every page, the offline one included, rendered per visit); scripts from other
  * sites, plugins, framing, and forms posting elsewhere are all refused.
  */

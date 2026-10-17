@@ -114,9 +114,9 @@ export async function deleteCover(filename: string | null | undefined) {
   else fs.rmSync(path.join(COVERS_DIR, name), { force: true });
 }
 
-const ALLOWED_COVER_HOSTS = new Set(["covers.openlibrary.org", "archive.org"]);
+const ALLOWED_COVER_HOSTS = new Set(["covers.openlibrary.org", "archive.org", "inventaire.io"]);
 
-/** Downloads a cover from OpenLibrary. Other hosts are refused so the server can't be pointed anywhere. */
+/** Downloads a cover from OpenLibrary or Inventaire. Other hosts are refused so the server can't be pointed anywhere. */
 export async function fetchCover(url: string): Promise<Buffer | null> {
   let parsed: URL;
   try {
