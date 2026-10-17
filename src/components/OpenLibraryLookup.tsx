@@ -3,8 +3,11 @@
 /* eslint-disable @next/next/no-img-element -- OpenLibrary thumbnails */
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { OLDetails, OLResult } from "@/lib/openlibrary";
+import type { LookupResult, Source } from "@/lib/catalogs";
+import type { OLDetails } from "@/lib/openlibrary";
 import { BarcodeScanner } from "./BarcodeScanner";
+
+const SOURCE_NAMES: Record<Source, string> = { openlibrary: "OpenLibrary", loc: "Library of Congress", inventaire: "Inventaire" };
 
 type Props = {
   initialQuery?: string;
@@ -17,7 +20,9 @@ type Props = {
 
 export function OpenLibraryLookup({ initialQuery = "", autoSearch = false, onPick, onCancel, startScanning = false }: Props) {
   const [query, setQuery] = useState(initialQuery);
-  const [results, setResults] = useState<OLResult[] | null>(null);
+  const [results, setResults] = useState<LookupResult[] | null>(null);
+  // Whether the Library of Congress and Inventaire have been searched for this query too.
+  const [searchedMore, setSearchedMore] = useState(false);
   const willAutoSearch = autoSearch && !!initialQuery.trim();
   const [status, setStatus] = useState<"idle" | "searching" | "loading">(willAutoSearch ? "searching" : "idle");
   const [error, setError] = useState<string | null>(null);
@@ -59,8 +64,11 @@ export function OpenLibraryLookup({ initialQuery = "", autoSearch = false, onPic
       const data = await res.json();
       if (id !== searchId.current) return null;
       if (!res.ok) throw new Error(data.error);
-      setResults(data);
-      return data as OLResult[];
+      const results = data as LookupResult[];
+      setResults(results);
+      // With nothing on OpenLibrary, the server has already asked the others.
+      setSearchedMore(!results.some((r) => r.source === "openlibrary"));
+      return results;
     } catch (err) {
       if (id === searchId.current) setError((err as Error).message || "Search failed.");
       return null;
@@ -69,13 +77,35 @@ export function OpenLibraryLookup({ initialQuery = "", autoSearch = false, onPic
     }
   }
 
-  async function pick(r: OLResult) {
+  /** Adds the Library of Congress's and Inventaire's results below OpenLibrary's. */
+  async function searchMore() {
+    const id = ++searchId.current;
+    setStatus("searching");
+    setError(null);
+    try {
+      const res = await fetch(`/api/openlibrary?more=1&q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (id !== searchId.current) return;
+      if (!res.ok) throw new Error(data.error);
+      setResults((prev) => [...(prev ?? []), ...(data as LookupResult[])]);
+      setSearchedMore(true);
+    } catch (err) {
+      if (id === searchId.current) setError((err as Error).message || "Search failed.");
+    } finally {
+      if (id === searchId.current) setStatus("idle");
+    }
+  }
+
+  async function pick(r: LookupResult) {
+    // The other catalogs' results already carry everything they know.
+    if (r.details) return onPick(r.details);
     setPicking(r.work);
     setStatus("loading");
     setError(null);
     try {
       const params = new URLSearchParams({ work: r.work });
       if (r.edition) params.set("edition", r.edition);
+      if (r.isbn13) params.set("isbn", r.isbn13);
       const res = await fetch(`/api/openlibrary?${params}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -115,7 +145,7 @@ export function OpenLibraryLookup({ initialQuery = "", autoSearch = false, onPic
           enterKeyHint="search"
           className="field"
           placeholder="Title, author or ISBN"
-          aria-label="Search OpenLibrary"
+          aria-label="Search for a book"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -153,13 +183,13 @@ export function OpenLibraryLookup({ initialQuery = "", autoSearch = false, onPic
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {results && results.length === 0 && status === "idle" && (
-        <p className="text-sm text-muted">Nothing found on OpenLibrary. Try fewer words, or enter the book by hand.</p>
+        <p className="text-sm text-muted">Nothing found on OpenLibrary, the Library of Congress or Inventaire. Try fewer words, or enter the book by hand.</p>
       )}
 
       {results && results.length > 0 && (
         <ul className="divide-y divide-line overflow-hidden card">
           {results.map((r) => (
-            <li key={r.work + r.edition}>
+            <li key={r.source + r.work + r.edition}>
               <button
                 type="button"
                 disabled={status === "loading"}
@@ -167,14 +197,14 @@ export function OpenLibraryLookup({ initialQuery = "", autoSearch = false, onPic
                 className="flex w-full items-center gap-3 p-3 text-left hover:bg-raised disabled:opacity-60"
               >
                 {r.coverUrl ? (
-                  <img src={r.coverUrl.replace("-L.jpg", "-S.jpg")} alt="" className="h-16 w-11 shrink-0 rounded bg-line object-cover" loading="lazy" />
+                  <img src={r.source === "openlibrary" ? r.coverUrl.replace("-L.jpg", "-S.jpg") : r.coverUrl} alt="" className="h-16 w-11 shrink-0 rounded bg-line object-cover" loading="lazy" />
                 ) : (
                   <div className="h-16 w-11 shrink-0 rounded bg-line" />
                 )}
                 <span className="min-w-0 flex-1">
                   <span className="line-clamp-2 font-medium">{r.title}</span>
                   <span className="block truncate text-sm text-muted">
-                    {[r.authors.slice(0, 2).join(", "), r.year].filter(Boolean).join(" · ")}
+                    {[r.authors.slice(0, 2).join(", "), r.year, r.source !== "openlibrary" && SOURCE_NAMES[r.source]].filter(Boolean).join(" · ")}
                   </span>
                 </span>
                 <span className="shrink-0 text-sm font-medium text-accent">{picking === r.work ? "Loading…" : "Use"}</span>
@@ -182,6 +212,12 @@ export function OpenLibraryLookup({ initialQuery = "", autoSearch = false, onPic
             </li>
           ))}
         </ul>
+      )}
+
+      {results && results.length > 0 && !searchedMore && (
+        <button type="button" className="text-sm text-accent underline" disabled={status !== "idle"} onClick={searchMore}>
+          {status === "searching" ? "Searching the Library of Congress and Inventaire…" : "Not here? Search the Library of Congress and Inventaire"}
+        </button>
       )}
 
       {onCancel && (

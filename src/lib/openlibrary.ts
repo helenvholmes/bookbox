@@ -54,7 +54,7 @@ const pagesOrNull = (n: number | undefined | null) => (n && n >= 20 ? n : null);
 const coverFromId = (id: number | undefined | null) => (id && id > 0 ? `https://covers.openlibrary.org/b/id/${id}-L.jpg` : null);
 
 /** OpenLibrary stores many titles in sentence case ("American elsewhere"). */
-function tidyTitle(title: string) {
+export function tidyTitle(title: string) {
   const words = title.split(" ");
   if (words.length < 2 || /[A-Z]/.test(title.slice(1))) return title;
   const small = new Set(["a", "an", "and", "as", "at", "but", "by", "for", "in", "of", "on", "or", "the", "to", "with"]);
