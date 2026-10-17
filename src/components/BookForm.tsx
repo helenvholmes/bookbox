@@ -223,11 +223,12 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
           <div>
             <h1 className="display text-3xl">Add a book</h1>
             <p className="mt-1 text-muted">Search OpenLibrary or scan the barcode on the back, and the details fill themselves in.</p>
+            {/* Up here so search results don't push it out of sight. */}
+            <button type="button" className="mt-2 text-sm font-medium text-accent" onClick={() => setLookupOpen(false)}>
+              Enter a book by hand instead
+            </button>
           </div>
           <OpenLibraryLookup onPick={applyLookup} startScanning={startScanning} />
-          <button type="button" className="text-sm font-medium text-accent" onClick={() => setLookupOpen(false)}>
-            Enter a book by hand instead
-          </button>
         </section>
       )}
 
