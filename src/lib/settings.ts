@@ -9,7 +9,7 @@ import { db } from "./db";
  */
 
 export type Settings = {
-  /** Your first name: "Hello, Sam" in the library, "A reading list from Sam" on share pages. Empty for neutral wording. */
+  /** Your first name: "Hello, Samantha" in the library, "A reading list from Samantha" on share pages. Empty for neutral wording. */
   ownerName: string;
 };
 
