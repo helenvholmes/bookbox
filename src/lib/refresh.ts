@@ -2,11 +2,13 @@ import "server-only";
 import { authorSort } from "./names";
 import { db } from "./db";
 import { setBookSeries } from "./books";
+import { otherCatalogsByIsbn } from "./catalogs";
 import { getOpenLibraryDetails, searchOpenLibrary } from "./openlibrary";
 
 /**
- * Bulk OpenLibrary refresh: for every book with an ISBN, fill empty fields from OpenLibrary and
- * queue real differences (title, author, series) as suggestions to accept or dismiss. Covers
+ * Bulk OpenLibrary refresh: for every book with an ISBN, fill empty fields from OpenLibrary (and
+ * what it lacks from the Library of Congress and Inventaire) and queue real differences (title,
+ * author, series) from OpenLibrary as suggestions to accept or dismiss. Covers
  * are left to the Missing covers page. The refresh page drives it in small batches (serverless
  * functions can't run a background job), and each finished book is stamped with ol_checked_at,
  * so a stopped run picks up where it left off.
@@ -98,44 +100,47 @@ async function refreshBook(id: number): Promise<{ title: string; filled: boolean
   let suggested = 0;
 
   const [match] = await searchOpenLibrary(book.isbn13);
-  if (match) {
-    const d = await getOpenLibraryDetails(match.work, match.edition);
-    const found = {
-      publisher: d?.publisher || match.publisher,
-      publish_year: d?.publish_year ?? match.year,
-      pages: d?.pages ?? match.pages,
-      description: d?.description ?? "",
-      additional_authors: d?.additional_authors ?? "",
-      ol_work: match.work,
-      ol_edition: match.edition,
-    };
+  const d = match ? await getOpenLibraryDetails(match.work, match.edition) : null;
+  const found = {
+    publisher: d?.publisher || match?.publisher || "",
+    publish_year: d?.publish_year ?? match?.year ?? null,
+    pages: d?.pages ?? match?.pages ?? null,
+    description: d?.description ?? "",
+    additional_authors: d?.additional_authors ?? "",
+    ol_work: match?.work ?? null,
+    ol_edition: match?.edition ?? null,
+  };
+  const empty = (v: string | number | null) => v === null || v === "";
 
-    // Fill only what's empty; never overwrite what's there.
-    const fills: Record<string, string | number> = {};
-    for (const [k, v] of Object.entries(found) as [keyof typeof found, string | number | null][]) {
-      const current = book[k];
-      if ((current === null || current === "") && v !== null && v !== "") fills[k] = v;
-    }
-    const keys = Object.keys(fills);
-    if (keys.length) {
-      (await db.prepare(`UPDATE books SET ${keys.map((k) => `${k} = ?`).join(", ")}, updated_at = datetime('now') WHERE id = ?`).run(
-        ...keys.map((k) => fills[k]),
-        id,
-      ));
-      filled = true;
-    }
+  // What neither the book nor OpenLibrary has, the Library of Congress or Inventaire might.
+  const gaps = (["publisher", "publish_year", "pages", "description", "additional_authors"] as const).filter((k) => empty(book[k]) && empty(found[k]));
+  const other = gaps.length ? await otherCatalogsByIsbn(book.isbn13) : null;
+  if (other) for (const k of gaps) Object.assign(found, { [k]: other[k] });
 
-    // Differences worth a look: a different title or author (not just case or a subtitle), or a series.
-    const suggest = async (field: string, value: string) => {
-      const r = (await db.prepare("INSERT OR IGNORE INTO refresh_suggestions (book_id, field, value) VALUES (?, ?, ?)").run(id, field, value));
-      if (r.changes) suggested++;
-    };
-    if (d?.title && normalize(d.title) && normalize(d.title) !== normalize(book.title)) await suggest("title", d.title);
-    const olAuthor = d?.author || match.authors[0] || "";
-    if (olAuthor && book.author && normalize(olAuthor) !== normalize(book.author)) await suggest("author", olAuthor);
-    const inSeries = (await db.prepare("SELECT 1 FROM book_series WHERE book_id = ?").get(id));
-    if (d?.series && !inSeries) await suggest("series", d.series);
+  // Fill only what's empty; never overwrite what's there.
+  const fills: Record<string, string | number> = {};
+  for (const [k, v] of Object.entries(found) as [keyof typeof found, string | number | null][]) {
+    if (empty(book[k]) && !empty(v)) fills[k] = v!;
   }
+  const keys = Object.keys(fills);
+  if (keys.length) {
+    (await db.prepare(`UPDATE books SET ${keys.map((k) => `${k} = ?`).join(", ")}, updated_at = datetime('now') WHERE id = ?`).run(
+      ...keys.map((k) => fills[k]),
+      id,
+    ));
+    filled = true;
+  }
+
+  // Differences worth a look: a different title or author (not just case or a subtitle), or a series.
+  const suggest = async (field: string, value: string) => {
+    const r = (await db.prepare("INSERT OR IGNORE INTO refresh_suggestions (book_id, field, value) VALUES (?, ?, ?)").run(id, field, value));
+    if (r.changes) suggested++;
+  };
+  if (d?.title && normalize(d.title) && normalize(d.title) !== normalize(book.title)) await suggest("title", d.title);
+  const olAuthor = d?.author || match?.authors[0] || "";
+  if (olAuthor && book.author && normalize(olAuthor) !== normalize(book.author)) await suggest("author", olAuthor);
+  const inSeries = (await db.prepare("SELECT 1 FROM book_series WHERE book_id = ?").get(id));
+  if (d?.series && !inSeries) await suggest("series", d.series);
   (await db.prepare("UPDATE books SET ol_checked_at = datetime('now') WHERE id = ?").run(id));
   return { title: book.title, filled, suggested };
 }
