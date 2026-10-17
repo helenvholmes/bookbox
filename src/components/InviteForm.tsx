@@ -12,7 +12,7 @@ export function InviteForm() {
       <form action={action} className="flex flex-wrap items-end gap-3">
         <label className="block min-w-0 flex-1 space-y-1.5">
           <span className="text-xs text-muted">Who it’s for (just for you)</span>
-          <input name="note" maxLength={80} placeholder="e.g. Sam" className="field" />
+          <input name="note" maxLength={80} placeholder="e.g. Katie" className="field" />
         </label>
         <button className="btn rounded-full px-4" disabled={pending}>
           {pending ? "Making…" : "Make invite link"}
