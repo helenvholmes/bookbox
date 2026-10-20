@@ -5,6 +5,7 @@ import { PageMotion } from "@/components/PageMotion";
 import { OfflineSupport } from "@/components/OfflineSupport";
 import { BackgroundSync } from "@/components/BackgroundSync";
 import { authEnabled } from "@/lib/auth";
+import { demoMode } from "@/lib/demo";
 import { getFacets, listLists } from "@/lib/books";
 
 /**
@@ -22,7 +23,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       >
         Skip to content
       </a>
-      <OfflineSupport />
+      <OfflineSupport demo={demoMode()} />
       <BackgroundSync />
       {/* Reads the URL's query string, so it needs a Suspense boundary of its own. */}
       <Suspense>
@@ -35,7 +36,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <Suspense
         fallback={
           <Suspense fallback={<SidebarShell />}>
-            <Nav years={[]} lists={[]} canSignOut={authEnabled()} />
+            <Nav years={[]} lists={[]} canSignOut={authEnabled() && !demoMode()} />
           </Suspense>
         }
       >
@@ -64,5 +65,5 @@ async function LocalCopyNotice() {
 
 async function NavWithYears() {
   const [{ years }, lists] = await Promise.all([getFacets(), listLists()]);
-  return <Nav years={years} lists={lists} canSignOut={authEnabled()} />;
+  return <Nav years={years} lists={lists} canSignOut={authEnabled() && !demoMode()} />;
 }

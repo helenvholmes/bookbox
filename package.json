@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "import:airtable": "tsx --disable-warning=ExperimentalWarning scripts/import-airtable.mts",
+    "build:demo-seed": "tsx scripts/build-demo-seed.mts",
     "generate:icons": "tsx scripts/generate-icons.mts",
     "push:cloud": "tsx scripts/push-to-cloud.mts",
     "pull:cloud": "tsx scripts/pull-from-cloud.mts"
