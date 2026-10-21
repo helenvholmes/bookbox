@@ -5,6 +5,7 @@ import { useState } from "react";
 import { changeStatus, statusesFrom, withProgress, withReads, withStartedOn, withStatus, type ShownProgress } from "@/lib/book-state";
 import type { Progress, Read } from "@/lib/books";
 import { formatDay, todayLocal } from "@/lib/dates";
+import { demoMode } from "@/lib/demo";
 import { submit, usePendingOps } from "@/lib/outbox";
 import { ago, FINISHED_PERCENT, formatDuration } from "@/lib/progress";
 
@@ -101,7 +102,7 @@ export function ProgressCard({ bookId, pages: pageCount, onKindle, shelves, read
             <button type="button" className="text-muted hover:text-ink" onClick={() => setEditing(true)}>
               {shown ? "Update progress" : abandoned ? "+ Add where you stopped" : "+ Add progress"}
             </button>
-            {!spotify && !abandoned && (
+            {!spotify && !abandoned && !demoMode() && (
               <Link href="/spotify" className="text-xs text-faint hover:text-muted">
                 Listening on Spotify?
               </Link>

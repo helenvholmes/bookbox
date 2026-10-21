@@ -17,8 +17,10 @@ const DIR = path.join(os.tmpdir(), "bookbox-demo");
 /** How long a library is kept after its last request. */
 const IDLE_MS = 20 * 60_000;
 /** Libraries one instance keeps at most; the longest unused go first. */
-const MAX_LIBRARIES = 200;
+const MAX_LIBRARIES = 100;
 const SWEEP_MS = 60_000;
+/** A library (and its covers) bigger than this starts again from the snapshot: someone is filling the server's disk. */
+const MAX_BYTES = 16 * 1024 * 1024;
 
 const g = globalThis as unknown as { bookboxDemos?: Map<string, number>; bookboxDemoSweptAt?: number };
 const lastUsed = (g.bookboxDemos ??= new Map());
@@ -31,9 +33,20 @@ export const demoCoversDir = (id: string) => path.join(DIR, `${id}-covers`);
 
 export function demoLibrary(id: string): Library {
   fs.mkdirSync(DIR, { recursive: true });
+  if (sizeOf(id) > MAX_BYTES) removeDemoLibrary(id);
   lastUsed.set(id, Date.now());
   if (Date.now() - (g.bookboxDemoSweptAt ?? 0) > SWEEP_MS) sweep(id);
   return libraryOf(id);
+}
+
+/** The bytes a demo library uses: its database and its covers. */
+function sizeOf(id: string) {
+  const size = (f: string) => fs.statSync(f, { throwIfNoEntry: false })?.size ?? 0;
+  let covers = 0;
+  try {
+    for (const name of fs.readdirSync(demoCoversDir(id))) covers += size(path.join(demoCoversDir(id), name));
+  } catch {} // no covers of its own yet
+  return size(file(id)) + size(`${file(id)}-wal`) + covers;
 }
 
 /** Deletes a demo library, so its next request starts again from the snapshot. */

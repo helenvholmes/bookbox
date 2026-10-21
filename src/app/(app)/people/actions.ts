@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect, RedirectType } from "next/navigation";
 import { createPerson, deletePerson, updatePerson } from "@/lib/books";
+import { notInDemo } from "@/lib/demo";
 
 const text = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 const relationships = (fd: FormData) => fd.getAll("relationship").map(String).join(",");
@@ -36,6 +37,7 @@ export async function deletePersonAction(fd: FormData) {
 export type ShareState = { savedAt?: number; token?: string; error?: string } | null;
 
 export async function saveShareAction(_prev: ShareState, fd: FormData): Promise<ShareState> {
+  notInDemo();
   const { ACCENTS, saveShareSettings } = await import("@/lib/share");
   const personId = Number(fd.get("person_id"));
   const accent = String(fd.get("accent") ?? "");
@@ -54,6 +56,7 @@ export async function saveShareAction(_prev: ShareState, fd: FormData): Promise<
 }
 
 export async function regenerateShareAction(fd: FormData) {
+  notInDemo();
   const { regenerateShareToken } = await import("@/lib/share");
   const personId = Number(fd.get("person_id"));
   await regenerateShareToken(personId);

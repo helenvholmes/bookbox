@@ -29,6 +29,8 @@ const demo = demoMode();
 checkDemoEnvironment();
 
 const nextConfig: NextConfig = {
+  // Built in, so the browser knows it's the demo too (demoMode() in src/lib/demo.ts).
+  env: { BOOKBOX_DEMO: demo ? "1" : "" },
   // No "N" badge in the corner during development (build and runtime errors still show).
   devIndicators: false,
   // Standalone output is for self-hosting; Vercel builds its own functions.

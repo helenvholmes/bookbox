@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { todayLocal } from "@/lib/dates";
+import { demoMode } from "@/lib/demo";
 
 const KEY = "bookbox:background-synced";
 const EVERY_MS = 2 * 60 * 1000;
@@ -11,11 +12,12 @@ const ENDPOINTS = ["/api/spotify/sync", "/api/libby/sync"];
 /**
  * Asks the server to pull Spotify listening progress and Libby loans when the app opens or comes
  * back into view (the server also skips each if it ran recently), and refreshes the page when
- * something changed. Each does nothing when it isn't connected.
+ * something changed. Each does nothing when it isn't connected, and the demo has neither.
  */
 export function BackgroundSync() {
   const router = useRouter();
   useEffect(() => {
+    if (demoMode()) return;
     const sync = async () => {
       if (document.visibilityState !== "visible" || !navigator.onLine) return;
       try {

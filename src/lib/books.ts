@@ -380,6 +380,10 @@ export async function saveBook(id: number | null, input: BookInput): Promise<num
 
     let bookId: number;
     if (id === null) {
+      const { DEMO_MAX_BOOKS, demoMode } = await import("./demo");
+      if (demoMode() && Number(((await db.prepare("SELECT COUNT(*) AS n FROM books").get()) as { n: number }).n) >= DEMO_MAX_BOOKS) {
+        throw new Error(`The demo holds up to ${DEMO_MAX_BOOKS} books. Delete one to add another, or get a BookBox of your own for as many as you like.`);
+      }
       const row = (await db
         .prepare(`INSERT INTO books (${BOOK_FIELDS.join(", ")}) VALUES (${BOOK_FIELDS.map(() => "?").join(", ")}) RETURNING id`)
         .get(...vals)) as { id: number };
