@@ -110,6 +110,15 @@ With `BOOKBOX_PASSWORD` unset there's no sign-in, which is fine on your own mach
 
 The service worker (offline support) only runs in production builds, so `npm run dev` always shows fresh code. Try offline mode with `npm run build && npm start`.
 
+### Tests
+
+```bash
+npx playwright install chromium   # once
+npm test
+```
+
+The tests drive the app in a real browser through everyday actions: adding a book by hand, finding one by search and saving it with its cover (also when OpenLibrary's cover server is down), editing and deleting. Each run starts its own copy of the app on port 3210 with an empty library in `e2e/.data`, and never reaches the real book catalogs: `e2e/catalog-stub.mjs` answers for them from `e2e/fixtures.mjs`. Stop `npm run dev` first, as Next.js runs one dev server per project. Add a test to `e2e/` when you add or change a common action.
+
 ### Moving a local library to your hosted copy
 
 If you've been using BookBox locally first, copy it up once, before you start using the hosted copy (this replaces what's in the hosted database, and uploads every cover that isn't there yet):

@@ -5,6 +5,7 @@ import { redirect, RedirectType } from "next/navigation";
 import { deleteBook, deleteLoan, getCoverName, lendBook, returnLoan, saveBook, setCover, setOwned, type BookInput } from "@/lib/books";
 import { isDay } from "@/lib/dates";
 import { coverLimitReached, coverUploadsPaused, MAX_COVERS, deleteCover, fetchCover, isUsableImage, saveCover } from "@/lib/covers";
+import { inventaireByIsbn } from "@/lib/inventaire";
 import { toIsbn13 } from "@/lib/names";
 
 /** `saved`: an edit was saved and the form steps back to the page it was opened from. */
@@ -57,6 +58,16 @@ function parseBook(fd: FormData): BookInput | string {
   };
 }
 
+/** The cover at `url`, or Inventaire's for the ISBN when that can't be had (OpenLibrary's cover server is sometimes down). */
+async function coverFrom(url: string, isbn: string | null): Promise<Buffer | null> {
+  const data = await fetchCover(url);
+  if (data && (await isUsableImage(data))) return data;
+  const fallback = isbn ? (await inventaireByIsbn(isbn).catch(() => null))?.coverUrl : null;
+  if (!fallback || fallback === url) return null;
+  const other = await fetchCover(fallback);
+  return other && (await isUsableImage(other)) ? other : null;
+}
+
 type CoverChange = { set: Buffer } | { remove: true } | null;
 
 /** Reads the requested cover change up front so a bad image fails before anything is saved. */
@@ -71,9 +82,9 @@ async function readCoverChange(fd: FormData): Promise<CoverChange | string> {
     return (await isUsableImage(data)) ? { set: data } : "That image couldn't be used as a cover.";
   }
   if (url) {
-    const data = await fetchCover(url);
+    const data = await coverFrom(url, toIsbn13(text(fd, "isbn13")));
     // A missing OpenLibrary cover isn't worth failing the save over.
-    return data && (await isUsableImage(data)) ? { set: data } : null;
+    return data ? { set: data } : null;
   }
   return fd.get("cover_remove") === "1" ? { remove: true } : null;
 }

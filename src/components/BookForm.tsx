@@ -7,9 +7,11 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { saveBookAction } from "@/app/(app)/books/actions";
 import type { Book } from "@/lib/books";
 import { hasPageBefore } from "@/lib/history";
+import { toIsbn13 } from "@/lib/names";
 import type { OLDetails } from "@/lib/openlibrary";
 import { Cover } from "./Cover";
 import { EditionCovers } from "./EditionCovers";
+import { LookupCover } from "./LookupCover";
 import { MultiPicker, StarInput, Toggle, YearsInput, type Option } from "./inputs";
 import { OpenLibraryLookup } from "./OpenLibraryLookup";
 
@@ -283,7 +285,12 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
           <div className="flex gap-4">
             <div className="w-28 shrink-0 space-y-2">
               {coverPreview ? (
-                <img src={coverPreview} alt="" className="aspect-[2/3] w-full rounded-md bg-line object-cover" />
+                <LookupCover
+                  key={coverPreview}
+                  src={coverPreview}
+                  isbn={filePreview ? null : toIsbn13(fields.isbn13)}
+                  className="aspect-[2/3] w-full rounded-md bg-line object-cover"
+                />
               ) : hasSavedCover ? (
                 <Cover cover={book!.cover} title={fields.title} />
               ) : (

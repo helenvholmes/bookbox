@@ -11,7 +11,8 @@
     "import:airtable": "tsx --disable-warning=ExperimentalWarning scripts/import-airtable.mts",
     "generate:icons": "tsx scripts/generate-icons.mts",
     "push:cloud": "tsx scripts/push-to-cloud.mts",
-    "pull:cloud": "tsx scripts/pull-from-cloud.mts"
+    "pull:cloud": "tsx scripts/pull-from-cloud.mts",
+    "test": "playwright test"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
@@ -29,6 +30,7 @@
     "sharp": "^0.35.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24.13.6",
     "@types/react": "^19",

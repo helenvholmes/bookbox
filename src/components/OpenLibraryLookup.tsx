@@ -1,11 +1,11 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element -- OpenLibrary thumbnails */
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { LookupResult, Source } from "@/lib/catalogs";
 import type { OLDetails } from "@/lib/openlibrary";
 import { BarcodeScanner } from "./BarcodeScanner";
+import { LookupCover } from "./LookupCover";
 
 const SOURCE_NAMES: Record<Source, string> = { openlibrary: "OpenLibrary", loc: "Library of Congress", inventaire: "Inventaire" };
 
@@ -197,7 +197,13 @@ export function OpenLibraryLookup({ initialQuery = "", autoSearch = false, onPic
                 className="flex w-full items-center gap-3 p-3 text-left hover:bg-raised disabled:opacity-60"
               >
                 {r.coverUrl ? (
-                  <img src={r.source === "openlibrary" ? r.coverUrl.replace("-L.jpg", "-S.jpg") : r.coverUrl} alt="" className="h-16 w-11 shrink-0 rounded bg-line object-cover" loading="lazy" />
+                  <LookupCover
+                    key={r.coverUrl}
+                    src={r.source === "openlibrary" ? r.coverUrl.replace("-L.jpg", "-S.jpg") : r.coverUrl}
+                    isbn={r.isbn13}
+                    className="h-16 w-11 shrink-0 rounded bg-line object-cover"
+                    lazy
+                  />
                 ) : (
                   <div className="h-16 w-11 shrink-0 rounded bg-line" />
                 )}
