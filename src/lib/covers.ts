@@ -116,7 +116,10 @@ export async function deleteCover(filename: string | null | undefined) {
 
 const ALLOWED_COVER_HOSTS = new Set(["covers.openlibrary.org", "archive.org", "inventaire.io"]);
 
-/** Downloads a cover from OpenLibrary or Inventaire. Other hosts are refused so the server can't be pointed anywhere. */
+/**
+ * Downloads a cover from OpenLibrary or Inventaire. Other hosts are refused so the server can't be pointed anywhere.
+ * Null when it can't be had: OpenLibrary's cover server is sometimes down or stalls, and that mustn't hold up a save.
+ */
 export async function fetchCover(url: string): Promise<Buffer | null> {
   let parsed: URL;
   try {
@@ -125,11 +128,15 @@ export async function fetchCover(url: string): Promise<Buffer | null> {
     return null;
   }
   if (parsed.protocol !== "https:" || !ALLOWED_COVER_HOSTS.has(parsed.hostname)) return null;
-  const res = await fetch(parsed, { redirect: "follow", headers: { "User-Agent": USER_AGENT } });
-  if (!res.ok) return null;
-  const finalHost = new URL(res.url).hostname;
-  if (!finalHost.endsWith("archive.org") && !ALLOWED_COVER_HOSTS.has(finalHost)) return null;
-  return Buffer.from(await res.arrayBuffer());
+  try {
+    const res = await fetch(parsed, { redirect: "follow", headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(8_000) });
+    if (!res.ok) return null;
+    const finalHost = new URL(res.url).hostname;
+    if (!finalHost.endsWith("archive.org") && !ALLOWED_COVER_HOSTS.has(finalHost)) return null;
+    return Buffer.from(await res.arrayBuffer());
+  } catch {
+    return null;
+  }
 }
 
 /** Downloads a cover from OverDrive's image CDN (img1.od-cdn.com and the like), for books imported from Libby. */
