@@ -1,0 +1,45 @@
+/** The catalog the test server sees (catalog-stub.mjs) and the tests search. */
+export const BOOKS = [
+  {
+    title: "The Lighthouse Keeper",
+    author: "Katie Marsh",
+    authorKey: "OL1A",
+    work: "OL1W",
+    edition: "OL1M",
+    isbn: "9780000000019",
+    coverId: 101,
+    publisher: "Harbor Press",
+    year: 2019,
+    pages: 312,
+    description: "A keeper, a storm and a letter that arrives forty years late.",
+  },
+  {
+    // OpenLibrary has a cover, but its cover server is down; Inventaire has one for the ISBN.
+    title: "Winter Orchard",
+    author: "Samantha Reyes",
+    authorKey: "OL2A",
+    work: "OL2W",
+    edition: "OL2M",
+    isbn: "9780000000026",
+    coverId: 666,
+    inventaireCover: true,
+    publisher: "Fieldstone",
+    year: 2022,
+    pages: 288,
+    description: "Three sisters keep their late mother's orchard going through one hard winter.",
+  },
+  {
+    // OpenLibrary's cover server is down, and Inventaire has no cover either.
+    title: "Paper Lanterns",
+    author: "Emily Tran",
+    authorKey: "OL3A",
+    work: "OL3W",
+    edition: "OL3M",
+    isbn: "9780000000033",
+    coverId: 666,
+    publisher: "Lantern House",
+    year: 2020,
+    pages: 240,
+    description: "A festival, a missing brother and a town that keeps its secrets.",
+  },
+];
