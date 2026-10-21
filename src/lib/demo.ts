@@ -6,12 +6,18 @@
  * The demo must never reach a real library, so it refuses to run with any database, storage or
  * Spotify keys set: with none, there is nothing real it could write to, whatever a bug does.
  *
- * Runs in the proxy as well as the server, so it only uses Web Crypto.
+ * Runs in the proxy and the browser as well as the server, so it only uses Web Crypto.
  */
 
 export const DEMO_COOKIE = "bookbox_demo";
 
+/** Works in the browser too: next.config.ts builds BOOKBOX_DEMO into the app. */
 export const demoMode = () => process.env.BOOKBOX_DEMO === "1";
+
+/** For features the demo has switched off (Spotify, Libby, share links, …): their server actions refuse, even if called directly. */
+export function notInDemo() {
+  if (demoMode()) throw new Error("That’s switched off in the demo.");
+}
 
 /** Hosts the demo may answer on: its own, previews on Vercel, and this computer. */
 export function demoHostAllowed(host: string | null) {
@@ -21,7 +27,7 @@ export function demoHostAllowed(host: string | null) {
 }
 
 // Anything that would connect the demo to a real library, its covers or someone's accounts.
-const FORBIDDEN_PREFIXES = ["TURSO_", "ACCOUNTS_", "R2_", "BLOB_", "SPOTIFY_"];
+const FORBIDDEN_PREFIXES = ["TURSO_", "ACCOUNTS_", "R2_", "BLOB_", "SPOTIFY_", "HARDCOVER_"];
 const FORBIDDEN = ["BOOKBOX_PASSWORD", "BOOKBOX_SECRET"];
 
 /** Throws when the demo is on alongside keys for anything real, so it never starts that way. */
@@ -41,4 +47,24 @@ export const isDemoId = (id: string | undefined): id is string => !!id && ID.tes
 
 export function newDemoId() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Books one demo library may hold, the snapshot's included (covers come with books, so this caps them too). */
+export const DEMO_MAX_BOOKS = 100;
+
+// Requests per visitor's network address, per server instance (see demoAllowed).
+const g = globalThis as unknown as { bookboxDemoHits?: Map<string, { start: number; count: number }> };
+const hits = (g.bookboxDemoHits ??= new Map());
+
+/**
+ * Counts a request towards a limit of `limit` per `windowMs` for `key` (a kind of request and an
+ * address), and whether it's still under it. Kept in memory, so each server instance counts its own:
+ * enough to stop one visitor or script from using up the free tier.
+ */
+export function demoAllowed(key: string, limit: number, windowMs: number) {
+  const now = Date.now();
+  if (hits.size > 10_000) for (const [k, w] of hits) if (now - w.start > 60 * 60_000) hits.delete(k);
+  let w = hits.get(key);
+  if (!w || now - w.start >= windowMs) hits.set(key, (w = { start: now, count: 0 }));
+  return ++w.count <= limit;
 }

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useOffline } from "next/offline";
 import { useEffect, useRef, useState } from "react";
+import { demoMode } from "@/lib/demo";
 import { flush, SYNCED_EVENT, useOutbox } from "@/lib/outbox";
 
 // Saved for offline use in the background: the index, these pages, and every cover.
@@ -16,7 +17,7 @@ const REFRESHED_KEY = "bookbox:refreshed-saved-copy";
  * app is back online, and says so when the connection drops. The demo has no offline copy: a
  * saved page there could show a library that's since been reset.
  */
-export function OfflineSupport({ demo = false }: { demo?: boolean }) {
+export function OfflineSupport() {
   const router = useRouter();
   const failing = useOffline(); // a request failed, e.g. the server is unreachable
   const [noNetwork, setNoNetwork] = useState(false); // the device knows it's offline, e.g. opened in airplane mode
@@ -91,7 +92,7 @@ export function OfflineSupport({ demo = false }: { demo?: boolean }) {
 
   useEffect(() => {
     // Dev builds change on every edit, which a caching service worker would only get in the way of.
-    if (process.env.NODE_ENV !== "production" || demo || !("serviceWorker" in navigator)) return;
+    if (process.env.NODE_ENV !== "production" || demoMode() || !("serviceWorker" in navigator)) return;
     let idle: number | undefined;
     navigator.serviceWorker
       .register("/sw.js", { scope: "/" })
@@ -121,7 +122,7 @@ export function OfflineSupport({ demo = false }: { demo?: boolean }) {
       if ("cancelIdleCallback" in window) window.cancelIdleCallback(idle);
       else clearTimeout(idle);
     };
-  }, [demo]);
+  }, []);
 
   // Offline, a client-side navigation would wait for the connection; a full page load lets the
   // service worker answer with the saved copy (or the offline library) instead.

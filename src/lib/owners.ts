@@ -1,5 +1,6 @@
 import "server-only";
 import { accountsDb } from "./accounts";
+import { demoMode } from "./demo";
 import { currentLibrary, libraryFor, mainLibrary, withLibrary, type Library } from "./db";
 
 /**
@@ -15,6 +16,7 @@ async function ownerLibrary(table: "share_owners" | "api_key_owners", column: "t
 
 /** Runs fn in the library a share link belongs to (null when its account is gone). */
 export async function withShareLibrary<T>(token: string, fn: () => Promise<T>): Promise<T | null> {
+  if (demoMode()) return null; // the demo has no share links
   const library = await ownerLibrary("share_owners", "token", token);
   return library ? withLibrary(library, fn) : null;
 }

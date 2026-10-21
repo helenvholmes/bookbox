@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { DemoBanner } from "@/components/DemoBanner";
 import { LocalCopyBanner } from "@/components/LocalCopyBanner";
 import { Nav } from "@/components/Nav";
 import { PageMotion } from "@/components/PageMotion";
@@ -23,7 +24,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       >
         Skip to content
       </a>
-      <OfflineSupport demo={demoMode()} />
+      <OfflineSupport />
       <BackgroundSync />
       {/* Reads the URL's query string, so it needs a Suspense boundary of its own. */}
       <Suspense>
@@ -42,7 +43,10 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       >
         <NavWithYears />
       </Suspense>
-      <main id="main" tabIndex={-1} className="mx-auto outline-none w-full max-w-5xl min-w-0 flex-1 px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-10 md:pt-8 md:pb-12">{children}</main>
+      <main id="main" tabIndex={-1} className="mx-auto outline-none w-full max-w-5xl min-w-0 flex-1 px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-10 md:pt-8 md:pb-12">
+        {demoMode() && <DemoBanner />}
+        {children}
+      </main>
     </div>
   );
 }
