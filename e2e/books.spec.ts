@@ -51,6 +51,16 @@ test("saves a book whose cover can't be downloaded", async ({ page }) => {
   await expect(page.locator("img[src*='/covers/']")).toHaveCount(0);
 });
 
+test("finds a book in the other catalogs quickly when OpenLibrary doesn't answer", async ({ page }) => {
+  await search(page, "slow river");
+  // OpenLibrary gets 8.5 seconds at most, and the other catalogs are asked after 3.
+  const result = page.getByRole("button", { name: /Slow River Crossing/ });
+  await expect(result).toBeVisible({ timeout: 12_000 });
+  await result.click();
+  await expect(page.locator("input[name=title]")).toHaveValue("Slow River Crossing");
+  await expect(page.locator("input[name=author]")).toHaveValue("Katie Abara");
+});
+
 test("says so when a search finds nothing", async ({ page }) => {
   await search(page, "no such book anywhere");
   await expect(page.getByText(/Nothing found on OpenLibrary/)).toBeVisible();

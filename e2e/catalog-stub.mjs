@@ -3,24 +3,27 @@
  * OpenLibrary, its cover server, Inventaire and the Library of Congress answer from the fixtures
  * below, and anything else off this machine fails as if offline. Requests to the server itself pass.
  *
- * Cover id 666 is OpenLibrary's cover server being down: the connection resets.
+ * Cover id 666 is OpenLibrary's cover server being down: the connection resets. Searches for books
+ * marked `slowOnOpenLibrary` never get an answer from OpenLibrary; they're in the Library of Congress.
  */
 import sharp from "sharp";
-import { BOOKS } from "./fixtures.mjs";
+import { BOOKS, LOC_BOOKS } from "./fixtures.mjs";
 
 const realFetch = globalThis.fetch;
 const cover = await sharp({ create: { width: 60, height: 90, channels: 3, background: "#b4532a" } }).jpeg().toBuffer();
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
 const notFound = () => json({ error: "not found" }, 404);
+const hang = (signal) => new Promise((_, reject) => signal?.addEventListener("abort", () => reject(signal.reason)));
 const reset = () => {
   throw new TypeError("fetch failed", { cause: Object.assign(new Error("read ECONNRESET"), { code: "ECONNRESET" }) });
 };
 
-function openLibrary(url) {
+function openLibrary(url, signal) {
   const p = url.pathname;
   if (p === "/search.json") {
     const q = (url.searchParams.get("q") ?? "").toLowerCase().replace(/^isbn:/, "");
+    if (LOC_BOOKS.some((b) => b.slowOnOpenLibrary && b.title.toLowerCase().includes(q))) return hang(signal);
     const docs = BOOKS.filter((b) => b.title.toLowerCase().includes(q) || b.isbn === q).map((b) => ({
       key: `/works/${b.work}`,
       title: b.title,
@@ -51,17 +54,27 @@ function inventaire(url) {
   return json({ results: [] });
 }
 
-function route(url) {
+function loc(url) {
+  const q = (url.searchParams.get("q") ?? "").toLowerCase();
+  const results = LOC_BOOKS.filter((b) => b.title.toLowerCase().includes(q)).map((b) => ({
+    title: b.title,
+    description: [b.description],
+    item: { title: b.title, contributors: [`${b.author.split(" ").reverse().join(", ")}, author`], created_published: [`New York : ${b.publisher}, ${b.year}`], date: String(b.year) },
+  }));
+  return json({ results });
+}
+
+function route(url, signal) {
   switch (url.hostname) {
     case "openlibrary.org":
-      return openLibrary(url);
+      return openLibrary(url, signal);
     case "covers.openlibrary.org":
       if (url.pathname.includes("/666-")) return reset();
       return new Response(cover, { headers: { "Content-Type": "image/jpeg" } });
     case "inventaire.io":
       return inventaire(url);
     case "www.loc.gov":
-      return json({ results: [] });
+      return loc(url);
     default:
       return reset();
   }
@@ -70,7 +83,7 @@ function route(url) {
 globalThis.fetch = async function stubbedFetch(input, init) {
   const url = new URL(input instanceof Request ? input.url : String(input));
   if (["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) return realFetch(input, init);
-  const res = await route(url);
+  const res = await route(url, init?.signal ?? (input instanceof Request ? input.signal : undefined));
   // fetchCover checks where redirects ended up.
   Object.defineProperty(res, "url", { value: url.href });
   return res;

@@ -1,7 +1,8 @@
 import { inventaireByIsbn, searchInventaire } from "./inventaire";
 import { searchLoc } from "./loc";
+import { cached, HOUR, MINUTE } from "./lookup-cache";
 import { looksLikeIsbn, toIsbn13 } from "./names";
-import { searchOpenLibrary, type OLDetails, type OLResult } from "./openlibrary";
+import { getOpenLibraryDetails, searchOpenLibrary, type OLDetails, type OLResult } from "./openlibrary";
 import { fold } from "./search";
 
 /**
@@ -14,6 +15,15 @@ export type Source = "openlibrary" | "loc" | "inventaire";
 export type LookupResult = OLResult & { source: Source; details?: OLDetails };
 
 const settle = <T>(p: Promise<T[]>) => p.catch(() => [] as T[]);
+
+/** The same search however it's typed, for the cache. */
+const searchKey = (q: string) => q.trim().toLowerCase().replace(/\s+/g, " ");
+
+/** Results are kept for an hour; a fallback or an empty answer (perhaps a catalog was down) for two minutes. */
+const keep = (good: boolean) => (good ? HOUR : 2 * MINUTE);
+
+/** How long OpenLibrary has to answer a search before the other catalogs are asked too, in case it has nothing. */
+const HEDGE_MS = 3_000;
 
 const baseTitle = (t: string) => fold(t.split(":")[0]).replace(/^(the|a|an) /, "");
 const sameBook = (a: OLDetails, b: OLDetails) =>
@@ -37,7 +47,11 @@ function asResult(d: OLDetails, source: Source, i: number): LookupResult {
 }
 
 /** Library of Congress and Inventaire results, one per book, taking turns (each ranks its own best first). */
-export async function searchOtherCatalogs(query: string): Promise<LookupResult[]> {
+export function searchOtherCatalogs(query: string): Promise<LookupResult[]> {
+  return cached(`more:${searchKey(query)}`, () => findInOtherCatalogs(query), (r) => keep(r.length > 0));
+}
+
+async function findInOtherCatalogs(query: string): Promise<LookupResult[]> {
   const q = query.trim();
   if (!q) return [];
   const isbn = looksLikeIsbn(q) ? toIsbn13(q) : null;
@@ -67,13 +81,47 @@ export async function searchOtherCatalogs(query: string): Promise<LookupResult[]
   return results.sort((a, b) => score(b) - score(a)).slice(0, 12);
 }
 
-/** OpenLibrary's results, or the other catalogs' when OpenLibrary has nothing or is down. */
-export async function searchCatalogs(query: string): Promise<LookupResult[]> {
-  const ol = await searchOpenLibrary(query).catch(() => null);
-  if (ol?.length) return ol.map((r) => ({ ...r, source: "openlibrary" }));
-  const others = await searchOtherCatalogs(query);
-  if (!ol && !others.length) throw new Error("OpenLibrary didn't respond");
-  return others;
+/**
+ * OpenLibrary's results, or the other catalogs' when OpenLibrary has nothing or is down. When OpenLibrary
+ * is slow, the other catalogs are searched alongside it, so falling back doesn't mean starting over, and
+ * "Not here?" (searchOtherCatalogs) has its answer ready.
+ */
+export function searchCatalogs(query: string): Promise<LookupResult[]> {
+  let fellBack = false;
+  return cached(
+    `search:${searchKey(query)}`,
+    async () => {
+      const hedge = setTimeout(() => searchOtherCatalogs(query).catch(() => {}), HEDGE_MS);
+      const ol = await searchOpenLibrary(query, { quick: true }).catch(() => null);
+      clearTimeout(hedge);
+      if (ol?.length) return ol.map((r): LookupResult => ({ ...r, source: "openlibrary" }));
+      fellBack = true;
+      const others = await searchOtherCatalogs(query);
+      if (!ol && !others.length) throw new Error("OpenLibrary didn't respond");
+      return others;
+    },
+    (r) => keep(!fellBack && r.length > 0),
+  );
+}
+
+/**
+ * Full details for an OpenLibrary search result, with gaps filled from the other catalogs. With the
+ * result's ISBN, the other catalogs are asked at the same time as OpenLibrary rather than after it, and
+ * with its authors, OpenLibrary's author records needn't be fetched.
+ */
+export function lookupDetails(work: string, edition: string | null, isbn: string | null, authors: string[]): Promise<OLDetails | null> {
+  return cached(
+    `details:${work}|${edition ?? ""}|${isbn ?? ""}|${authors.join("|")}`,
+    async () => {
+      const early = isbn ? otherCatalogsByIsbn(isbn) : null;
+      const details = await getOpenLibraryDetails(work, edition, { knownAuthors: authors, quick: true });
+      if (!details) return null;
+      const d = { ...details, isbn13: details.isbn13 ?? isbn };
+      if (!d.isbn13 || !hasGaps(d)) return d;
+      return fillGaps(d, await (early && d.isbn13 === isbn ? early : otherCatalogsByIsbn(d.isbn13)));
+    },
+    () => HOUR,
+  );
 }
 
 /** Fills the empty fields of `d` from `other`; never overwrites. */
@@ -98,16 +146,16 @@ const hasGaps = (d: OLDetails) => !d.description || !d.publisher || !d.publish_y
  * An edition's details from the Library of Congress and Inventaire, merged, for filling what
  * OpenLibrary is missing. Null when neither knows the ISBN or both are unreachable.
  */
-export async function otherCatalogsByIsbn(isbn: string): Promise<OLDetails | null> {
-  const [loc, inv] = await Promise.all([
-    searchLoc(isbn, isbn).then((r) => r[0] ?? null, () => null),
-    inventaireByIsbn(isbn).catch(() => null),
-  ]);
-  return loc ? fillGaps(loc, inv) : inv;
-}
-
-/** `d` with its empty fields filled from the other catalogs, when it has an ISBN and something is missing. */
-export async function withOtherCatalogs(d: OLDetails): Promise<OLDetails> {
-  if (!d.isbn13 || !hasGaps(d)) return d;
-  return fillGaps(d, await otherCatalogsByIsbn(d.isbn13));
+export function otherCatalogsByIsbn(isbn: string): Promise<OLDetails | null> {
+  return cached(
+    `isbn:${isbn}`,
+    async () => {
+      const [loc, inv] = await Promise.all([
+        searchLoc(isbn, isbn).then((r) => r[0] ?? null, () => null),
+        inventaireByIsbn(isbn).catch(() => null),
+      ]);
+      return loc ? fillGaps(loc, inv) : inv;
+    },
+    (d) => keep(!!d),
+  );
 }
