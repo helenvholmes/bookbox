@@ -7,6 +7,7 @@ import { isDay } from "@/lib/dates";
 import { coverLimitReached, coverUploadsPaused, MAX_COVERS, deleteCover, fetchCover, isUsableImage, saveCover } from "@/lib/covers";
 import { inventaireByIsbn } from "@/lib/inventaire";
 import { toIsbn13 } from "@/lib/names";
+import { isRating } from "@/lib/sync-ops";
 
 /** `saved`: an edit was saved and the form steps back to the page it was opened from. */
 export type SaveState = { error?: string; saved?: number } | undefined;
@@ -24,7 +25,7 @@ function parseBook(fd: FormData): BookInput | string {
   const rawIsbn = text(fd, "isbn13");
   const isbn13 = rawIsbn ? toIsbn13(rawIsbn) : null;
   if (rawIsbn && !isbn13) return `“${rawIsbn}” isn't a valid ISBN.`;
-  const rating = int(fd, "rating");
+  const rating = Number(text(fd, "rating"));
 
   return {
     title,
@@ -32,7 +33,7 @@ function parseBook(fd: FormData): BookInput | string {
     author_original: text(fd, "author_original"),
     additional_authors: text(fd, "additional_authors"),
     isbn13,
-    rating: rating && rating >= 1 && rating <= 5 ? rating : null,
+    rating: isRating(rating) ? rating : null,
     description: text(fd, "description"),
     review: text(fd, "review"),
     spoiler: text(fd, "spoiler"),

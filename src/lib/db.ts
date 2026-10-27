@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS books (
   author_sort        TEXT NOT NULL DEFAULT '',
   additional_authors TEXT NOT NULL DEFAULT '',
   isbn13             TEXT,
-  rating             INTEGER,
+  rating             REAL, -- whole or half stars; older databases say INTEGER, which stores 3.5 as it is
   description        TEXT NOT NULL DEFAULT '',
   review             TEXT NOT NULL DEFAULT '',
   spoiler            TEXT NOT NULL DEFAULT '',

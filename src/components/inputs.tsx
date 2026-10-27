@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type MouseEvent, type PointerEvent } from "react";
+import { ratingAt, Stars } from "./Stars";
 
 export type Option = { value: string; label: string };
 
@@ -112,28 +113,74 @@ export function StarInput({ name, value, onChange }: { name: string; value: numb
     <div>
       <span className="mb-1.5 block text-sm font-medium">My rating</span>
       <input type="hidden" name={name} value={value ?? ""} />
-      <div className="flex gap-1" role="radiogroup" aria-label="My rating">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            key={n}
-            type="button"
-            role="radio"
-            aria-checked={value === n}
-            aria-label={`${n} star${n > 1 ? "s" : ""}`}
-            className={`p-0.5 ${value && n <= value ? "text-ink" : "text-faint hover:text-muted"}`}
-            onClick={() => onChange(value === n ? null : n)}
-          >
-            <svg viewBox="0 0 24 24" className="size-7" strokeWidth={1.5} strokeLinejoin="round" aria-hidden>
-              <path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.6l-5.1 2.7 1-5.7-4.1-4 5.7-.8z" fill={value && n <= value ? "currentColor" : "none"} stroke="currentColor" />
-            </svg>
-          </button>
-        ))}
+      <div className="flex items-center gap-3">
+        <RatingSlider label="My rating" value={value} onChange={onChange} starsClass="h-7" filledClass="text-ink" />
         {value && (
-          <button type="button" className="ml-2 self-center text-sm text-muted underline" onClick={() => onChange(null)}>
+          <button type="button" className="text-sm text-muted underline" onClick={() => onChange(null)}>
             Clear
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Five stars to rate with, in half stars: the left half of a star is a half star, the right half
+ * a whole one, and tapping the rating you already have clears it. Pointing (or dragging a finger)
+ * previews. It's one slider to a screen reader or keyboard: arrows step by half a star, Home and End
+ * go to the ends, Delete clears.
+ */
+export function RatingSlider({
+  label,
+  value,
+  onChange,
+  starsClass = "h-5",
+  filledClass = "text-muted",
+}: {
+  label: string;
+  value: number | null;
+  onChange: (v: number | null) => void;
+  starsClass?: string;
+  filledClass?: string;
+}) {
+  const [preview, setPreview] = useState<number | null>(null);
+  const at = (e: PointerEvent<HTMLElement> | MouseEvent<HTMLElement>) => {
+    const stars = e.currentTarget.querySelector("svg");
+    return stars ? ratingAt(e.clientX, stars.getBoundingClientRect()) : null;
+  };
+  const pick = (r: number | null) => {
+    setPreview(null);
+    if (r !== value) onChange(r);
+  };
+
+  return (
+    <div
+      role="slider"
+      tabIndex={0}
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={5}
+      aria-valuenow={value ?? 0}
+      aria-valuetext={value ? `${value} out of 5 stars` : "Not rated"}
+      className="-mx-1 w-fit cursor-pointer touch-pan-y rounded-md px-1 py-1 focus-visible:outline-2 focus-visible:outline-muted"
+      onPointerMove={(e) => (e.pointerType === "mouse" || e.buttons) && setPreview(at(e))}
+      onPointerLeave={() => setPreview(null)}
+      onPointerCancel={() => setPreview(null)}
+      onClick={(e) => {
+        const r = at(e);
+        pick(r === value ? null : r);
+      }}
+      onKeyDown={(e) => {
+        const now = value ?? 0;
+        const next: Record<string, number> = { ArrowRight: now + 0.5, ArrowUp: now + 0.5, ArrowLeft: now - 0.5, ArrowDown: now - 0.5, Home: 0.5, End: 5, Delete: 0, Backspace: 0 };
+        if (!(e.key in next)) return;
+        e.preventDefault();
+        const r = Math.min(5, next[e.key]);
+        pick(r >= 0.5 ? r : null);
+      }}
+    >
+      <Stars rating={preview ?? value} className={starsClass} label={false} filledClass={preview !== null ? "text-ink" : filledClass} />
     </div>
   );
 }

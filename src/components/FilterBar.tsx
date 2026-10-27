@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { Facets } from "@/lib/books";
+import { RATINGS, ratingText } from "@/lib/sync-ops";
 import { SearchBox } from "./SearchBox";
 import { STATUS_SHELVES } from "./ShelfIcon";
 
@@ -132,9 +133,9 @@ export function FilterBar({ facets, sorts }: Props) {
           </Select>
           <Select label="Rating" value={params.get("rating") ?? ""} onChange={(v) => update({ rating: v })}>
             <option value="">Any rating</option>
-            {[5, 4, 3, 2, 1].map((r) => (
+            {RATINGS.map((r) => (
               <option key={r} value={r}>
-                {"★".repeat(r)}
+                {ratingText(r)}
               </option>
             ))}
             <option value="none">Unrated</option>

@@ -18,7 +18,7 @@ const FIRST_BATCH = 60;
 export async function generateMetadata(props: PageProps<"/library">): Promise<Metadata> {
   const sp = await props.searchParams;
   const one = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
-  const [q, shelf, year, tag, person] = ["q", "shelf", "year", "tag", "person"].map(one);
+  const [q, shelf, year, tag, person, rating] = ["q", "shelf", "year", "tag", "person", "rating"].map(one);
   if (q) return { title: `Search: ${q}` };
   const facets = tag || person ? await getFacets() : null;
   const parts = [
@@ -26,6 +26,7 @@ export async function generateMetadata(props: PageProps<"/library">): Promise<Me
     year && (year === "none" ? "No year" : `Read in ${year}`),
     tag && facets?.tags.find((t) => String(t.id) === tag)?.name,
     person && facets?.people.find((p) => String(p.id) === person || p.slug === person)?.name,
+    rating && (rating === "none" ? "Unrated" : `Rated ${rating}`),
   ].filter(Boolean);
   return { title: parts.length ? parts.join(" · ") : "Library" };
 }
