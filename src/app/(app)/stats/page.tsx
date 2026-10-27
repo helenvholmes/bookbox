@@ -14,10 +14,10 @@ export default async function StatsPage() {
   const [s, authors, authorsByYear] = await Promise.all([getStats(), genderBreakdown(), genderByYear()]);
   const maxRating = Math.max(1, ...s.ratings.map((r) => r.count));
 
-  const tiles = [
+  const tiles: { value: string | number; label: string; href?: string }[] = [
     { value: s.totals.books, label: "books in your library" },
     { value: s.totals.read, label: "books read" },
-    { value: s.totals.rereads, label: s.totals.rereads === 1 ? "re-read" : "re-reads" },
+    { value: s.totals.rereads, label: s.totals.rereads === 1 ? "re-read" : "re-reads", href: s.totals.rereads ? "/stats/rereads" : undefined },
     { value: s.totals.avgRating ?? "–", label: "average rating" },
     { value: s.totals.pagesThisYear ? s.totals.pagesThisYear.toLocaleString() : "–", label: `pages in ${s.year}` },
     { value: s.totals.abandoned, label: "abandoned" },
@@ -40,9 +40,21 @@ export default async function StatsPage() {
 
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {tiles.map((t) => (
-          <li key={t.label} className="card p-3">
-            <p className="display text-2xl">{t.value}</p>
-            <p className="text-xs leading-tight text-muted">{t.label}</p>
+          <li key={t.label}>
+            {t.href ? (
+              <Link href={t.href} className="card group flex h-full items-start justify-between gap-2 p-3 transition hover:border-line-hover">
+                <span>
+                  <span className="display block text-2xl">{t.value}</span>
+                  <span className="block text-xs leading-tight text-muted">{t.label}</span>
+                </span>
+                <span aria-hidden className="text-faint group-hover:text-ink">›</span>
+              </Link>
+            ) : (
+              <div className="card h-full p-3">
+                <p className="display text-2xl">{t.value}</p>
+                <p className="text-xs leading-tight text-muted">{t.label}</p>
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -69,7 +81,7 @@ export default async function StatsPage() {
           <h2 className="section-title">Your ratings</h2>
           <ul className="space-y-2">
             {[...s.ratings].reverse().map((r) => (
-              <li key={r.rating} className="grid grid-cols-[5.5rem_minmax(0,1fr)_2.5rem] items-center gap-3 text-xs" title={`${r.count} books rated ${r.rating}`}>
+              <li key={r.rating} className="grid grid-cols-[5.5rem_minmax(0,1fr)_2.5rem] items-center gap-3 text-xs" title={`${r.count} ${r.count === 1 ? "book" : "books"} rated ${r.rating}`}>
                 <Stars rating={r.rating} label={false} />
                 <span className="h-2 rounded-r-[4px] bg-faint" style={{ width: `${(r.count / maxRating) * 100}%`, minWidth: r.count ? 2 : 0 }} />
                 <span className="text-right text-muted tabular-nums">{r.count}</span>

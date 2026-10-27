@@ -4,6 +4,7 @@ import { changeStatus, statusesFrom, withRating, withReads, withStartedOn, withS
 import type { Read } from "@/lib/books";
 import { submit, useOutbox, usePendingOps } from "@/lib/outbox";
 import { STATUSES } from "@/lib/sync-ops";
+import { RatingSlider } from "./inputs";
 import { ShelfIcon, shelfLabel } from "./ShelfIcon";
 
 /**
@@ -49,30 +50,12 @@ export function BookStatus({ bookId, shelves, reads, startedOn }: { bookId: numb
   );
 }
 
-const STAR = "M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.6l-5.1 2.7 1-5.7-4.1-4 5.7-.8z";
-
-/** Tap a star to rate; tap the current rating again to clear it. Works offline. */
+/** Tap a star to rate (its left half for half a star); tap the current rating again to clear it. Works offline. */
 export function RatingPicker({ bookId, rating: saved }: { bookId: number; rating: number | null }) {
   const rating = withRating(saved, usePendingOps(bookId));
   return (
     <div className="flex items-center gap-2.5 text-[0.8125rem]">
-      <span className="-ml-1 inline-flex" role="radiogroup" aria-label="Rating">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            key={n}
-            type="button"
-            role="radio"
-            aria-checked={rating === n}
-            aria-label={`${n} ${n === 1 ? "star" : "stars"}${rating === n ? " (tap to clear)" : ""}`}
-            onClick={() => submit({ kind: "rating", bookId, rating: rating === n ? null : n })}
-            className={`p-1 transition hover:text-ink ${rating && n <= rating ? "text-muted" : "text-faint"}`}
-          >
-            <svg viewBox="0 0 24 24" className="size-5" strokeWidth={1.7} strokeLinejoin="round" aria-hidden>
-              <path d={STAR} fill={rating && n <= rating ? "currentColor" : "none"} stroke="currentColor" />
-            </svg>
-          </button>
-        ))}
-      </span>
+      <RatingSlider label="Rating" value={rating} onChange={(r) => submit({ kind: "rating", bookId, rating: r })} />
       <span className="text-muted">{rating ? `${rating} of 5` : "Not rated yet"}</span>
     </div>
   );

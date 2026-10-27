@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SharedBook } from "@/lib/share";
 import { Cover } from "./Cover";
+import { Stars } from "./Stars";
 
 /** `owner` is the library owner's name for "Helen's review", or null for neutral wording. */
 type Props = { books: SharedBook[]; layout: "grid" | "list"; srcBase: string; accent: string; owner: string | null };
@@ -83,7 +84,7 @@ export function SharedBooks({ books, layout, srcBase, accent, owner }: Props) {
                 {book.author && <p className="text-sm text-muted">by {book.author}</p>}
                 {book.details?.additional_authors && <p className="text-xs text-faint">with {book.details.additional_authors}</p>}
                 {book.details?.series && <p className="text-xs text-muted">{book.details.series}</p>}
-                {book.rating && <Rating value={book.rating} accent={accent} owner={owner} size="size-4" />}
+                {book.rating && <Rating value={book.rating} accent={accent} owner={owner} size="h-4" />}
               </div>
               <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="-mt-2 -mr-2 flex size-9 shrink-0 items-center justify-center rounded-full text-muted hover:bg-raised hover:text-ink">
                 <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden>
@@ -147,14 +148,6 @@ function Wrap({ onOpen, className, children }: { onOpen?: () => void; className:
   );
 }
 
-function Rating({ value, accent, owner, size = "size-3" }: { value: number; accent: string; owner: string | null; size?: string }) {
-  return (
-    <span className="mt-1 inline-flex gap-0.5" role="img" aria-label={`${owner ?? "Rated"}${owner ? " rated it" : ""} ${value} out of 5`}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <svg key={n} viewBox="0 0 24 24" className={size} strokeWidth={1.7} strokeLinejoin="round" aria-hidden style={{ color: n <= value ? accent : "var(--faint)" }}>
-          <path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.6l-5.1 2.7 1-5.7-4.1-4 5.7-.8z" fill={n <= value ? "currentColor" : "none"} stroke="currentColor" />
-        </svg>
-      ))}
-    </span>
-  );
+function Rating({ value, accent, owner, size = "h-3" }: { value: number; accent: string; owner: string | null; size?: string }) {
+  return <Stars rating={value} fill={accent} className={`mt-1 ${size}`} label={`${owner ?? "Rated"}${owner ? " rated it" : ""} ${value} out of 5`} />;
 }

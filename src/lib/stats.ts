@@ -2,6 +2,7 @@ import "server-only";
 import { connection } from "next/server";
 import { daysBetween, nextDay } from "./dates";
 import { db } from "./db";
+import { RATINGS } from "./sync-ops";
 
 export async function getGoal(year: number): Promise<number | null> {
   return ((await db.prepare("SELECT target FROM goals WHERE year = ?").get(year)) as { target: number } | undefined)?.target ?? null;
@@ -33,7 +34,14 @@ export async function getStats(year?: number) {
     )
     .all()) as { year: number; books: number; reads: number; pages: number }[];
 
-  const ratings = await Promise.all([1, 2, 3, 4, 5].map(async (r) => ({ rating: r, count: await n("SELECT count(*) AS n FROM books WHERE rating = ?", r) })));
+  // Every whole star, and the half stars you've used.
+  const rated = new Map(
+    ((await db.prepare("SELECT rating, count(*) AS n FROM books WHERE rating IS NOT NULL GROUP BY rating").all()) as { rating: number; n: number }[]).map((r) => [r.rating, r.n]),
+  );
+  const ratings = [...RATINGS]
+    .reverse()
+    .map((r) => ({ rating: r, count: rated.get(r) ?? 0 }))
+    .filter((r) => Number.isInteger(r.rating) || r.count > 0);
 
   return {
     year,
@@ -71,6 +79,27 @@ export async function getStats(year?: number) {
       )
       .all()) as (Count & { id: number; slug: string; avg: number })[],
   };
+}
+
+export type Reread = { id: number; title: string; author: string; cover: string | null; rating: number | null; years: number[] };
+
+/** Books read more than once, most-read first, each with the years it was read (oldest first). */
+export async function getRereads(): Promise<Reread[]> {
+  await connection();
+  const rows = (await db
+    .prepare(
+      `SELECT b.id, b.title, b.author, b.cover, b.rating, r.year FROM book_reads r JOIN books b ON b.id = r.book_id
+       WHERE r.book_id IN (SELECT book_id FROM book_reads GROUP BY book_id HAVING count(*) > 1)
+       ORDER BY r.year, coalesce(r.finished_on, ''), r.id`,
+    )
+    .all()) as (Omit<Reread, "years"> & { year: number })[];
+  const books = new Map<number, Reread>();
+  for (const { year, ...b } of rows) {
+    const book = books.get(b.id) ?? { ...b, years: [] };
+    book.years.push(year);
+    books.set(b.id, book);
+  }
+  return [...books.values()].sort((a, b) => b.years.length - a.years.length || b.years.at(-1)! - a.years.at(-1)! || a.title.localeCompare(b.title));
 }
 
 export type ReviewBook = {

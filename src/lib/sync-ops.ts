@@ -36,6 +36,13 @@ const optionalDay = (v: unknown) => v === undefined || dayOrNull(v);
 const inOrder = (start: unknown, end: unknown) => !start || !end || (start as string) <= (end as string);
 const readRef = (o: Record<string, unknown>) => (Number.isInteger(o.readId) && o.clientId === null) || (o.readId === null && isId(o.clientId));
 
+/** A rating is whole or half stars, from half a star to five. */
+export const isRating = (r: unknown): r is number => typeof r === "number" && Number.isInteger(r * 2) && r >= 0.5 && r <= 5;
+/** Every rating there is, highest first. */
+export const RATINGS = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5];
+/** "★★★½", for places that show a rating as text. */
+export const ratingText = (r: number) => "★".repeat(Math.floor(r)) + (r % 1 ? "½" : "");
+
 export const validYear = (y: unknown): y is number => Number.isInteger(y) && (y as number) > 1900 && (y as number) < 2200;
 
 /** Whether an op from the client is well formed (the server checks before applying anything). */
@@ -47,7 +54,7 @@ export function isValidOp(op: unknown): op is SyncOp {
     case "status":
       return (o.shelf === null || (STATUSES as readonly unknown[]).includes(o.shelf)) && (o.date === undefined || isDay(o.date));
     case "rating":
-      return o.rating === null || (Number.isInteger(o.rating) && (o.rating as number) >= 1 && (o.rating as number) <= 5);
+      return o.rating === null || isRating(o.rating);
     case "text":
       return (TEXT_FIELDS as readonly unknown[]).includes(o.field) && typeof o.value === "string" && o.value.length <= 100_000;
     case "addRead":
