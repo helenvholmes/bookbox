@@ -23,6 +23,8 @@ export const LANDING_METADATA: Metadata = {
 };
 
 const DEPLOY_URL = `${SOURCE_URL}#deploy-your-own-free`;
+// The public demo (BOOKBOX_DEMO=1, its own deployment): a throwaway sample library, no sign-up.
+const DEMO_URL = "https://demo.bookbox.lol";
 
 const READING = [
   { title: "The Great Gatsby", author: "F. Scott Fitzgerald", cover: "great-gatsby.webp", progress: 62 },
@@ -129,6 +131,9 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
               <Link href={start.href} className="btn btn-primary rounded-full px-5">
                 {start.label}
               </Link>
+              <a href={DEMO_URL} className="btn rounded-full px-5">
+                Try the demo
+              </a>
               <a href="#features" className="btn rounded-full px-5">
                 See what it does
               </a>
@@ -176,6 +181,9 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
               <Link href={start.href} className="btn btn-primary rounded-full px-5">
                 {start.label}
               </Link>
+              <a href={DEMO_URL} className="btn rounded-full px-5">
+                Try the demo
+              </a>
             </div>
           </div>
         </section>

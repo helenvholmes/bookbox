@@ -29,6 +29,8 @@ const demo = demoMode();
 checkDemoEnvironment();
 
 const nextConfig: NextConfig = {
+  // The tests run a demo server beside the normal one (e2e/serve.mjs), and each dev server needs its own folder.
+  ...(process.env.BOOKBOX_DIST_DIR ? { distDir: process.env.BOOKBOX_DIST_DIR } : {}),
   // Built in, so the browser knows it's the demo too (demoMode() in src/lib/demo.ts).
   env: { BOOKBOX_DEMO: demo ? "1" : "" },
   // No "N" badge in the corner during development (build and runtime errors still show).
