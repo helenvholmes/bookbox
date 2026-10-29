@@ -310,6 +310,7 @@ async function migrate(c: Client) {
 
 /** Where the main library lives: Turso when TURSO_DATABASE_URL is set, otherwise a file in DATA_DIR. */
 export function libraryConnection() {
+  if (process.env.BOOKBOX_DEMO === "1") throw new Error("The demo has no main library: every visitor's is a throwaway (see demo.ts).");
   return { url: process.env.TURSO_DATABASE_URL ?? `file:${path.join(DATA_DIR, "bookbox.db")}`, authToken: process.env.TURSO_AUTH_TOKEN };
 }
 
@@ -317,7 +318,7 @@ export function libraryConnection() {
  * A library database: the main one (accountId null for the copy's owner, or no accounts at all) or
  * a person's own. Every query runs against exactly one.
  */
-export type Library = { accountId: number | null; url: string; authToken?: string };
+export type Library = { accountId: number | null; url: string; authToken?: string; demoId?: string };
 
 export const mainLibrary = (): Library => ({ accountId: null, ...libraryConnection() });
 
@@ -354,6 +355,7 @@ const libraries = (g.bookboxLibraries ??= new Map());
 export async function currentLibrary(): Promise<Library> {
   const scoped = libraryScope.getStore();
   if (scoped) return scoped;
+  if (process.env.BOOKBOX_DEMO === "1") return currentDemoLibrary();
   const { authEnabled, readSession, SESSION_COOKIE } = await import("./auth");
   if (!authEnabled() || !process.env.NEXT_RUNTIME) return mainLibrary();
   let token: string | undefined;
@@ -368,6 +370,17 @@ export async function currentLibrary(): Promise<Library> {
   const library = await libraryFor(session.accountId);
   if (!library) throw new SignedOutError();
   return library;
+}
+
+/** The demo visitor's throwaway library, named by the cookie the proxy gave them. */
+async function currentDemoLibrary(): Promise<Library> {
+  const { checkDemoEnvironment, DEMO_COOKIE, isDemoId } = await import("./demo");
+  checkDemoEnvironment();
+  const { cookies } = await import("next/headers");
+  const id = (await cookies()).get(DEMO_COOKIE)?.value;
+  if (!isDemoId(id)) throw new SignedOutError();
+  const { demoLibrary } = await import("./demo-library");
+  return demoLibrary(id);
 }
 
 /** An account's library, or null when the account is gone. */
@@ -414,6 +427,8 @@ async function clientFor(library: Library): Promise<Client> {
     if (library.url.startsWith("file:")) await client.execute("PRAGMA journal_mode = WAL");
     await client.executeMultiple(SCHEMA);
     await migrate(client);
+    // A new demo library starts as a copy of the snapshot.
+    if (library.demoId && stamped === undefined) await (await import("./demo-library")).seedDemo(client);
     await client.batch(
       [
         "CREATE TABLE IF NOT EXISTS bookbox_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
@@ -427,6 +442,12 @@ async function clientFor(library: Library): Promise<Client> {
   });
   await entry.ready;
   return client;
+}
+
+/** Closes a library's client, before its database is deleted. */
+export function closeLibrary(library: Library) {
+  clients.get(library.url)?.client.close();
+  clients.delete(library.url);
 }
 
 /** Sets up a new library's tables now, rather than on its first query. */

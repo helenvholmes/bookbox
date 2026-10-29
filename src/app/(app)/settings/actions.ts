@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { notInDemo } from "@/lib/demo";
 import { cleanGoodreadsBook, fetchImportedCovers, findMatches, importGoodreadsBooks, parseGoodreadsCsv, type GoodreadsBook } from "@/lib/goodreads";
 import { cleanLibbyBook, type LibbyBook } from "@/lib/libby";
 import { fetchLibbyCovers, importLibbyBooks } from "@/lib/libby-import";
@@ -20,6 +21,7 @@ export type SpotifyKeysState = { error?: string } | null;
 
 /** Saves the Spotify app's keys from Settings. */
 export async function saveSpotifyKeysAction(_prev: SpotifyKeysState, fd: FormData): Promise<SpotifyKeysState> {
+  notInDemo();
   const { saveSpotifyCredentials } = await import("@/lib/spotify");
   const clientId = String(fd.get("client_id") ?? "").trim();
   const clientSecret = String(fd.get("client_secret") ?? "").trim();
@@ -31,6 +33,7 @@ export async function saveSpotifyKeysAction(_prev: SpotifyKeysState, fd: FormDat
 
 /** Forgets the app's keys (and disconnects, since the connection can't be refreshed without them). */
 export async function removeSpotifyKeysAction() {
+  notInDemo();
   const { disconnectSpotify, saveSpotifyCredentials } = await import("@/lib/spotify");
   await disconnectSpotify();
   await saveSpotifyCredentials(null);
@@ -41,6 +44,7 @@ export type HardcoverTokenState = { error?: string } | null;
 
 /** Saves the Hardcover API token from Settings, after checking Hardcover takes it. */
 export async function saveHardcoverTokenAction(_prev: HardcoverTokenState, fd: FormData): Promise<HardcoverTokenState> {
+  notInDemo();
   const { checkHardcoverToken, saveHardcoverToken, HardcoverError } = await import("@/lib/hardcover");
   const token = String(fd.get("token") ?? "").trim();
   if (token.length < 20 || /\s/.test(token.replace(/^bearer /i, ""))) return { error: "That doesn’t look like a Hardcover token. Copy it from hardcover.app/account/api." };
@@ -55,6 +59,7 @@ export async function saveHardcoverTokenAction(_prev: HardcoverTokenState, fd: F
 }
 
 export async function removeHardcoverTokenAction() {
+  notInDemo();
   const { saveHardcoverToken } = await import("@/lib/hardcover");
   await saveHardcoverToken(null);
   revalidatePath("/", "layout");
@@ -64,6 +69,7 @@ export type LibbyConnectState = { error?: string } | null;
 
 /** Links Libby with the code from its Copy To Another Device screen, then runs the first sync. */
 export async function connectLibbyAction(_prev: LibbyConnectState, fd: FormData): Promise<LibbyConnectState> {
+  notInDemo();
   const { cleanTimeZone, connectLibby, LibbyError } = await import("@/lib/libby-sync");
   const code = String(fd.get("code") ?? "").replace(/\D/g, "");
   try {
@@ -77,12 +83,14 @@ export async function connectLibbyAction(_prev: LibbyConnectState, fd: FormData)
 }
 
 export async function syncLibbyNowAction() {
+  notInDemo();
   const { syncLibby } = await import("@/lib/libby-sync");
   await syncLibby({ force: true }).catch(() => {}); // the error is saved and shown in Settings
   revalidatePath("/", "layout");
 }
 
 export async function disconnectLibbyAction() {
+  notInDemo();
   const { disconnectLibby } = await import("@/lib/libby-sync");
   await disconnectLibby();
   revalidatePath("/", "layout");
@@ -94,6 +102,7 @@ export type ApiKeyState = { key?: string; name?: string; error?: string } | null
 
 /** Makes a key and hands it back once, to copy into the app. */
 export async function createApiKeyAction(_prev: ApiKeyState, fd: FormData): Promise<ApiKeyState> {
+  notInDemo();
   const { createApiKey, parseOrigins } = await import("@/lib/api-keys");
   const name = String(fd.get("name") ?? "").trim().slice(0, 60);
   if (!name) return { error: "Name the key after the app that will use it, like “Scriptable widget”." };
@@ -107,6 +116,7 @@ export async function createApiKeyAction(_prev: ApiKeyState, fd: FormData): Prom
 export type ApiKeyOriginsState = { error?: string; savedAt?: number } | null;
 
 export async function saveApiKeyOriginsAction(_prev: ApiKeyOriginsState, fd: FormData): Promise<ApiKeyOriginsState> {
+  notInDemo();
   const { parseOrigins, setApiKeyOrigins } = await import("@/lib/api-keys");
   const id = Number(fd.get("id"));
   if (!Number.isInteger(id)) return { error: "That key is gone." };
@@ -118,6 +128,7 @@ export async function saveApiKeyOriginsAction(_prev: ApiKeyOriginsState, fd: For
 }
 
 export async function deleteApiKeyAction(fd: FormData) {
+  notInDemo();
   const { deleteApiKey } = await import("@/lib/api-keys");
   const id = Number(fd.get("id"));
   if (Number.isInteger(id)) await deleteApiKey(id);
@@ -127,6 +138,7 @@ export async function deleteApiKeyAction(fd: FormData) {
 // Goodreads import (see src/lib/goodreads.ts). The browser drives it a batch at a time.
 
 export async function previewGoodreadsAction(csv: string): Promise<{ books?: GoodreadsBook[]; error?: string }> {
+  notInDemo();
   if (typeof csv !== "string" || csv.length > 9_000_000) return { error: "That file is too big." };
   const parsed = parseGoodreadsCsv(csv);
   if (typeof parsed === "string") return { error: parsed };
@@ -135,22 +147,26 @@ export async function previewGoodreadsAction(csv: string): Promise<{ books?: Goo
 }
 
 export async function importGoodreadsAction(books: unknown[]): Promise<{ id: number; isbn13: string | null }[]> {
+  notInDemo();
   const clean = (Array.isArray(books) ? books.slice(0, 50) : []).map(cleanGoodreadsBook).filter((b): b is GoodreadsBook => b !== null);
   return importGoodreadsBooks(clean);
 }
 
 export async function goodreadsCoversAction(books: { id: number; isbn13: string }[]): Promise<number> {
+  notInDemo();
   const clean = (Array.isArray(books) ? books.slice(0, 12) : []).filter((b) => Number.isInteger(b?.id) && typeof b.isbn13 === "string" && /^97[89]\d{10}$/.test(b.isbn13));
   return fetchImportedCovers(clean);
 }
 
 export async function finishImportAction() {
+  notInDemo();
   revalidatePath("/", "layout");
 }
 
 // Libby import (see src/lib/libby.ts). The browser reads the file; these check and add the books.
 
 export async function previewLibbyAction(books: unknown[]): Promise<{ books?: LibbyBook[]; error?: string }> {
+  notInDemo();
   if (!Array.isArray(books) || books.length > 20_000) return { error: "That file is too big." };
   const clean = books.map(cleanLibbyBook).filter((b): b is LibbyBook => b !== null);
   if (!clean.length) return { error: "There are no books in that file." };
@@ -158,11 +174,13 @@ export async function previewLibbyAction(books: unknown[]): Promise<{ books?: Li
 }
 
 export async function importLibbyAction(books: unknown[]): Promise<{ id: number; isbn13: string | null; coverUrl: string | null }[]> {
+  notInDemo();
   const clean = (Array.isArray(books) ? books.slice(0, 50) : []).map(cleanLibbyBook).filter((b): b is LibbyBook => b !== null);
   return importLibbyBooks(clean);
 }
 
 export async function libbyCoversAction(books: { id: number; isbn13: string | null; coverUrl: string | null }[]): Promise<number> {
+  notInDemo();
   const clean = (Array.isArray(books) ? books.slice(0, 12) : [])
     .filter((b) => Number.isInteger(b?.id))
     .map((b) => ({
@@ -188,6 +206,7 @@ async function accountWithPassword(fd: FormData) {
 }
 
 export async function changeEmailAction(_prev: AccountState, fd: FormData): Promise<AccountState> {
+  notInDemo();
   const { emailTaken, looksLikeEmail, setEmail } = await import("@/lib/accounts");
   const email = String(fd.get("email") ?? "").trim();
   if (!looksLikeEmail(email)) return { error: "That doesn’t look like an email address." };
@@ -201,6 +220,7 @@ export async function changeEmailAction(_prev: AccountState, fd: FormData): Prom
 
 /** Changes the password, signs out every other device, and keeps this one signed in. */
 export async function changePasswordAction(_prev: AccountState, fd: FormData): Promise<AccountState> {
+  notInDemo();
   const { setPassword } = await import("@/lib/accounts");
   const { hashPassword, MIN_PASSWORD_LENGTH } = await import("@/lib/passwords");
   const { startSession } = await import("@/lib/session");
@@ -226,6 +246,7 @@ async function ownerAccount() {
 }
 
 export async function createInviteAction(_prev: InviteState, fd: FormData): Promise<InviteState> {
+  notInDemo();
   const account = await ownerAccount();
   if (!account) return { error: "Only the owner of this BookBox can invite people." };
   const { createInvite } = await import("@/lib/invites");
@@ -237,6 +258,7 @@ export async function createInviteAction(_prev: InviteState, fd: FormData): Prom
 }
 
 export async function revokeInviteAction(fd: FormData) {
+  notInDemo();
   if (!(await ownerAccount())) return;
   const { revokeInvite } = await import("@/lib/invites");
   await revokeInvite(String(fd.get("id") ?? ""));

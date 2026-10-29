@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { demoMode } from "@/lib/demo";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { deletePersonAction, updatePersonAction, type UpdatePersonState } from "@/app/(app)/people/actions";
@@ -64,9 +65,11 @@ export function PersonHeader({ person, children }: { person: Person; children: R
                 Updated
               </span>
             )}
-            <Link href={`/people/${person.slug}/share`} className="btn rounded-full px-4">
-              Share
-            </Link>
+            {!demoMode() && (
+              <Link href={`/people/${person.slug}/share`} className="btn rounded-full px-4">
+                Share
+              </Link>
+            )}
             <button type="button" className="btn rounded-full px-4" onClick={() => setEditing(true)}>
               Edit
             </button>

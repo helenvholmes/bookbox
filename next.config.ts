@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { checkDemoEnvironment, demoMode } from "./src/lib/demo";
 
 /**
  * Where the browser may load things from. Everything BookBox fetches is its own (covers come through
@@ -23,7 +24,13 @@ const contentSecurityPolicy = [
   ...(process.env.VERCEL ? ["upgrade-insecure-requests"] : []),
 ].join("; ");
 
+// The public demo (see src/lib/demo.ts). It won't even build with keys for anything real set.
+const demo = demoMode();
+checkDemoEnvironment();
+
 const nextConfig: NextConfig = {
+  // Built in, so the browser knows it's the demo too (demoMode() in src/lib/demo.ts).
+  env: { BOOKBOX_DEMO: demo ? "1" : "" },
   // No "N" badge in the corner during development (build and runtime errors still show).
   devIndicators: false,
   // Standalone output is for self-hosting; Vercel builds its own functions.
@@ -48,7 +55,14 @@ const nextConfig: NextConfig = {
       },
       // The service worker must always be revalidated, or a stale one keeps serving old pages.
       { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
+      // The demo is for trying BookBox, not for finding in search results.
+      ...(demo ? [{ source: "/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] }] : []),
     ];
+  },
+  // The demo has no accounts: its front page is the library, and signing in, signing up and invites go there too.
+  async redirects() {
+    if (!demo) return [];
+    return ["/", "/login", "/signup", "/join/:code"].map((source) => ({ source, destination: "/library", permanent: false }));
   },
   experimental: {
     // Navigations and saves made while the connection drops wait and retry instead of failing.

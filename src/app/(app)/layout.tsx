@@ -1,10 +1,12 @@
 import { Suspense } from "react";
+import { DemoBanner } from "@/components/DemoBanner";
 import { LocalCopyBanner } from "@/components/LocalCopyBanner";
 import { Nav } from "@/components/Nav";
 import { PageMotion } from "@/components/PageMotion";
 import { OfflineSupport } from "@/components/OfflineSupport";
 import { BackgroundSync } from "@/components/BackgroundSync";
 import { authEnabled } from "@/lib/auth";
+import { demoMode } from "@/lib/demo";
 import { getFacets, listLists } from "@/lib/books";
 
 /**
@@ -35,13 +37,16 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <Suspense
         fallback={
           <Suspense fallback={<SidebarShell />}>
-            <Nav years={[]} lists={[]} canSignOut={authEnabled()} />
+            <Nav years={[]} lists={[]} canSignOut={authEnabled() && !demoMode()} />
           </Suspense>
         }
       >
         <NavWithYears />
       </Suspense>
-      <main id="main" tabIndex={-1} className="mx-auto outline-none w-full max-w-5xl min-w-0 flex-1 px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-10 md:pt-8 md:pb-12">{children}</main>
+      <main id="main" tabIndex={-1} className="mx-auto outline-none w-full max-w-5xl min-w-0 flex-1 px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-10 md:pt-8 md:pb-12">
+        {demoMode() && <DemoBanner />}
+        {children}
+      </main>
     </div>
   );
 }
@@ -64,5 +69,5 @@ async function LocalCopyNotice() {
 
 async function NavWithYears() {
   const [{ years }, lists] = await Promise.all([getFacets(), listLists()]);
-  return <Nav years={years} lists={lists} canSignOut={authEnabled()} />;
+  return <Nav years={years} lists={lists} canSignOut={authEnabled() && !demoMode()} />;
 }
