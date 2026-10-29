@@ -82,3 +82,12 @@ test("deletes a book", async ({ page }) => {
   await page.goto(bookUrl);
   await expect(page.getByRole("heading", { name: "Not found" })).toBeVisible();
 });
+
+test("robots.txt lets crawlers read only the page about BookBox", async ({ request }) => {
+  const res = await request.get("/robots.txt");
+  expect(res.ok()).toBe(true);
+  const body = await res.text();
+  expect(body).toMatch(/Allow: \/\$/);
+  expect(body).toMatch(/Allow: \/about/);
+  expect(body).toMatch(/Disallow: \/$/m);
+});

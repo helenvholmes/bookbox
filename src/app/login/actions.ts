@@ -3,7 +3,7 @@
 import { redirect, RedirectType } from "next/navigation";
 import { createAccount, findAccountByEmail, hasAccounts, looksLikeEmail } from "@/lib/accounts";
 import { checkSetupPassword } from "@/lib/auth";
-import { clearFailures, lockedOutFor, recordFailure } from "@/lib/login-limit";
+import { lockedOutFor, recordFailure } from "@/lib/login-limit";
 import { hashPassword, verifyPassword } from "@/lib/passwords";
 import { endSession, startSession } from "@/lib/session";
 
@@ -35,10 +35,19 @@ export async function loginAction(_prev: LoginState, fd: FormData): Promise<Logi
     await new Promise((r) => setTimeout(r, 600)); // slow down guessing
     return { error: "That email and password don’t match.", email };
   }
-  await clearFailures();
+  // Failures aren't cleared on success: someone with an account of their own could otherwise sign
+  // into it between guesses at someone else's password, and never be locked out.
   await startSession(accountId);
-  const next = String(fd.get("next") ?? "/library");
-  redirect(next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/library", RedirectType.replace);
+  redirect(sameSitePath(String(fd.get("next") ?? "")), RedirectType.replace);
+}
+
+/** Where to go after signing in: a path on this site, or the library. Browsers drop tabs and newlines from addresses, so "/\t/evil.com" would leave the site; resolving it the same way catches that. */
+function sameSitePath(next: string) {
+  try {
+    const url = new URL(next, "https://bookbox.invalid");
+    if (next.startsWith("/") && url.origin === "https://bookbox.invalid") return url.pathname + url.search + url.hash;
+  } catch {}
+  return "/library";
 }
 
 /** Signs this device out by removing its sign-in cookie. (The page clears its offline copies first; see SignOutButton.) */

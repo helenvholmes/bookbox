@@ -20,6 +20,10 @@ A web page on another site can call the API only if its key lists that site. Add
 
 Anything in a web page's code can be read by its visitors, key included. Use a browser key only on a site that's yours, or call the API from your other app's server instead, where the key stays private.
 
+### Bot protection
+
+If your BookBox is on Vercel with **Firewall → Bot Protection** turned on (bookbox.lol is), add a Firewall rule that skips it for request paths starting with `/api/v1`. Bot protection answers requests that look automated with a browser check, which servers, apps (like Steady), Scriptable and Shortcuts can't pass, so their calls fail without the rule. Skipping it there is safe: every API request still needs a key.
+
 ## Endpoints
 
 All responses are JSON with camelCase fields, ISO dates and absolute URLs. Responses may be kept for a minute (`Cache-Control: private, max-age=60`).
