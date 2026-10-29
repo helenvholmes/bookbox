@@ -62,7 +62,10 @@ export async function GET() {
   ];
 
   const cell = (v: unknown) => {
-    const s = v === null || v === undefined ? "" : String(v);
+    let s = v === null || v === undefined ? "" : String(v);
+    // Text starting like a formula would run as one in Excel or Sheets, and titles and descriptions
+    // can come from OpenLibrary, which anyone can edit. A leading apostrophe keeps it text.
+    if (typeof v === "string" && /^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = `'${s}`;
     return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const lines = [columns.map(([h]) => cell(h)).join(","), ...rows.map((r) => columns.map(([, get]) => cell(get(r))).join(","))];
