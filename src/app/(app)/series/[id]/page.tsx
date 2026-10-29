@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { BookGrid } from "@/components/BookGrid";
 import { SeriesSuggestions } from "@/components/SeriesSuggestions";
 import { getSeries } from "@/lib/books";
+import { demoMode } from "@/lib/demo";
 import { HardcoverError, hardcoverSeries, hardcoverToken, missingFromLibrary } from "@/lib/hardcover";
 import { renameSeriesAction } from "../actions";
 
@@ -50,6 +51,7 @@ export default async function SeriesDetailPage(props: PageProps<"/series/[id]">)
 
 /** The books in the series you don't have yet, from Hardcover. Streams in after the page so a slow lookup doesn't hold it up. */
 async function RestOfSeries({ seriesId, positions }: { seriesId: number; positions: (number | null)[] }) {
+  if (demoMode()) return null; // no Hardcover in the demo
   if (!(await hardcoverToken())) {
     return (
       <p className="text-sm text-muted">

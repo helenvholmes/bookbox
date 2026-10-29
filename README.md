@@ -147,6 +147,12 @@ It uses the same keys file as `push:cloud`, saved as `.env.cloud` (git-ignored) 
 
 `npm run generate:icons` redraws the app icon (defined as SVG in `scripts/generate-icons.mts`) and writes the manifest icons, favicon and iOS launch screens.
 
+### The demo
+
+`BOOKBOX_DEMO=1` runs the public demo (demo.bookbox.lol): no signing in, and each visitor gets a throwaway copy of a sample library, deleted after 20 minutes unused or when another server instance answers. It refuses to build or run with any database, cover storage, Spotify, Hardcover or password variables set, so it can't reach a real library. Spotify, Libby, Hardcover, imports, share links, API keys and the bulk OpenLibrary refresh are switched off. Each library holds up to 100 books and starts over past 16 MB, and requests are limited per network address, so the demo stays within free tiers. Deploy it as its own Vercel project with only `BOOKBOX_DEMO=1` set.
+
+`npm run build:demo-seed [path/to/library.db]` remakes the sample library (`src/lib/demo-seed.ts` and `public/demo-covers`) from a library database, leaving out private notes, settings, share links, API keys and anything Spotify or Libby, and renaming people. Everything in it is public, so use a small library made for the demo.
+
 ## Hosting elsewhere
 
 Any host with a persistent disk works too (Fly.io, Railway, Render, a VPS), with the database and covers in `DATA_DIR`:

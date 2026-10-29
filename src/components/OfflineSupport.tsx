@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useOffline } from "next/offline";
 import { useEffect, useRef, useState } from "react";
+import { demoMode } from "@/lib/demo";
 import { flush, SYNCED_EVENT, useOutbox } from "@/lib/outbox";
 
 // Saved for offline use in the background: the index, these pages, and every cover.
@@ -13,7 +14,8 @@ const REFRESHED_KEY = "bookbox:refreshed-saved-copy";
 
 /**
  * Registers the service worker, keeps the offline copy fresh, sends edits made offline once the
- * app is back online, and says so when the connection drops.
+ * app is back online, and says so when the connection drops. The demo has no offline copy: a
+ * saved page there could show a library that's since been reset.
  */
 export function OfflineSupport() {
   const router = useRouter();
@@ -90,7 +92,7 @@ export function OfflineSupport() {
 
   useEffect(() => {
     // Dev builds change on every edit, which a caching service worker would only get in the way of.
-    if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
+    if (process.env.NODE_ENV !== "production" || demoMode() || !("serviceWorker" in navigator)) return;
     let idle: number | undefined;
     navigator.serviceWorker
       .register("/sw.js", { scope: "/" })

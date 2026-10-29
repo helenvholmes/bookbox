@@ -2,6 +2,7 @@ import "server-only";
 import { after, type NextRequest } from "next/server";
 import { allAllowedOrigins, findApiKey, touchApiKey } from "./api-keys";
 import { db, withLibrary } from "./db";
+import { demoMode } from "./demo";
 import { goalPace } from "./goal";
 import { booksReadIn, getGoal, getStats } from "./stats";
 
@@ -24,6 +25,7 @@ function corsHeaders(origin: string): Record<string, string> {
 /** Checks the key (and, from a browser, that the key allows that website), then runs the handler with CORS headers added. */
 export function apiRoute<C>(handler: (request: NextRequest, ctx: C) => Promise<Response>) {
   return async (request: NextRequest, ctx: C): Promise<Response> => {
+    if (demoMode()) return apiError(404, "not_found", "The demo has no API.");
     const origin = request.headers.get("origin");
     const key = await findApiKey(request.headers.get("authorization"));
     if (!key) {
@@ -53,6 +55,7 @@ export function apiRoute<C>(handler: (request: NextRequest, ctx: C) => Promise<R
  * allows any website that some key allows; the real request is then checked against its own key.
  */
 export async function preflight(request: NextRequest) {
+  if (demoMode()) return new Response(null, { status: 404 });
   const origin = request.headers.get("origin");
   const headers = new Headers({ Allow: "GET, OPTIONS", Vary: "Origin" });
   if (origin && (await allAllowedOrigins()).has(origin)) {

@@ -20,11 +20,13 @@ const store = coverStore(process.env);
 /** Covers one library may keep, so one person can't use up the shared free storage. */
 export const MAX_COVERS = 5000;
 
-/** Where the current library's covers go, under covers/. */
+/** Where the current library's cover goes: its name under covers/, and its file when covers are local. A demo library's are in a folder of its own. */
 async function stored(filename: string) {
   const library = await currentLibrary();
-  const name = path.basename(filename);
-  return library.url === mainLibrary().url ? name : `a${library.accountId}/${name}`;
+  const base = path.basename(filename);
+  if (library.demoId) return { name: base, file: path.join((await import("./demo-library")).demoCoversDir(library.demoId), base) };
+  const name = library.url === mainLibrary().url ? base : `a${library.accountId}/${base}`;
+  return { name, file: path.join(COVERS_DIR, name) };
 }
 
 /** Whether the current library already has as many covers as it may keep. */
@@ -48,14 +50,13 @@ export async function coverStorageUsage() {
 /** Stores a cover, or returns false when uploads are paused or the library has all the covers it may keep. */
 async function writeCover(filename: string, data: Buffer) {
   if (await coverLimitReached()) return false;
-  const name = await stored(filename);
+  const { name, file } = await stored(filename);
   if (store) {
     if (!(await allowed(store.name, "upload"))) return false;
     await store.put(name, data);
     await countUpload(store.name);
     return true;
   }
-  const file = path.join(COVERS_DIR, name);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, data);
   return true;
@@ -63,14 +64,14 @@ async function writeCover(filename: string, data: Buffer) {
 
 /** The stored cover as a body for a Response, or null when it doesn't exist. */
 export async function readCover(filename: string): Promise<BodyInit | null> {
-  const name = await stored(filename);
+  const { name, file } = await stored(filename);
   if (store) {
     if (!(await allowed(store.name, "read"))) return null;
     countRead(store.name);
     return store.get(name);
   }
   try {
-    return new Uint8Array(await fs.promises.readFile(path.join(COVERS_DIR, name))) as Uint8Array<ArrayBuffer>;
+    return new Uint8Array(await fs.promises.readFile(file)) as Uint8Array<ArrayBuffer>;
   } catch {
     return null;
   }
@@ -109,9 +110,9 @@ export async function isUsableImage(input: Buffer): Promise<boolean> {
 
 export async function deleteCover(filename: string | null | undefined) {
   if (!filename) return;
-  const name = await stored(filename);
+  const { name, file } = await stored(filename);
   if (store) await store.remove(name);
-  else fs.rmSync(path.join(COVERS_DIR, name), { force: true });
+  else fs.rmSync(file, { force: true });
 }
 
 const ALLOWED_COVER_HOSTS = new Set(["covers.openlibrary.org", "archive.org", "inventaire.io"]);
