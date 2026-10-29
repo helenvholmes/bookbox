@@ -1,4 +1,17 @@
+import fs from "node:fs";
+import path from "node:path";
+import { STATEMENTS } from "../src/lib/demo-seed";
 import { expect, save, test } from "./test";
+
+test("every book in the sample library has a cover", () => {
+  const books = STATEMENTS.filter((s) => s.startsWith('INSERT OR IGNORE INTO "books"'));
+  expect(books.length).toBeGreaterThan(0);
+  for (const s of books) {
+    const cover = s.match(/'([a-z0-9-]+\.webp)'/)?.[1];
+    expect(cover, s.slice(0, 160)).toBeTruthy();
+    expect(fs.existsSync(path.join(__dirname, "../public/demo-covers", cover!)), cover).toBe(true);
+  }
+});
 
 test("the demo starts with the sample library, and Start over undoes changes", async ({ page }) => {
   await page.goto("/");
