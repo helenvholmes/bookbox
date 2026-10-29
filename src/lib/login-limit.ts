@@ -46,7 +46,3 @@ export async function recordFailure() {
   // Keep the table small.
   await accountsDb.run("DELETE FROM login_failures WHERE first_at < ?", now - 24 * 60 * 60 * 1000);
 }
-
-export async function clearFailures() {
-  await accountsDb.run("DELETE FROM login_failures WHERE key = ?", await clientKey());
-}

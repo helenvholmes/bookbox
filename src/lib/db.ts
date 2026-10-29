@@ -366,7 +366,9 @@ export async function currentLibrary(): Promise<Library> {
     throw new Error("A query ran outside a request without withLibrary(), so BookBox can't tell whose library it's for.");
   }
   const session = await readSession(token);
-  if (!session) throw new SignedOutError();
+  // Also checked here, not only in the proxy: server actions can be posted to pages the proxy lets
+  // through (the front page, /s/…), and a cookie from before a password change must not work there.
+  if (!session || !(await (await import("./session")).sessionIsCurrent(token))) throw new SignedOutError();
   const library = await libraryFor(session.accountId);
   if (!library) throw new SignedOutError();
   return library;

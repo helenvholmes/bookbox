@@ -37,3 +37,9 @@ test("the demo switches off integrations", async ({ page }) => {
   await expect(page).toHaveURL(/\/settings$/);
   expect((await page.request.get("/api/v1/books")).status()).toBe(404);
 });
+
+test("the demo's robots.txt keeps crawlers out", async ({ request }) => {
+  const body = await (await request.get("/robots.txt")).text();
+  expect(body).toMatch(/Disallow: \/$/m);
+  expect(body).not.toMatch(/Allow:/);
+});

@@ -50,10 +50,10 @@ export const config = {
   // Everything except the front page and /about (they check the session themselves: your library or the page
   // about BookBox when signed in, otherwise the page about BookBox or sign-in), the login and sign-up pages,
   // invite links (/join/…, which check their own code), public share links (/s/…), the offline page and service
-  // worker (which hold no data themselves), the assets the home screen needs before signing in, the
+  // worker (which hold no data themselves), robots.txt, the assets the home screen needs before signing in, the
   // public-domain covers on the page about BookBox and in the demo, Vercel's Speed Insights script and reports
   // (/_vercel/…), and the API for other apps (/api/v1/…), which checks its own keys (src/lib/api.ts).
   matcher: [
-    "/((?!$|about$|login|signup$|join/|s/|offline|sw\\.js|_next/static|_next/image|manifest.webmanifest|favicon.ico|icon|apple-icon|icons/|splash/|landing/|demo-covers/|_vercel/|api/v1/).*)",
+    "/((?!$|about$|login|signup$|join/|s/|offline|sw\\.js|robots\\.txt$|_next/static|_next/image|manifest.webmanifest|favicon.ico|icon|apple-icon|icons/|splash/|landing/|demo-covers/|_vercel/|api/v1/).*)",
   ],
 };
