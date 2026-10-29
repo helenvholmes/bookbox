@@ -102,6 +102,8 @@ export async function saveCover(bookId: number, input: Buffer): Promise<string |
 export async function isUsableImage(input: Buffer): Promise<boolean> {
   try {
     const meta = await sharp(input).metadata();
+    // Photos only: an SVG (or PDF) can carry scripts, and /api/isbn-cover passes images through as they are.
+    if (!["jpeg", "png", "webp", "gif", "avif", "heif"].includes(meta.format ?? "")) return false;
     return !!meta.width && !!meta.height && meta.width >= 20 && meta.height >= 20;
   } catch {
     return false;

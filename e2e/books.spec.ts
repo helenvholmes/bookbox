@@ -91,3 +91,14 @@ test("robots.txt lets crawlers read only the page about BookBox", async ({ reque
   expect(body).toMatch(/Allow: \/about/);
   expect(body).toMatch(/Disallow: \/$/m);
 });
+
+test("the CSV export keeps formula-like text as text", async ({ page }) => {
+  await page.goto("/books/new");
+  await page.getByRole("button", { name: "Enter a book by hand instead" }).click();
+  await page.locator("input[name=title]").fill("=HYPERLINK(\"https://example.com\")");
+  await page.locator("input[name=author]").fill("Samantha Ortiz");
+  await save(page);
+  const csv = await (await page.request.get("/export/books.csv")).text();
+  expect(csv).toContain(`"'=HYPERLINK(""https://example.com"")"`);
+  expect(csv).not.toMatch(/,=HYPERLINK|,"=HYPERLINK/);
+});
