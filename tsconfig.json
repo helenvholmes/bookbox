@@ -28,7 +28,9 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    ".next/e2e-demo/types/**/*.ts",
+    ".next/e2e-demo/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }
