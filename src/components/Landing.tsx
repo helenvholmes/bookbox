@@ -95,21 +95,17 @@ const FEATURES: { title: string; body: string; d: string }[] = [
   },
 ];
 
-/** `signedIn` swaps "Sign in" and "Sign up" for a way back to the library. */
+/** `signedIn` swaps "Sign in" for a way back to the library. */
 export function Landing({ signedIn }: { signedIn: boolean }) {
   const account = signedIn ? { href: "/library", label: "Open your library" } : { href: "/login", label: "Sign in" };
-  const start = signedIn ? account : { href: "/signup", label: "Sign up" };
   return (
     <div className="min-h-dvh bg-paper text-ink">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-5 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8">
         <span className="display text-xl">BookBox</span>
-        {/* Always both, in the same words; signed in, they lead straight to the library. */}
+        {/* Always the same words; signed in, it leads straight to the library. */}
         <nav aria-label="Site" className="flex items-center gap-4 text-sm">
           <Link href={signedIn ? "/library" : "/login"} className="text-muted hover:text-ink">
             Sign in
-          </Link>
-          <Link href={signedIn ? "/library" : "/signup"} className="btn btn-primary rounded-full px-4">
-            Sign up
           </Link>
         </nav>
       </header>
@@ -128,10 +124,7 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
               with no ads, no feeds, and nobody else&rsquo;s algorithm.
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Link href={start.href} className="btn btn-primary rounded-full px-5">
-                {start.label}
-              </Link>
-              <a href={DEMO_URL} className="btn rounded-full px-5">
+              <a href={DEMO_URL} className="btn btn-primary rounded-full px-5">
                 Try the demo
               </a>
               <a href="#features" className="btn rounded-full px-5">
@@ -178,10 +171,7 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
               <p className="max-w-md leading-relaxed text-muted">Your books stay yours: export them as a CSV whenever you like.</p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link href={start.href} className="btn btn-primary rounded-full px-5">
-                {start.label}
-              </Link>
-              <a href={DEMO_URL} className="btn rounded-full px-5">
+              <a href={DEMO_URL} className="btn btn-primary rounded-full px-5">
                 Try the demo
               </a>
             </div>
