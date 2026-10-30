@@ -227,7 +227,7 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
         <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-3 px-5 py-8 text-xs text-faint sm:px-8">
           <span className="space-y-1">
             <span className="block">
-              BookBox is open source under the AGPL-3.0. Covers shown are{" "}
+              BookBox is open source under the GPL-3.0. Covers shown are{" "}
               <a href={`${SOURCE_URL}/blob/main/public/landing/CREDITS.md`} className="underline decoration-line underline-offset-2 hover:text-muted">
                 public-domain first editions
               </a>

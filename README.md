@@ -181,4 +181,4 @@ BookBox is free and open source. If it's useful to you, you can [leave a tip on 
 
 ## License
 
-[AGPL-3.0](LICENSE). You're free to use, change and share BookBox. If you run a modified copy for other people to use, you have to offer them its source code under the same license. The "BookBox is open source" link in the app's sidebar is there for that: point `SOURCE_URL` in `src/lib/constants.ts` at your fork.
+[GPL-3.0](LICENSE). You're free to use, change and share BookBox. If you distribute a copy, changed or not, you have to share its source code under the same license. The "BookBox is open source" link in the app's sidebar points at the source: set `SOURCE_URL` in `src/lib/constants.ts` to your fork.
