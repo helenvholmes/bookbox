@@ -40,11 +40,11 @@ function r2Store(env: Env): CoverStore {
   return {
     name: "r2",
     async put(file, data) {
-      const res = await aws.fetch(url(file), {
-        method: "PUT",
-        body: data as Uint8Array<ArrayBuffer>,
-        headers: { "Content-Type": "image/webp" },
-      });
+      // Signed, then sent with the bytes as the body. aws.fetch() sends a Request object, whose body
+      // Next.js's fetch streams without a Content-Length, and R2 refuses that (411).
+      const body = data as Uint8Array<ArrayBuffer>;
+      const signed = await aws.sign(url(file), { method: "PUT", body, headers: { "Content-Type": "image/webp" } });
+      const res = await fetch(signed.url, { method: "PUT", headers: signed.headers, body });
       if (!res.ok) throw new Error(`R2 upload of ${file} failed: ${res.status} ${await res.text()}`);
     },
     async get(file) {
