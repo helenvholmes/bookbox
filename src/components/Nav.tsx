@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { SOURCE_URL } from "@/lib/constants";
 import { arrivedAt, notePage, notePlace, rememberScroll } from "@/lib/history";
 import { SignOutButton } from "./SignOutButton";
+import { GooeyFilter } from "./GooeyFilter";
 import { ShelfIcon, STATUS_SHELVES, shelfLabel } from "./ShelfIcon";
 
 const ICONS = {
@@ -230,6 +231,8 @@ export function Nav({ years, lists, canSignOut }: Props) {
   const pathname = usePathname();
   const params = useSearchParams();
   const { ref: menuRef, open: openMenu, close: closeMenu } = useSlidingDialog();
+  // The tab you just tapped, lit at once rather than when its page arrives; it counts only until you're somewhere new.
+  const [tapped, setTapped] = useState<{ href: string; from: string } | null>(null);
 
   // Close the drawer once something in it is picked (the page or its filters change).
   const location = `${pathname}?${params}`;
@@ -253,6 +256,17 @@ export function Nav({ years, lists, canSignOut }: Props) {
   if (pathname === "/login") return null;
   const onLibrary = pathname === "/library";
   const inMenu = ["/lists", "/series", "/calendar", "/missing-covers", "/missing-isbns", "/duplicates", "/refresh", "/spotify", "/settings"].some((p) => pathname.startsWith(p));
+
+  const tabs = [
+    { href: "/library", label: "Library", d: ICONS.library, active: onLibrary || (pathname.startsWith("/books/") && pathname !== "/books/new") },
+    { href: "/books/new", label: "Add", d: ICONS.add, active: pathname === "/books/new" },
+    { href: "/people", label: "People", d: ICONS.people, active: pathname.startsWith("/people") },
+    { href: "/tags", label: "Tags", d: ICONS.tags, active: pathname.startsWith("/tags") },
+    { href: "/stats", label: "Stats", d: ICONS.stats, active: pathname.startsWith("/stats") },
+  ];
+  const tappedIndex = tapped?.from === location ? tabs.findIndex((t) => t.href === tapped.href) : -1;
+  // Which tab is lit: the one just tapped, else this page's (the Menu tab is the last), else none.
+  const lit = tappedIndex >= 0 ? tappedIndex : inMenu ? tabs.length : tabs.findIndex((t) => t.active);
 
   return (
     <>
@@ -297,19 +311,17 @@ export function Nav({ years, lists, canSignOut }: Props) {
         style={{ viewTransitionName: "tab-bar" }}
         className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
       >
-        <div className="flex">
-          {[
-            { href: "/library", label: "Library", d: ICONS.library, active: onLibrary || (pathname.startsWith("/books/") && pathname !== "/books/new") },
-            { href: "/books/new", label: "Add", d: ICONS.add, active: pathname === "/books/new" },
-            { href: "/people", label: "People", d: ICONS.people, active: pathname.startsWith("/people") },
-            { href: "/tags", label: "Tags", d: ICONS.tags, active: pathname.startsWith("/tags") },
-            { href: "/stats", label: "Stats", d: ICONS.stats, active: pathname.startsWith("/stats") },
-          ].map((t) => (
+        <TabBlob index={lit} count={tabs.length + 1} />
+        <div className="relative flex">
+          {tabs.map((t, i) => (
             <Link
               key={t.href}
               href={t.href}
               aria-current={t.active ? "page" : undefined}
-              className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] ${t.active ? "text-ink" : "text-muted"}`}
+              onClick={() => setTapped({ href: t.href, from: location })}
+              // Touching it fetches the whole page (src/components/TouchPrefetch.tsx).
+              data-prefetch="full"
+              className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] transition-colors duration-200 ${lit === i ? "text-ink" : "text-muted"}`}
             >
               <Icon d={t.d} className="size-5" />
               {t.label}
@@ -319,13 +331,36 @@ export function Nav({ years, lists, canSignOut }: Props) {
             type="button"
             onClick={openMenu}
             aria-haspopup="dialog"
-            className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] ${inMenu ? "text-ink" : "text-muted"}`}
+            className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] transition-colors duration-200 ${lit === tabs.length ? "text-ink" : "text-muted"}`}
           >
             <Icon d={ICONS.menu} className="size-5" />
             Menu
           </button>
         </div>
       </nav>
+    </>
+  );
+}
+
+/**
+ * The rounded square behind the lit tab's icon and label. Moving to another tab, a second drop trails the pill and the
+ * gooey filter melts the two together, so it stretches across like liquid and snaps back into shape.
+ * Without SVG filters on HTML (some Safari versions) the two drops just overlap into a longer pill.
+ */
+function TabBlob({ index, count }: { index: number; count: number }) {
+  const drop = "absolute left-0 transition-transform motion-reduce:transition-none";
+  const at = { width: `${100 / count}%`, transform: `translateX(${Math.max(index, 0) * 100}%)` };
+  return (
+    <>
+      <GooeyFilter id="tab-goo" />
+      <div aria-hidden className={`pointer-events-none absolute inset-x-0 top-0 bottom-[env(safe-area-inset-bottom)] transition-opacity duration-200 ${index < 0 ? "opacity-0" : ""}`} style={{ filter: "url(#tab-goo)" }}>
+        <div className={`${drop} inset-y-1 duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)]`} style={at}>
+          <div className="mx-auto h-full w-14 rounded-xl bg-raised" />
+        </div>
+        <div className={`${drop} inset-y-3 duration-[540ms] ease-[cubic-bezier(0.45,0.1,0.1,1)]`} style={at}>
+          <div className="mx-auto h-full w-10 rounded-xl bg-raised" />
+        </div>
+      </div>
     </>
   );
 }

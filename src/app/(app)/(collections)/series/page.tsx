@@ -1,10 +1,9 @@
 /* eslint-disable @next/next/no-img-element -- covers are resized WebP served from our own route */
 import Link from "next/link";
 import { connection } from "next/server";
-import { CollectionTabs } from "@/components/CollectionTabs";
 import { detectSeriesFromTitles, listSeries } from "@/lib/books";
 import { checkSeriesOnHardcover } from "@/lib/hardcover";
-import { applyDetectedSeriesAction } from "./actions";
+import { applyDetectedSeriesAction } from "@/app/(app)/series/actions";
 
 export const metadata = { title: "Series" };
 
@@ -19,11 +18,7 @@ export default async function SeriesPage() {
 
   return (
     <div className="space-y-8 pb-6">
-      <CollectionTabs current="/series" />
-      <header>
-        <h1 className="display text-3xl">Series</h1>
-        <p className="mt-1 text-sm text-muted">Add a book to a series from its edit screen, with its number in the series.</p>
-      </header>
+      <p className="text-sm text-muted">Add a book to a series from its edit screen, with its number in the series.</p>
 
       {detected.length > 0 && (
         <form action={applyDetectedSeriesAction} className="card flex flex-wrap items-center justify-between gap-3 p-4">

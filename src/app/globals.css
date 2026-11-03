@@ -196,10 +196,11 @@ body {
 }
 
 /*
- * Page transitions (src/components/PageMotion.tsx). Every page change crossfades; going into a book
- * from a grid also slides the page left (and the back button slides it right), while the tapped
- * cover flies to its place on the book's page (src/lib/cover-handoff.ts). The sidebar, tab bar and
- * menu stay put.
+ * Page transitions (src/components/PageMotion.tsx). The old page is gone quickly and the new one
+ * starts at once, rising a few pixels into place as it fades in; going into a book from a grid
+ * slides the page left instead (and the back button slides it right), while the tapped cover flies
+ * to its place on the book's page (src/lib/cover-handoff.ts). The sidebar, tab bar and menu stay
+ * put, and so do the Library's search and filters between one filtered view and the next.
  */
 :root {
   --vt-ease: cubic-bezier(0.32, 0.72, 0, 1);
@@ -211,31 +212,33 @@ body {
 }
 
 ::view-transition-old(root) {
-  animation: 140ms ease-out both vt-fade-out;
+  animation: 90ms ease-out both vt-fade-out;
 }
 ::view-transition-new(root) {
-  animation: 220ms ease-out 60ms both vt-fade-in;
+  animation:
+    160ms ease-out both vt-fade-in,
+    260ms var(--vt-ease) both vt-rise;
 }
 
 html:active-view-transition-type(nav-forward)::view-transition-old(root) {
   animation:
-    160ms ease-in both vt-fade-out,
-    380ms var(--vt-ease) both vt-out-left;
+    90ms ease-out both vt-fade-out,
+    280ms var(--vt-ease) both vt-out-left;
 }
 html:active-view-transition-type(nav-forward)::view-transition-new(root) {
   animation:
-    240ms ease-out 80ms both vt-fade-in,
-    380ms var(--vt-ease) both vt-in-right;
+    180ms ease-out both vt-fade-in,
+    280ms var(--vt-ease) both vt-in-right;
 }
 html:active-view-transition-type(nav-back)::view-transition-old(root) {
   animation:
-    160ms ease-in both vt-fade-out,
-    380ms var(--vt-ease) both vt-out-right;
+    90ms ease-out both vt-fade-out,
+    280ms var(--vt-ease) both vt-out-right;
 }
 html:active-view-transition-type(nav-back)::view-transition-new(root) {
   animation:
-    240ms ease-out 80ms both vt-fade-in,
-    380ms var(--vt-ease) both vt-in-left;
+    180ms ease-out both vt-fade-in,
+    280ms var(--vt-ease) both vt-in-left;
 }
 
 /* The invisible marker that starts each one. */
@@ -246,6 +249,34 @@ html:active-view-transition-type(nav-back)::view-transition-new(root) {
 /* A loading skeleton fades out as its page arrives. */
 ::view-transition-old(*.skeleton-out) {
   animation: 180ms ease-out both vt-fade-out;
+}
+
+/*
+ * The Library's search and filters (src/components/FilterBar.tsx), and the Lists/Tags/Series/Stats
+ * title and tabs (src/components/CollectionHeader.tsx). From one view to the next they stay put, already showing
+ * the new choice, and only glide when they move (the filters go up past the Library's tiles once
+ * something is filtered). Arriving or leaving with the page, they fade along with it.
+ */
+::view-transition-group(collection-header),
+::view-transition-group(filter-bar) {
+  animation-duration: 280ms;
+  animation-timing-function: var(--vt-ease);
+}
+::view-transition-old(collection-header):not(:only-child),
+::view-transition-old(filter-bar):not(:only-child) {
+  display: none;
+}
+::view-transition-new(collection-header):not(:only-child),
+::view-transition-new(filter-bar):not(:only-child) {
+  animation: none;
+}
+::view-transition-old(collection-header):only-child,
+::view-transition-old(filter-bar):only-child {
+  animation: 90ms ease-out both vt-fade-out;
+}
+::view-transition-new(collection-header):only-child,
+::view-transition-new(filter-bar):only-child {
+  animation: 160ms ease-out both vt-fade-in;
 }
 
 /* The tapped book's cover, on its way to the book's page. */
@@ -288,6 +319,11 @@ html:active-view-transition-type(nav-back)::view-transition-new(root) {
 @keyframes vt-fade-out {
   to {
     opacity: 0;
+  }
+}
+@keyframes vt-rise {
+  from {
+    translate: 0 8px;
   }
 }
 @keyframes vt-out-left {

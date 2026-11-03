@@ -31,6 +31,8 @@ export function BookGrid({
           <Link
             href={`/books/${b.id}`}
             transitionTypes={["nav-forward"]}
+            // Touching it fetches the whole book page (src/components/TouchPrefetch.tsx).
+            data-prefetch="full"
             // For carrying the cover to the book's page (see src/lib/cover-handoff.ts).
             data-cover-handoff={b.cover ?? ""}
             data-title={b.title}
