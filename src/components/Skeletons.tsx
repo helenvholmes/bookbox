@@ -1,5 +1,4 @@
 import { ViewTransition } from "react";
-import { CollectionTabs } from "./CollectionTabs";
 import { PendingCover } from "./PendingCover";
 
 /**
@@ -131,23 +130,12 @@ export function ListSkeleton() {
   );
 }
 
-/**
- * Lists, Tags, Series and Stats: the title, then their tabs (real, and still, so they don't flicker
- * as you switch between them), then rows.
- */
-export function CollectionSkeleton({ current }: { current: React.ComponentProps<typeof CollectionTabs>["current"] }) {
+/** Lists, Tags, Series and Stats, under their title and tabs (which stay on screen): a line of description, then rows. */
+export function CollectionSkeleton() {
   return (
-    <Shell label="Loading" pulse={false}>
-      <div className="space-y-4">
-        <div className={`flex min-h-10 items-center ${PULSE}`}>
-          <Bar className="h-9 w-40" />
-        </div>
-        <CollectionTabs current={current} />
-        <div className={`pt-2 ${PULSE}`}>
-          <Bar className="h-4 w-80 max-w-full" />
-        </div>
-      </div>
-      <div className={`card divide-y divide-line ${PULSE}`}>
+    <Shell label="Loading">
+      <Bar className="h-4 w-80 max-w-full" />
+      <div className="card divide-y divide-line">
         {Array.from({ length: 8 }, (_, i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-3.5">
             <div className="size-8 shrink-0 rounded-full bg-raised" />
