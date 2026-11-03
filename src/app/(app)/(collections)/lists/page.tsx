@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { CollectionTabs } from "@/components/CollectionTabs";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { ListsHeader } from "@/components/ListForms";
 import { getFacets, listLists } from "@/lib/books";
-import { listFromTagAction } from "./actions";
+import { listFromTagAction } from "@/app/(app)/lists/actions";
 
 export const metadata = { title: "Lists" };
 
@@ -11,8 +9,6 @@ export default async function ListsPage() {
   const [lists, { tags }] = await Promise.all([listLists(), getFacets()]);
   return (
     <div className="space-y-6 pb-6">
-      <CollectionTabs current="/lists" />
-      <ListsHeader />
       <p className="text-sm text-muted">
         Your own collections of books, like Urbanism or Gifts to give. A book can be on any number of lists, whatever its reading status. Add books from each
         book&rsquo;s page.

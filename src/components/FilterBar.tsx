@@ -33,7 +33,8 @@ export function FilterBar({ facets, sorts }: Props) {
   const active = ["q", "shelf", "year", "tag", "person", "rating", "owned"].some((k) => params.get(k));
 
   return (
-    <div className={`space-y-3 transition-opacity ${pending ? "opacity-70" : ""}`}>
+    // Named, so it stays put from one view of the Library to the next (see "Page transitions" in globals.css).
+    <div style={{ viewTransitionName: "filter-bar" }} className={`space-y-3 transition-opacity ${pending ? "opacity-70" : ""}`}>
       <SearchBox value={params.get("q") ?? ""} onSubmit={(q) => update({ q })} />
 
       {/* Underline tabs, like Oku's "Books | Members". */}

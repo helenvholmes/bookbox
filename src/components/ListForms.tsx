@@ -1,40 +1,27 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { createListAction, renameListAction, type ListState } from "@/app/(app)/lists/actions";
 
-/** "Lists" heading with a "+ New list" button that opens a name field underneath. */
-export function ListsHeader() {
-  const [open, setOpen] = useState(false);
+/** The name field that "+ New list" opens under the Lists page's tabs (src/components/CollectionHeader.tsx). */
+export function NewListForm({ onClose }: { onClose: () => void }) {
   const [state, action, pending] = useActionState(async (prev: ListState, fd: FormData) => {
     const result = await createListAction(prev, fd);
-    if (result?.doneAt) setOpen(false);
+    if (result?.doneAt) onClose();
     return result;
   }, null);
 
   return (
-    <div className="space-y-4">
-      <header className="flex items-center justify-between gap-4">
-        <h1 className="display text-3xl">Lists</h1>
-        {!open && (
-          <button type="button" className="btn rounded-full px-4" onClick={() => setOpen(true)}>
-            + New list
-          </button>
-        )}
-      </header>
-      {open && (
-        <form action={action} className="flex flex-wrap items-center gap-2">
-          <input name="name" required autoFocus autoComplete="off" maxLength={80} placeholder="Urbanism" aria-label="List name" className="field max-w-xs flex-1" />
-          <button type="button" className="btn rounded-full px-4" onClick={() => setOpen(false)} disabled={pending}>
-            Cancel
-          </button>
-          <button className="btn btn-primary rounded-full px-4" disabled={pending}>
-            {pending ? "Making…" : "Make list"}
-          </button>
-          {state?.error && <p className="basis-full text-sm text-danger">{state.error}</p>}
-        </form>
-      )}
-    </div>
+    <form action={action} className="flex flex-wrap items-center gap-2">
+      <input name="name" required autoFocus autoComplete="off" maxLength={80} placeholder="Urbanism" aria-label="List name" className="field max-w-xs flex-1" />
+      <button type="button" className="btn rounded-full px-4" onClick={onClose} disabled={pending}>
+        Cancel
+      </button>
+      <button className="btn btn-primary rounded-full px-4" disabled={pending}>
+        {pending ? "Making…" : "Make list"}
+      </button>
+      {state?.error && <p className="basis-full text-sm text-danger">{state.error}</p>}
+    </form>
   );
 }
 
