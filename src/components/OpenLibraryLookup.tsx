@@ -106,6 +106,7 @@ export function OpenLibraryLookup({ initialQuery = "", autoSearch = false, onPic
       const params = new URLSearchParams({ work: r.work });
       if (r.edition) params.set("edition", r.edition);
       if (r.isbn13) params.set("isbn", r.isbn13);
+      for (const a of r.authors.slice(0, 4)) params.append("author", a);
       const res = await fetch(`/api/openlibrary?${params}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);

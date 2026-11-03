@@ -31,22 +31,49 @@ export type OLDetails = {
   series: string | null;
 };
 
-async function get<T>(pathAndQuery: string, attempt = 1): Promise<T | null> {
-  try {
+/**
+ * `hedgeAfter`: when the first request hasn't answered after this long, a second one starts alongside it
+ * and the first answer wins (a failed first request starts it straight away). OpenLibrary is often slow
+ * or briefly down, and a request that stalls usually answers quickly when asked again. Defaults to the
+ * timeout, which makes the second request a plain retry.
+ */
+type GetOptions = { timeout?: number; hedgeAfter?: number };
+
+function get<T>(pathAndQuery: string, { timeout = 12_000, hedgeAfter = timeout }: GetOptions = {}): Promise<T | null> {
+  const once = async () => {
     const res = await fetch(OL + pathAndQuery, {
       headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
       redirect: "follow",
-      signal: AbortSignal.timeout(12_000),
+      signal: AbortSignal.timeout(timeout),
     });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`OpenLibrary ${res.status}`);
     return (await res.json()) as T;
-  } catch (err) {
-    // OpenLibrary is often slow or briefly down; one retry smooths most of it over.
-    if (attempt < 2) return get<T>(pathAndQuery, attempt + 1);
-    throw err;
-  }
+  };
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    let failures = 0;
+    const attempt = () => {
+      attempts++;
+      once().then(
+        (value) => {
+          clearTimeout(second);
+          resolve(value);
+        },
+        (err) => (++failures === 2 ? reject(err) : again()),
+      );
+    };
+    const again = () => {
+      clearTimeout(second);
+      if (attempts < 2) attempt();
+    };
+    const second = setTimeout(again, hedgeAfter);
+    attempt();
+  });
 }
+
+/** For someone waiting on the answer: a second request after 3 seconds. */
+const QUICK: GetOptions = { hedgeAfter: 3_000 };
 
 /** OpenLibrary has placeholder page counts like 1; anything under 20 isn't a real book length. */
 const pagesOrNull = (n: number | undefined | null) => (n && n >= 20 ? n : null);
@@ -115,12 +142,16 @@ const SEARCH_FIELDS = [
   "editions.publisher", "editions.publish_date", "editions.number_of_pages",
 ].join(",");
 
-export async function searchOpenLibrary(query: string): Promise<OLResult[]> {
+/**
+ * `quick` is for someone waiting on the results, with other catalogs to fall back on: a second request
+ * after 2.5 seconds, and each gives up after 6. Background jobs wait longer.
+ */
+export async function searchOpenLibrary(query: string, { quick = false } = {}): Promise<OLResult[]> {
   const q = query.trim();
   if (!q) return [];
   const isbn = looksLikeIsbn(q) ? toIsbn13(q) : null;
   const params = new URLSearchParams({ q: isbn ? `isbn:${isbn}` : q, fields: SEARCH_FIELDS, limit: "12", lang: "en" });
-  const data = await get<{ docs: SearchDoc[] }>(`/search.json?${params}`);
+  const data = await get<{ docs: SearchDoc[] }>(`/search.json?${params}`, quick ? { timeout: 6_000, hedgeAfter: 2_500 } : {});
 
   return (data?.docs ?? []).map((d) => {
     // With an ISBN query, the "best edition" OpenLibrary returns is the matching one.
@@ -175,24 +206,35 @@ function cleanDescription(d: Work["description"]): string {
     .trim();
 }
 
-/** Full metadata for a work, preferring edition-level details when an edition is known. */
-export async function getOpenLibraryDetails(work: string, edition?: string | null): Promise<OLDetails | null> {
+/**
+ * Full metadata for a work, preferring edition-level details when an edition is known. `knownAuthors`
+ * (from a search result) saves looking the authors up, which can only start once the work has loaded.
+ * `quick` is for someone waiting on the answer (see QUICK).
+ */
+export async function getOpenLibraryDetails(
+  work: string,
+  edition?: string | null,
+  { knownAuthors = [], quick = false }: { knownAuthors?: string[]; quick?: boolean } = {},
+): Promise<OLDetails | null> {
   const safe = (k: string | null | undefined) => (k && /^OL\d+[WM]$/.test(k) ? k : null);
   const workKey = safe(work);
   const editionKey = safe(edition);
   if (!workKey) return null;
+  const opts = quick ? QUICK : {};
 
   const [w, e] = await Promise.all([
-    get<Work>(`/works/${workKey}.json`),
+    get<Work>(`/works/${workKey}.json`, opts),
     // Only the work is essential; the rest are nice-to-haves that shouldn't fail the lookup.
-    editionKey ? get<Edition>(`/books/${editionKey}.json`).catch(() => null) : Promise.resolve(null),
+    editionKey ? get<Edition>(`/books/${editionKey}.json`, opts).catch(() => null) : Promise.resolve(null),
   ]);
   if (!w) return null;
 
-  const authorKeys = (w.authors ?? []).map((a) => a.author?.key).filter(Boolean).slice(0, 4);
-  const authors = (await Promise.all(authorKeys.map((k) => get<{ name?: string }>(`${k}.json`).catch(() => null))))
-    .map((a) => a?.name)
-    .filter((n): n is string => !!n);
+  const authorKeys = knownAuthors.length ? [] : (w.authors ?? []).map((a) => a.author?.key).filter(Boolean).slice(0, 4);
+  const authors = knownAuthors.length
+    ? knownAuthors.slice(0, 4)
+    : (await Promise.all(authorKeys.map((k) => get<{ name?: string }>(`${k}.json`, opts).catch(() => null))))
+        .map((a) => a?.name)
+        .filter((n): n is string => !!n);
 
   return {
     title: joinTitle(e?.title ?? w.title, e?.subtitle ?? w.subtitle),

@@ -43,3 +43,16 @@ export const BOOKS = [
     description: "A festival, a missing brother and a town that keeps its secrets.",
   },
 ];
+
+/** Books only the Library of Congress has (catalog-stub.mjs). */
+export const LOC_BOOKS = [
+  {
+    // OpenLibrary never answers a search for it.
+    title: "Slow River Crossing",
+    author: "Katie Abara",
+    publisher: "Riverbank Books",
+    year: 2021,
+    description: "A ferry pilot and the last summer before the bridge opens.",
+    slowOnOpenLibrary: true,
+  },
+];
