@@ -25,16 +25,18 @@ export default async function StatsPage() {
 
   return (
     <div className="space-y-8 pb-6">
-      <CollectionTabs current="/stats" />
-      <header className="flex items-center justify-between gap-4">
-        <h1 className="display text-3xl">Stats</h1>
-        <a href="/export/books.csv" download className="btn rounded-full px-4">
-          <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14" />
-          </svg>
-          Export CSV
-        </a>
-      </header>
+      <div className="space-y-4">
+        <header className="flex min-h-10 items-center justify-between gap-4">
+          <h1 className="display text-3xl">Stats</h1>
+          <a href="/export/books.csv" download className="btn rounded-full px-4">
+            <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14" />
+            </svg>
+            Export CSV
+          </a>
+        </header>
+        <CollectionTabs current="/stats" />
+      </div>
 
       <GoalCard year={s.year} goal={s.goal} read={s.readThisYear} />
 

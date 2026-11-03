@@ -7,10 +7,14 @@ const TABS = [
   { href: "/stats", label: "Stats" },
 ] as const;
 
-/** Underline tabs shared by the Lists, Tags, Series and Stats pages. */
+/**
+ * Underline tabs shared by the Lists, Tags, Series and Stats pages, right under each page's title so
+ * the titles line up as you switch. Named, so they stay put while the page changes around them (see
+ * "Page transitions" in globals.css).
+ */
 export function CollectionTabs({ current }: { current: (typeof TABS)[number]["href"] }) {
   return (
-    <nav aria-label="Collections" className="-mx-4 flex gap-5 border-b border-line px-4">
+    <nav aria-label="Collections" style={{ viewTransitionName: "collection-tabs" }} className="-mx-4 flex gap-5 border-b border-line px-4">
       {TABS.map((t) => (
         <Link
           key={t.href}

@@ -1,4 +1,5 @@
 import { ViewTransition } from "react";
+import { CollectionTabs } from "./CollectionTabs";
 import { PendingCover } from "./PendingCover";
 
 /**
@@ -110,7 +111,7 @@ export function GridSkeleton() {
   );
 }
 
-/** A heading over rows: People, Tags, Series, Stats, and the tidy-up pages. */
+/** A heading over rows: People, Authors, and the tidy-up pages. */
 export function ListSkeleton() {
   return (
     <Shell label="Loading">
@@ -119,6 +120,34 @@ export function ListSkeleton() {
         <Bar className="h-4 w-80 max-w-full" />
       </div>
       <div className="card divide-y divide-line">
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} className="flex items-center gap-3 px-4 py-3.5">
+            <div className="size-8 shrink-0 rounded-full bg-raised" />
+            <Bar className={`h-3.5 ${["w-2/5", "w-1/2", "w-1/3"][i % 3]}`} />
+          </div>
+        ))}
+      </div>
+    </Shell>
+  );
+}
+
+/**
+ * Lists, Tags, Series and Stats: the title, then their tabs (real, and still, so they don't flicker
+ * as you switch between them), then rows.
+ */
+export function CollectionSkeleton({ current }: { current: React.ComponentProps<typeof CollectionTabs>["current"] }) {
+  return (
+    <Shell label="Loading" pulse={false}>
+      <div className="space-y-4">
+        <div className={`flex min-h-10 items-center ${PULSE}`}>
+          <Bar className="h-9 w-40" />
+        </div>
+        <CollectionTabs current={current} />
+        <div className={`pt-2 ${PULSE}`}>
+          <Bar className="h-4 w-80 max-w-full" />
+        </div>
+      </div>
+      <div className={`card divide-y divide-line ${PULSE}`}>
         {Array.from({ length: 8 }, (_, i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-3.5">
             <div className="size-8 shrink-0 rounded-full bg-raised" />

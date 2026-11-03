@@ -1,1 +1,5 @@
-export { ListSkeleton as default } from "@/components/Skeletons";
+import { CollectionSkeleton } from "@/components/Skeletons";
+
+export default function Loading() {
+  return <CollectionSkeleton current="/lists" />;
+}

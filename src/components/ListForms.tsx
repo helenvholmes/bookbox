@@ -3,8 +3,8 @@
 import { useActionState, useState } from "react";
 import { createListAction, renameListAction, type ListState } from "@/app/(app)/lists/actions";
 
-/** "Lists" heading with a "+ New list" button that opens a name field underneath. */
-export function ListsHeader() {
+/** "Lists" heading with a "+ New list" button that opens a name field underneath (below `children`, the page's tabs). */
+export function ListsHeader({ children }: { children?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(async (prev: ListState, fd: FormData) => {
     const result = await createListAction(prev, fd);
@@ -14,7 +14,7 @@ export function ListsHeader() {
 
   return (
     <div className="space-y-4">
-      <header className="flex items-center justify-between gap-4">
+      <header className="flex min-h-10 items-center justify-between gap-4">
         <h1 className="display text-3xl">Lists</h1>
         {!open && (
           <button type="button" className="btn rounded-full px-4" onClick={() => setOpen(true)}>
@@ -22,6 +22,7 @@ export function ListsHeader() {
           </button>
         )}
       </header>
+      {children}
       {open && (
         <form action={action} className="flex flex-wrap items-center gap-2">
           <input name="name" required autoFocus autoComplete="off" maxLength={80} placeholder="Urbanism" aria-label="List name" className="field max-w-xs flex-1" />

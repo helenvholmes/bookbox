@@ -252,23 +252,29 @@ html:active-view-transition-type(nav-back)::view-transition-new(root) {
 }
 
 /*
- * The Library's search and filters (src/components/FilterBar.tsx). From one view of the Library to
- * another they stay put, already showing the new choice, and only glide when they move (up past the
- * tiles once something is filtered). Arriving or leaving with the page, they fade along with it.
+ * The Library's search and filters (src/components/FilterBar.tsx), and the Lists/Tags/Series/Stats
+ * tabs (src/components/CollectionTabs.tsx). From one view to the next they stay put, already showing
+ * the new choice, and only glide when they move (the filters go up past the Library's tiles once
+ * something is filtered). Arriving or leaving with the page, they fade along with it.
  */
+::view-transition-group(collection-tabs),
 ::view-transition-group(filter-bar) {
   animation-duration: 280ms;
   animation-timing-function: var(--vt-ease);
 }
+::view-transition-old(collection-tabs):not(:only-child),
 ::view-transition-old(filter-bar):not(:only-child) {
   display: none;
 }
+::view-transition-new(collection-tabs):not(:only-child),
 ::view-transition-new(filter-bar):not(:only-child) {
   animation: none;
 }
+::view-transition-old(collection-tabs):only-child,
 ::view-transition-old(filter-bar):only-child {
   animation: 90ms ease-out both vt-fade-out;
 }
+::view-transition-new(collection-tabs):only-child,
 ::view-transition-new(filter-bar):only-child {
   animation: 160ms ease-out both vt-fade-in;
 }

@@ -19,11 +19,13 @@ export default async function SeriesPage() {
 
   return (
     <div className="space-y-8 pb-6">
-      <CollectionTabs current="/series" />
-      <header>
-        <h1 className="display text-3xl">Series</h1>
-        <p className="mt-1 text-sm text-muted">Add a book to a series from its edit screen, with its number in the series.</p>
-      </header>
+      <div className="space-y-4">
+        <header className="flex min-h-10 items-center">
+          <h1 className="display text-3xl">Series</h1>
+        </header>
+        <CollectionTabs current="/series" />
+        <p className="pt-2 text-sm text-muted">Add a book to a series from its edit screen, with its number in the series.</p>
+      </div>
 
       {detected.length > 0 && (
         <form action={applyDetectedSeriesAction} className="card flex flex-wrap items-center justify-between gap-3 p-4">
