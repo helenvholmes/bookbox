@@ -319,6 +319,8 @@ export function Nav({ years, lists, canSignOut }: Props) {
               href={t.href}
               aria-current={t.active ? "page" : undefined}
               onClick={() => setTapped({ href: t.href, from: location })}
+              // Touching it fetches the whole page (src/components/TouchPrefetch.tsx).
+              data-prefetch="full"
               className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] transition-colors duration-200 ${lit === i ? "text-ink" : "text-muted"}`}
             >
               <Icon d={t.d} className="size-5" />

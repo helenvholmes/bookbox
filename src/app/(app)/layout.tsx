@@ -3,6 +3,7 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { LocalCopyBanner } from "@/components/LocalCopyBanner";
 import { Nav } from "@/components/Nav";
 import { PageMotion } from "@/components/PageMotion";
+import { TouchPrefetch } from "@/components/TouchPrefetch";
 import { OfflineSupport } from "@/components/OfflineSupport";
 import { BackgroundSync } from "@/components/BackgroundSync";
 import { authEnabled } from "@/lib/auth";
@@ -26,6 +27,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       </a>
       <OfflineSupport />
       <BackgroundSync />
+      <TouchPrefetch />
       {/* Reads the URL's query string, so it needs a Suspense boundary of its own. */}
       <Suspense>
         <PageMotion />
