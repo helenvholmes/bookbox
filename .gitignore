@@ -46,5 +46,6 @@ next-env.d.ts
 
 # end-to-end tests
 /e2e/.data
+/e2e/.data-demo
 /test-results
 /playwright-report
