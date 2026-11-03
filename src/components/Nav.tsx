@@ -341,22 +341,22 @@ export function Nav({ years, lists, canSignOut }: Props) {
 }
 
 /**
- * The pill behind the lit tab's icon. Moving to another tab, a second drop trails the pill and the
+ * The rounded square behind the lit tab's icon and label. Moving to another tab, a second drop trails the pill and the
  * gooey filter melts the two together, so it stretches across like liquid and snaps back into shape.
  * Without SVG filters on HTML (some Safari versions) the two drops just overlap into a longer pill.
  */
 function TabBlob({ index, count }: { index: number; count: number }) {
-  const drop = "absolute top-1 left-0 h-8 transition-transform motion-reduce:transition-none";
+  const drop = "absolute left-0 transition-transform motion-reduce:transition-none";
   const at = { width: `${100 / count}%`, transform: `translateX(${Math.max(index, 0) * 100}%)` };
   return (
     <>
       <GooeyFilter id="tab-goo" />
-      <div aria-hidden className={`pointer-events-none absolute inset-x-0 top-0 h-10 transition-opacity duration-200 ${index < 0 ? "opacity-0" : ""}`} style={{ filter: "url(#tab-goo)" }}>
-        <div className={`${drop} duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)]`} style={at}>
-          <div className="mx-auto h-full w-14 rounded-full bg-raised" />
+      <div aria-hidden className={`pointer-events-none absolute inset-x-0 top-0 bottom-[env(safe-area-inset-bottom)] transition-opacity duration-200 ${index < 0 ? "opacity-0" : ""}`} style={{ filter: "url(#tab-goo)" }}>
+        <div className={`${drop} inset-y-1 duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)]`} style={at}>
+          <div className="mx-auto h-full w-14 rounded-xl bg-raised" />
         </div>
-        <div className={`${drop} duration-[540ms] ease-[cubic-bezier(0.45,0.1,0.1,1)]`} style={at}>
-          <div className="mx-auto mt-1 h-6 w-10 rounded-full bg-raised" />
+        <div className={`${drop} inset-y-3 duration-[540ms] ease-[cubic-bezier(0.45,0.1,0.1,1)]`} style={at}>
+          <div className="mx-auto h-full w-10 rounded-xl bg-raised" />
         </div>
       </div>
     </>
