@@ -4,7 +4,11 @@
  * below, and anything else off this machine fails as if offline. Requests to the server itself pass.
  *
  * Cover id 666 is OpenLibrary's cover server being down: the connection resets.
+ *
+ * Cloudflare R2 (where hosted copies keep covers; serve.mjs sets made-up R2 keys) is a bucket in
+ * memory behind a server on this machine, which refuses uploads without a Content-Length as R2 does.
  */
+import http from "node:http";
 import sharp from "sharp";
 import { BOOKS } from "./fixtures.mjs";
 
@@ -51,6 +55,31 @@ function inventaire(url) {
   return json({ results: [] });
 }
 
+const bucket = new Map();
+const r2 = http.createServer((req, res) => {
+  const chunks = [];
+  req.on("data", (c) => chunks.push(c));
+  req.on("end", () => {
+    if (req.method === "PUT") {
+      if (!req.headers["content-length"]) return res.writeHead(411).end("<Error><Code>MissingContentLength</Code></Error>");
+      bucket.set(req.url, Buffer.concat(chunks));
+      return res.end();
+    }
+    if (req.method === "DELETE") return bucket.delete(req.url), res.writeHead(204).end();
+    const object = bucket.get(req.url);
+    if (!object) return res.writeHead(404).end();
+    res.writeHead(200, { "Content-Type": "image/webp", "Content-Length": object.length }).end(req.method === "HEAD" ? undefined : object);
+  });
+});
+await new Promise((resolve) => r2.listen(0, "127.0.0.1", resolve));
+r2.unref();
+
+/** Sends an R2 request to the local bucket as it was made: a Request object as one, so its body goes the same way. */
+function toR2(url, input, init) {
+  const local = `http://127.0.0.1:${r2.address().port}${url.pathname}`;
+  return input instanceof Request ? realFetch(new Request(local, input), init) : realFetch(local, init);
+}
+
 function route(url) {
   switch (url.hostname) {
     case "openlibrary.org":
@@ -70,6 +99,7 @@ function route(url) {
 globalThis.fetch = async function stubbedFetch(input, init) {
   const url = new URL(input instanceof Request ? input.url : String(input));
   if (["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) return realFetch(input, init);
+  if (url.hostname.endsWith(".r2.cloudflarestorage.com")) return toR2(url, input, init);
   const res = await route(url);
   // fetchCover checks where redirects ended up.
   Object.defineProperty(res, "url", { value: url.href });

@@ -117,7 +117,7 @@ npx playwright install chromium   # once
 npm test
 ```
 
-The tests drive the app in a real browser through everyday actions: adding a book by hand, finding one by search and saving it with its cover (also when OpenLibrary's cover server is down), editing and deleting. Each run starts its own copy of the app on port 3210 with an empty library in `e2e/.data`, and never reaches the real book catalogs: `e2e/catalog-stub.mjs` answers for them from `e2e/fixtures.mjs`. `e2e/demo.spec.ts` runs against a second copy in demo mode on port 3211. Stop `npm run dev` first, as Next.js runs one dev server per project. Add a test to `e2e/` when you add or change a common action.
+The tests drive the app in a real browser through everyday actions: adding a book by hand, finding one by search and saving it with its cover (also when OpenLibrary's cover server is down), editing and deleting. Each run starts its own copy of the app on port 3210 with an empty library in `e2e/.data`, and never reaches the real book catalogs: `e2e/catalog-stub.mjs` answers for them from `e2e/fixtures.mjs`, and keeps covers in a stand-in for Cloudflare R2 that, like R2, refuses uploads without a Content-Length. `e2e/demo.spec.ts` runs against a second copy in demo mode on port 3211. Stop `npm run dev` first, as Next.js runs one dev server per project. Add a test to `e2e/` when you add or change a common action.
 
 ### Moving a local library to your hosted copy
 
