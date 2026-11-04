@@ -44,7 +44,20 @@ export function GoodreadsImport() {
     }
   }
 
+  // Set as soon as Import is pressed, before the button is gone, so a second press can't import everything twice.
+  const importing = useRef(false);
+
   async function run(books: GoodreadsBook[]) {
+    if (importing.current) return;
+    importing.current = true;
+    try {
+      await importBooks(books);
+    } finally {
+      importing.current = false;
+    }
+  }
+
+  async function importBooks(books: GoodreadsBook[]) {
     setError(null);
     const added: { id: number; isbn13: string | null }[] = [];
     try {

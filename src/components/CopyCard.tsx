@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { deleteLoanAction, lendAction, returnLoanAction, setOwnedAction } from "@/app/(app)/books/actions";
 import type { Loan } from "@/lib/books";
 import { formatDay, todayLocal } from "@/lib/dates";
@@ -19,7 +19,19 @@ export function CopyCard({ bookId, owned, loans, people }: Props) {
   const [lending, setLending] = useState(false);
   const open = loans.find((l) => !l.returnedOn);
   const past = loans.filter((l) => l.returnedOn);
-  const run = (fn: () => Promise<void>) => start(fn);
+  // Disabling the buttons waits for a re-render; this doesn't, so a double tap can't, say, lend the book (and add the new person) twice.
+  const busy = useRef(false);
+  const run = (fn: () => Promise<void>) => {
+    if (busy.current) return;
+    busy.current = true;
+    start(async () => {
+      try {
+        await fn();
+      } finally {
+        busy.current = false;
+      }
+    });
+  };
 
   return (
     <section className="space-y-3">

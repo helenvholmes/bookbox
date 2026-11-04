@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { statusesFrom, withReads, withStatus, type ShownRead } from "@/lib/book-state";
 import type { Read } from "@/lib/books";
 import { formatSpan, todayLocal } from "@/lib/dates";
@@ -18,6 +18,8 @@ export function ReadsCard({ bookId, reads: saved, shelves }: { bookId: number; r
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<ShownRead | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The form closes on the next render; until then a second Add read (a double tap, Enter twice) would log the read twice.
+  const added = useRef(false);
 
   return (
     <section className="space-y-3">
@@ -70,6 +72,8 @@ export function ReadsCard({ bookId, reads: saved, shelves }: { bookId: number; r
               const year = finishedOn ? Number(finishedOn.slice(0, 4)) : Number(String(fd.get("year") ?? "").trim());
               if (!validYear(year)) return setError("Enter a year like 2026.");
               if (startedOn && finishedOn && startedOn > finishedOn) return setError("The start is after the finish.");
+              if (added.current) return;
+              added.current = true;
               submit({ kind: "addRead", bookId, clientId: newId(), year, note: String(fd.get("note") ?? "").trim(), startedOn, finishedOn });
               setError(null);
               setAdding(false);
@@ -89,7 +93,14 @@ export function ReadsCard({ bookId, reads: saved, shelves }: { bookId: number; r
             </div>
           </form>
         ) : (
-          <button type="button" className="block w-full p-3 text-left text-[0.8125rem] text-muted hover:text-ink" onClick={() => setAdding(true)}>
+          <button
+            type="button"
+            className="block w-full p-3 text-left text-[0.8125rem] text-muted hover:text-ink"
+            onClick={() => {
+              added.current = false;
+              setAdding(true);
+            }}
+          >
             + {reads.length ? "Add a re-read" : "Add a read"}
           </button>
         )}

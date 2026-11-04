@@ -138,3 +138,29 @@ test("adds a person only once when Add person is pressed again while it saves", 
   await page.goto("/people");
   await expect(page.getByRole("link", { name: /Katie Twice/ })).toHaveCount(1);
 });
+
+test("imports a Goodreads export only once when Import is pressed again while it runs", async ({ page }) => {
+  await page.goto("/settings");
+  await page.locator("#goodreads-file").setInputFiles({
+    name: "goodreads_library_export.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("Title,Author,Exclusive Shelf\nImported Just Once,Samantha Reyes,to-read\n"),
+  });
+  const add = page.getByRole("button", { name: "Import 1 book" });
+  await expect(add).toBeVisible();
+
+  await page.route("**/settings", async (route) => {
+    if (route.request().method() === "POST") await new Promise((r) => setTimeout(r, 1500));
+    await route.continue();
+  });
+  await add.evaluate((button: HTMLButtonElement) => {
+    button.click();
+    button.click();
+    button.click();
+  });
+  await expect(page.getByText("Added 1 book")).toBeVisible();
+  await page.unroute("**/settings");
+
+  const csv = await (await page.request.get("/export/books.csv")).text();
+  expect(csv.split("Imported Just Once").length - 1).toBe(1);
+});
