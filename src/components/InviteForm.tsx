@@ -2,10 +2,11 @@
 
 import { useActionState, useState } from "react";
 import { createInviteAction, type InviteState } from "@/app/(app)/settings/actions";
+import { SubmitButton } from "./SubmitButton";
 
 /** Makes an invite link and shows it once, ready to copy into a message. */
 export function InviteForm() {
-  const [state, action, pending] = useActionState(createInviteAction, null as InviteState);
+  const [state, action] = useActionState(createInviteAction, null as InviteState);
   const [copied, setCopied] = useState<string | null>(null);
   return (
     <div className="space-y-3">
@@ -14,9 +15,9 @@ export function InviteForm() {
           <span className="text-xs text-muted">Who it’s for (just for you)</span>
           <input name="note" maxLength={80} placeholder="e.g. Katie" className="field" />
         </label>
-        <button className="btn rounded-full px-4" disabled={pending}>
-          {pending ? "Making…" : "Make invite link"}
-        </button>
+        <SubmitButton className="btn rounded-full px-4" pending="Making…">
+          Make invite link
+        </SubmitButton>
       </form>
       {state?.error && <p className="text-xs text-danger">{state.error}</p>}
       {state?.link && (

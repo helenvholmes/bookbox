@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { getFacets, getTag } from "@/lib/books";
 import { deleteTagAction, mergeTagAction, updateTagAction } from "../actions";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export async function generateMetadata(props: PageProps<"/tags/[id]">): Promise<Metadata> {
   const tag = await getTag(Number((await props.params).id));
@@ -38,7 +39,9 @@ export default async function TagPage(props: PageProps<"/tags/[id]">) {
           <span className="mb-1.5 block text-sm font-medium">Notes</span>
           <textarea name="notes" defaultValue={tag.notes} className="field" />
         </label>
-        <button className="btn btn-primary">Save</button>
+        <SubmitButton className="btn btn-primary" pending="Saving…">
+          Save
+        </SubmitButton>
       </form>
 
       <form action={mergeTagAction} className="space-y-3 card p-4">
@@ -57,7 +60,9 @@ export default async function TagPage(props: PageProps<"/tags/[id]">) {
               </option>
             ))}
         </select>
-        <button className="btn">Merge</button>
+        <SubmitButton className="btn" pending="Merging…">
+          Merge
+        </SubmitButton>
       </form>
 
       <form action={deleteTagAction} className="text-center">

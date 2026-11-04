@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { createListAction, renameListAction, type ListState } from "@/app/(app)/lists/actions";
+import { SubmitButton } from "./SubmitButton";
 
 /** The name field that "+ New list" opens under the Lists page's tabs (src/components/CollectionHeader.tsx). */
 export function NewListForm({ onClose }: { onClose: () => void }) {
@@ -17,9 +18,9 @@ export function NewListForm({ onClose }: { onClose: () => void }) {
       <button type="button" className="btn rounded-full px-4" onClick={onClose} disabled={pending}>
         Cancel
       </button>
-      <button className="btn btn-primary rounded-full px-4" disabled={pending}>
-        {pending ? "Making…" : "Make list"}
-      </button>
+      <SubmitButton className="btn btn-primary rounded-full px-4" pending="Making…">
+        Make list
+      </SubmitButton>
       {state?.error && <p className="basis-full text-sm text-danger">{state.error}</p>}
     </form>
   );

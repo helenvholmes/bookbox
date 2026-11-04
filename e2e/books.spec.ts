@@ -112,3 +112,29 @@ test("the CSV export keeps formula-like text as text", async ({ page }) => {
   expect(csv).toContain(`"'=HYPERLINK(""https://example.com"")"`);
   expect(csv).not.toMatch(/,=HYPERLINK|,"=HYPERLINK/);
 });
+
+test("adds a person only once when Add person is pressed again while it saves", async ({ page }) => {
+  await page.goto("/people");
+  await page.getByRole("button", { name: "+ Add person" }).click();
+  await page.getByLabel("First name").fill("Katie");
+  await page.getByLabel("Last name").fill("Twice");
+
+  // Slow the save down, so the extra presses land while it's still running.
+  await page.route("**/people", async (route) => {
+    if (route.request().method() === "POST") await new Promise((r) => setTimeout(r, 1500));
+    await route.continue();
+  });
+  const add = page.getByRole("button", { name: "Add person", exact: true });
+  // Three presses in one go, quicker than anyone could tap.
+  await add.evaluate((button: HTMLButtonElement) => {
+    button.click();
+    button.click();
+    button.click();
+  });
+  await expect(page.getByRole("button", { name: "Adding…" })).toBeDisabled();
+  await expect(page).toHaveURL(/\/people\/katie-twice/);
+
+  await page.unroute("**/people");
+  await page.goto("/people");
+  await expect(page.getByRole("link", { name: /Katie Twice/ })).toHaveCount(1);
+});

@@ -14,6 +14,7 @@ import { EditionCovers } from "./EditionCovers";
 import { LookupCover } from "./LookupCover";
 import { MultiPicker, StarInput, Toggle, YearsInput, type Option } from "./inputs";
 import { OpenLibraryLookup } from "./OpenLibraryLookup";
+import { SubmitButton } from "./SubmitButton";
 
 export type FormOptions = {
   shelves: string[];
@@ -81,7 +82,7 @@ async function downscale(file: File, maxWidth = 1200): Promise<File> {
 
 export function BookForm({ book, options, startScanning = false }: { book?: Book; options: FormOptions; startScanning?: boolean }) {
   const isNew = !book;
-  const [state, formAction, saving] = useActionState(saveBookAction, undefined);
+  const [state, formAction] = useActionState(saveBookAction, undefined);
   const router = useRouter();
   // Opened from another page: Save (on an edit) and Cancel step back to it, so the form doesn't stay in the history.
   useEffect(() => {
@@ -256,9 +257,9 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
               Cancel
             </Link>
             <span className="truncate display text-lg">{isNew ? "New book" : "Edit book"}</span>
-            <button className="btn btn-primary" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </button>
+            <SubmitButton className="btn btn-primary" pending="Saving…">
+              Save
+            </SubmitButton>
           </div>
 
           {state?.error && <p className="rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger">{state.error}</p>}
@@ -479,9 +480,9 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
           </div>
           {text("publisher", "Publisher")}
 
-          <button className="btn btn-primary w-full py-3" disabled={saving}>
-            {saving ? "Saving…" : isNew ? "Add book" : "Save changes"}
-          </button>
+          <SubmitButton className="btn btn-primary w-full py-3" pending="Saving…">
+            {isNew ? "Add book" : "Save changes"}
+          </SubmitButton>
         </form>
       )}
     </div>

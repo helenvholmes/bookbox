@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { detectSeriesFromTitles, listSeries } from "@/lib/books";
 import { checkSeriesOnHardcover } from "@/lib/hardcover";
 import { applyDetectedSeriesAction } from "@/app/(app)/series/actions";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export const metadata = { title: "Series" };
 
@@ -29,7 +30,9 @@ export default async function SeriesPage() {
             ({detectedNames.slice(0, 3).join(", ")}
             {detectedNames.length > 3 ? ` and ${detectedNames.length - 3} more` : ""}).
           </p>
-          <button className="btn btn-primary shrink-0 rounded-full px-4">Add them to series</button>
+          <SubmitButton className="btn btn-primary shrink-0 rounded-full px-4" pending="Adding…">
+            Add them to series
+          </SubmitButton>
         </form>
       )}
 

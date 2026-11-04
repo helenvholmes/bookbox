@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { RefreshRunner } from "@/components/RefreshRunner";
+import { SubmitButton } from "@/components/SubmitButton";
 import { getRefreshStatus, listSuggestions, type Suggestion } from "@/lib/refresh";
 import { allSuggestionsAction, suggestionAction } from "./actions";
 
@@ -43,12 +44,12 @@ export default async function RefreshPage() {
               </h2>
               <form action={allSuggestionsAction} className="flex gap-3 text-xs">
                 <input type="hidden" name="field" value={g.field} />
-                <button name="decision" value="dismiss" className="text-muted hover:text-ink">
+                <SubmitButton name="decision" value="dismiss" className="text-muted hover:text-ink" pending="Dismissing…">
                   Dismiss all
-                </button>
-                <button name="decision" value="accept" className="text-muted hover:text-ink">
+                </SubmitButton>
+                <SubmitButton name="decision" value="accept" className="text-muted hover:text-ink" pending="Accepting…">
                   Accept all
-                </button>
+                </SubmitButton>
               </form>
             </div>
             <ul className="card divide-y divide-line">
@@ -67,12 +68,12 @@ export default async function RefreshPage() {
                   <form action={suggestionAction} className="flex shrink-0 gap-2">
                     <input type="hidden" name="book_id" value={s.book_id} />
                     <input type="hidden" name="field" value={s.field} />
-                    <button name="decision" value="dismiss" className="btn rounded-full px-3 text-xs">
+                    <SubmitButton name="decision" value="dismiss" className="btn rounded-full px-3 text-xs" pending="Dismissing…">
                       Dismiss
-                    </button>
-                    <button name="decision" value="accept" className="btn btn-primary rounded-full px-3 text-xs">
+                    </SubmitButton>
+                    <SubmitButton name="decision" value="accept" className="btn btn-primary rounded-full px-3 text-xs" pending="Accepting…">
                       Accept
-                    </button>
+                    </SubmitButton>
                   </form>
                 </li>
               ))}

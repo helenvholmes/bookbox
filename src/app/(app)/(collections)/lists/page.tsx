@@ -49,7 +49,7 @@ export default async function ListsPage() {
               </option>
             ))}
           </select>
-          <ConfirmButton className="btn" message="Turn this tag into a list? The tag is removed; its books go on the list." confirmLabel="Make list">
+          <ConfirmButton className="btn" message="Turn this tag into a list? The tag is removed; its books go on the list." confirmLabel="Make list" pending="Making…">
             Make list
           </ConfirmButton>
         </form>

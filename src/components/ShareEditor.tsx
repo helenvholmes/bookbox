@@ -64,7 +64,7 @@ export function ShareEditor({ personId, first, settings, counts, defaultTitle, a
           </div>
           <form action={regenerateShareAction}>
             <input type="hidden" name="person_id" value={personId} />
-            <ConfirmButton className="text-xs text-muted underline hover:text-ink" message="Make a new link? The old one will stop working." confirmLabel="New link">
+            <ConfirmButton className="text-xs text-muted underline hover:text-ink" message="Make a new link? The old one will stop working." confirmLabel="New link" pending="Making…">
               Make a new link
             </ConfirmButton>
           </form>

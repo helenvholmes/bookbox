@@ -152,7 +152,7 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
                       </SubmitButton>
                     </form>
                     <form action={disconnectAction}>
-                      <ConfirmButton className="btn rounded-full px-4" message="Disconnect Spotify? Synced progress is removed." confirmLabel="Disconnect">
+                      <ConfirmButton className="btn rounded-full px-4" message="Disconnect Spotify? Synced progress is removed." confirmLabel="Disconnect" pending="Disconnecting…">
                         Disconnect
                       </ConfirmButton>
                     </form>
@@ -202,6 +202,7 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
                           className="text-xs text-faint hover:text-danger"
                           message="Remove the keys? Spotify is disconnected too."
                           confirmLabel="Remove"
+                          pending="Removing…"
                         >
                           Remove keys
                         </ConfirmButton>
@@ -247,7 +248,7 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
                       </SubmitButton>
                     </form>
                     <form action={disconnectLibbyAction}>
-                      <ConfirmButton className="btn rounded-full px-4" message="Disconnect Libby? Your books stay as they are." confirmLabel="Disconnect">
+                      <ConfirmButton className="btn rounded-full px-4" message="Disconnect Libby? Your books stay as they are." confirmLabel="Disconnect" pending="Disconnecting…">
                         Disconnect
                       </ConfirmButton>
                     </form>
@@ -300,7 +301,7 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
                 <HardcoverTokenForm replacing={!!hardcover} />
                 {hardcover && (
                   <form action={removeHardcoverTokenAction}>
-                    <ConfirmButton className="text-xs text-faint hover:text-danger" message="Remove the Hardcover token?" confirmLabel="Remove">
+                    <ConfirmButton className="text-xs text-faint hover:text-danger" message="Remove the Hardcover token?" confirmLabel="Remove" pending="Removing…">
                       Remove token
                     </ConfirmButton>
                   </form>
@@ -336,6 +337,7 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
                       className="text-xs text-faint hover:text-danger"
                       message={`Revoke the key for ${k.name}? Apps using it stop working.`}
                       confirmLabel="Revoke"
+                      pending="Revoking…"
                     >
                       Revoke
                     </ConfirmButton>
@@ -437,6 +439,7 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
                     className="text-xs text-faint hover:text-danger"
                     message="Cancel this invite? The link stops working."
                     confirmLabel="Cancel invite"
+                    pending="Cancelling…"
                   >
                     Cancel
                   </ConfirmButton>
