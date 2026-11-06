@@ -106,7 +106,7 @@ export function SearchBox({ value, onSubmit }: Props) {
       />
 
       {open && q.trim() && entries && (
-        <div id={listId} role="listbox" className="card absolute inset-x-0 top-full z-30 mt-2 overflow-hidden p-1 shadow-2xl shadow-black/50">
+        <div id={listId} role="listbox" className="card absolute inset-x-0 top-full z-30 mt-2 overflow-hidden p-1 shadow-2xl shadow-shadow">
           {shown.length === 0 ? (
             <p className="px-3 py-4 text-center text-sm text-muted">No books match &ldquo;{q.trim()}&rdquo;.</p>
           ) : (

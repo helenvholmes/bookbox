@@ -101,7 +101,7 @@ export function YearChart({ rows, highlight }: { rows: Row[]; highlight: number 
           {shown && (
             <div
               aria-hidden
-              className="pointer-events-none absolute -top-2 z-10 -translate-x-1/2 -translate-y-full rounded-md border border-line bg-raised px-2.5 py-1.5 text-xs whitespace-nowrap text-ink shadow-[0_8px_24px_rgb(0_0_0/0.5)]"
+              className="pointer-events-none absolute -top-2 z-10 -translate-x-1/2 -translate-y-full rounded-md border border-line bg-raised px-2.5 py-1.5 text-xs whitespace-nowrap text-ink shadow-[0_8px_24px_var(--shadow)]"
               style={{ left: `${((hover! + 0.5) / years.length) * 100}%` }}
             >
               <span className="text-muted">{shown.year}</span> · {shown.books} {shown.books === 1 ? "book" : "books"}

@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
-/* Dark-only, after Oku: near-black surfaces, hairline borders, no shadows, white for emphasis. */
+/*
+ * After Oku: near-black surfaces, hairline borders, no shadows, white for emphasis. The system's
+ * light setting swaps in the light palette below: the same layout on off-white, ink for emphasis.
+ */
 :root {
   --paper: #111214;
   --card: #17181b;
@@ -19,7 +22,63 @@
   --accent-ink: #111214;
   --star: #e9e2d0;
   --danger: #f28b82;
+  /* Text on a solid --danger button. */
+  --danger-ink: #1a0f0e;
+  /* The primary button under the pointer. */
+  --accent-hover: #e2e2e4;
+  /* Long text (descriptions, notes), a step softer than --ink. */
+  --prose: #c9cacd;
+  /* The desktop sidebar and the phone menu, a shade off the page. */
+  --sidebar: #0e0f11;
+  /* Under popovers, toasts and the landing page's sample card. */
+  --shadow: rgb(0 0 0 / 0.5);
+  /* The soft light behind the landing page's sample card. */
+  --glow: rgb(236 236 237 / 0.07);
+  /* Initials circles (src/components/Avatar.tsx), muted against the page. */
+  --avatar-0: #3a3d44;
+  --avatar-1: #4a4038;
+  --avatar-2: #37443d;
+  --avatar-3: #3f3a4a;
+  --avatar-4: #473a3d;
+  --avatar-5: #384449;
+  /* How much of a share page's chosen accent shows, the rest darkened (its colours are pale, for dark pages). */
+  --share-tone: 100%;
   color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --paper: #f8f8f6;
+    --card: #ffffff;
+    --raised: #e4e4df;
+    --ink: #1b1c1f;
+    /* Muted and faint text both clear WCAG AA (4.5:1) on every surface from --paper to --pill. */
+    --muted: #585a60;
+    --faint: #606268;
+    --line: #e3e3df;
+    --line-hover: #cbcbc6;
+    --pill: #f0f0ed;
+    --pill-ink: #56585e;
+    --accent: #1b1c1f;
+    --accent-soft: #ebebe7;
+    --accent-ink: #ffffff;
+    --star: #8a6a1c;
+    --danger: #c0281f;
+    --danger-ink: #ffffff;
+    --accent-hover: #38393d;
+    --prose: #38393d;
+    --sidebar: #f3f3f1;
+    --shadow: rgb(20 20 25 / 0.12);
+    --glow: rgb(255 255 255 / 0.9);
+    --avatar-0: #dcdee3;
+    --avatar-1: #e6ddd3;
+    --avatar-2: #d6e2da;
+    --avatar-3: #dfd9e8;
+    --avatar-4: #e8d9dc;
+    --avatar-5: #d5e1e5;
+    --share-tone: 55%;
+    color-scheme: light;
+  }
 }
 
 @theme inline {
@@ -38,6 +97,8 @@
   --color-pill: var(--pill);
   --color-pill-ink: var(--pill-ink);
   --color-danger: var(--danger);
+  --color-sidebar: var(--sidebar);
+  --color-shadow: var(--shadow);
   --font-sans: var(--font-inter);
   --font-display: var(--font-newsreader);
 }
@@ -99,9 +160,6 @@ body {
     min-height: 7rem;
     line-height: 1.55;
   }
-  select.field {
-    color-scheme: dark;
-  }
 
   .btn {
     display: inline-flex;
@@ -129,7 +187,7 @@ body {
     color: var(--accent-ink);
   }
   .btn-primary:hover {
-    background: #e2e2e4;
+    background: var(--accent-hover);
   }
   .btn-danger {
     color: var(--danger);
@@ -142,10 +200,10 @@ body {
   .btn-danger-solid {
     background: var(--danger);
     border-color: var(--danger);
-    color: #1a0f0e;
+    color: var(--danger-ink);
   }
   .btn-danger-solid:hover {
-    background: color-mix(in srgb, var(--danger) 85%, white);
+    background: color-mix(in srgb, var(--danger) 85%, var(--paper));
   }
 
   .chip {
@@ -184,7 +242,7 @@ body {
     white-space: pre-wrap;
     line-height: 1.7;
     font-size: 0.875rem;
-    color: #c9cacd;
+    color: var(--prose);
   }
 
   .no-scrollbar::-webkit-scrollbar {
