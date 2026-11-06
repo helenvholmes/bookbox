@@ -4,6 +4,7 @@ import { SOURCE_URL } from "@/lib/constants";
 import { withShareLibrary } from "@/lib/owners";
 import { ownerName } from "@/lib/settings";
 import { getSharedList } from "@/lib/share";
+import { shownAccent } from "@/lib/share-accent";
 import { SharedBooks } from "@/components/SharedBooks";
 
 export async function generateMetadata(props: PageProps<"/s/[token]">): Promise<Metadata> {
@@ -23,7 +24,7 @@ export default async function SharedListPage(props: PageProps<"/s/[token]">) {
   if (!data) notFound();
   const { settings, forThem, fromThem, title } = data;
   const srcBase = `/s/${token}/c`;
-  const accent = settings.accent;
+  const accent = shownAccent(settings.accent);
 
   return (
     <main className="mx-auto max-w-4xl px-5 pt-[max(2.5rem,env(safe-area-inset-top))] pb-16 sm:px-8 sm:pt-16">

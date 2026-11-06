@@ -15,7 +15,7 @@ export function LocalCopyBanner({ pulledAt }: { pulledAt: number | null }) {
   const when = pulledAt ? new Date(pulledAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null;
   return (
     <div role="status" className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 md:bottom-4 md:left-56">
-      <form action={action} className="card pointer-events-auto flex flex-wrap items-center gap-3 px-4 py-2 text-xs text-muted shadow-xl shadow-black/40">
+      <form action={action} className="card pointer-events-auto flex flex-wrap items-center gap-3 px-4 py-2 text-xs text-muted shadow-xl shadow-shadow">
         <span className="size-1.5 rounded-full bg-accent" aria-hidden />
         {state?.summary ?? state?.error ?? (when ? `Local copy of your library from ${when}.` : "This is a local copy of your library, not the live one.")}
         {!state?.summary && (
