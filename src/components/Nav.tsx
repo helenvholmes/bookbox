@@ -8,6 +8,7 @@ import { arrivedAt, notePage, notePlace, rememberScroll } from "@/lib/history";
 import { SignOutButton } from "./SignOutButton";
 import { GooeyFilter } from "./GooeyFilter";
 import { ShelfIcon, STATUS_SHELVES, shelfLabel } from "./ShelfIcon";
+import { formatCount } from "@/lib/numbers";
 
 const ICONS = {
   library: "M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z",
@@ -68,7 +69,7 @@ function useYears(years: Props["years"]) {
 
 /** Sidebar rows; `large` is the phone menu, which has the whole screen and fingers to fit: everything there is at least 40 pixels square to tap. */
 const item = (active: boolean, large = false) =>
-  `flex items-center gap-2.5 rounded-md px-2.5 transition ${large ? "py-2.5 text-base" : "py-1.5 text-[0.8125rem]"} ${active ? "bg-raised text-ink" : "text-muted hover:text-ink"}`;
+  `flex items-center gap-2.5 rounded-md px-2.5 transition active:opacity-60 ${large ? "py-2.5 text-base" : "py-1.5 text-[0.8125rem]"} ${active ? "bg-raised text-ink" : "text-muted hover:text-ink"}`;
 
 /**
  * Everything in the sidebar: shown beside the page on desktop, and in the full-screen Menu on
@@ -90,7 +91,7 @@ function SidebarLinks({ years: withReads, lists, canSignOut, large = false }: Pr
     <Link key={y} href={`/library?year=${y}`} className={`${row(year === String(y))} ${nested ? "pl-8" : ""}`}>
       <YearIcon filled={year === String(y)} />
       <span className="flex-1">{y}</span>
-      <span className="text-xs text-faint">{count}</span>
+      <span className="text-xs text-faint tabular-nums">{formatCount(count)}</span>
     </Link>
   );
 
@@ -162,7 +163,7 @@ function SidebarLinks({ years: withReads, lists, canSignOut, large = false }: Pr
           <Link key={l.id} href={`/library?shelf=${encodeURIComponent(l.name)}`} className={row(shelf === l.name)}>
             <Icon d={ICONS.list} />
             <span className="min-w-0 flex-1 truncate">{l.name}</span>
-            <span className="text-xs text-faint">{l.count}</span>
+            <span className="text-xs text-faint tabular-nums">{formatCount(l.count)}</span>
           </Link>
         ))}
         {lists.length === 0 && (
@@ -197,18 +198,26 @@ function SidebarLinks({ years: withReads, lists, canSignOut, large = false }: Pr
   );
 }
 
-/** How long the phone menu takes to slide in or out; matches its duration-300 class. */
+/** How long the phone menu takes to slide in or out (its duration-300 class), or to fade with reduced motion (duration-150). */
 const SLIDE_MS = 300;
+const FADE_MS = 150;
+/** A swipe to the right closes the menu once it's dragged this share of its width, or let go faster than this (px/ms). */
+const DISMISS_SHARE = 0.4;
+const DISMISS_SPEED = 0.5;
 
 /**
  * Opens and closes the phone menu with a slide from the right. It's driven from here rather than
  * with CSS alone (@starting-style and transitioning `overlay`), which Safari on iPhone doesn't fully
  * support: there the menu appeared without sliding in, and left the screen before sliding out.
  * Opening shows the dialog off-screen first, then slides it in; closing slides it out, then closes it.
+ *
+ * It can also be swiped closed, back the way it came: it follows the finger to the right, and closes when let go far
+ * enough or fast enough, or slides back. Up-and-down swipes scroll it as usual.
  */
 function useSlidingDialog() {
   const ref = useRef<HTMLDialogElement>(null);
   const closing = useRef<number | undefined>(undefined);
+  const drag = useRef<{ x: number; y: number; dx: number; axis: "x" | "y" | null; lastX: number; lastT: number; speed: number } | null>(null);
   const open = useCallback(() => {
     const d = ref.current;
     if (!d) return;
@@ -223,15 +232,63 @@ function useSlidingDialog() {
     if (!d?.open || d.dataset.shown !== "true") return;
     d.dataset.shown = "false";
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    closing.current = window.setTimeout(() => d.close(), still ? 0 : SLIDE_MS);
+    closing.current = window.setTimeout(() => d.close(), still ? FADE_MS : SLIDE_MS);
   }, []);
-  return { ref, open, close };
+
+  const swipe = {
+    onPointerDown(e: React.PointerEvent<HTMLDialogElement>) {
+      if (e.pointerType === "mouse") return;
+      drag.current = { x: e.clientX, y: e.clientY, dx: 0, axis: null, lastX: e.clientX, lastT: e.timeStamp, speed: 0 };
+    },
+    onPointerMove(e: React.PointerEvent<HTMLDialogElement>) {
+      const g = drag.current;
+      const d = e.currentTarget;
+      if (!g) return;
+      const dx = e.clientX - g.x;
+      // Decide once, after a few pixels, whether this is a sideways swipe or a scroll.
+      if (!g.axis) {
+        if (Math.hypot(dx, e.clientY - g.y) < 8) return;
+        g.axis = Math.abs(dx) > Math.abs(e.clientY - g.y) ? "x" : "y";
+        if (g.axis === "x") d.style.transition = "none";
+      }
+      if (g.axis !== "x") return;
+      g.speed = (e.clientX - g.lastX) / Math.max(1, e.timeStamp - g.lastT);
+      g.lastX = e.clientX;
+      g.lastT = e.timeStamp;
+      g.dx = Math.max(0, dx);
+      // Straight onto the element, not through React state, so it keeps up with the finger.
+      d.style.transform = `translate3d(${g.dx}px,0,0)`;
+    },
+    onPointerUp(e: React.PointerEvent<HTMLDialogElement>) {
+      const g = drag.current;
+      const d = e.currentTarget;
+      drag.current = null;
+      if (g?.axis !== "x") return;
+      // The finger lifting off a link at the end of a swipe isn't a tap on it. (Only the click that comes straight
+      // after: a swipe often produces none, and the next real tap must get through.)
+      if (g.dx > 0) {
+        const swallow = (c: MouseEvent) => c.preventDefault();
+        d.addEventListener("click", swallow, { capture: true, once: true });
+        window.setTimeout(() => d.removeEventListener("click", swallow, { capture: true }), 300);
+      }
+      d.style.transition = "";
+      if (g.dx > d.offsetWidth * DISMISS_SHARE || g.speed > DISMISS_SPEED) close();
+      // Either way the CSS transition takes it from here: on out, or back into place.
+      d.style.transform = "";
+    },
+    onPointerCancel(e: React.PointerEvent<HTMLDialogElement>) {
+      drag.current = null;
+      e.currentTarget.style.transition = "";
+      e.currentTarget.style.transform = "";
+    },
+  };
+  return { ref, open, close, swipe };
 }
 
 export function Nav({ years, lists, canSignOut }: Props) {
   const pathname = usePathname();
   const params = useSearchParams();
-  const { ref: menuRef, open: openMenu, close: closeMenu } = useSlidingDialog();
+  const { ref: menuRef, open: openMenu, close: closeMenu, swipe } = useSlidingDialog();
   // The tab you just tapped, lit at once rather than when its page arrives; it counts only until you're somewhere new.
   const [tapped, setTapped] = useState<{ href: string; from: string } | null>(null);
 
@@ -290,7 +347,9 @@ export function Nav({ years, lists, canSignOut }: Props) {
         onClick={(e) => {
           if ((e.target as Element).closest("a")) closeMenu();
         }}
-        className="m-0 h-dvh max-h-none w-full max-w-none [transform:translate3d(100%,0,0)] overflow-y-auto overscroll-contain bg-sidebar p-0 text-ink transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform backdrop:bg-transparent data-[shown=true]:[transform:translate3d(0,0,0)] motion-reduce:transition-none md:hidden"
+        {...swipe}
+        // Slides in from the right; with reduced motion it fades in where it is instead.
+        className="m-0 h-dvh max-h-none w-full max-w-none touch-pan-y overflow-y-auto overscroll-contain bg-sidebar p-0 text-ink backdrop:bg-transparent motion-safe:[transform:translate3d(100%,0,0)] motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-(--vt-ease) motion-safe:will-change-transform motion-safe:data-[shown=true]:[transform:translate3d(0,0,0)] motion-reduce:opacity-0 motion-reduce:transition-opacity motion-reduce:duration-150 motion-reduce:ease-out motion-reduce:data-[shown=true]:opacity-100 md:hidden"
       >
         <button
           type="button"
@@ -322,7 +381,7 @@ export function Nav({ years, lists, canSignOut }: Props) {
               onClick={() => setTapped({ href: t.href, from: location })}
               // Touching it fetches the whole page (src/components/TouchPrefetch.tsx).
               data-prefetch="full"
-              className={`flex min-h-10 min-w-10 flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] transition-colors duration-200 ${lit === i ? "text-ink" : "text-muted"}`}
+              className={`flex min-h-10 min-w-10 flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] transition-[color,opacity] duration-200 active:opacity-60 ${lit === i ? "text-ink" : "text-muted"}`}
             >
               <Icon d={t.d} className="size-5" />
               {t.label}
@@ -332,7 +391,7 @@ export function Nav({ years, lists, canSignOut }: Props) {
             type="button"
             onClick={openMenu}
             aria-haspopup="dialog"
-            className={`flex min-h-10 min-w-10 flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] transition-colors duration-200 ${lit === tabs.length ? "text-ink" : "text-muted"}`}
+            className={`flex min-h-10 min-w-10 flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] transition-[color,opacity] duration-200 active:opacity-60 ${lit === tabs.length ? "text-ink" : "text-muted"}`}
           >
             <Icon d={ICONS.menu} className="size-5" />
             Menu
@@ -359,10 +418,11 @@ function TabBlob({ index, count }: { index: number; count: number }) {
     <>
       <GooeyFilter id="tab-goo" />
       <div aria-hidden className={`pointer-events-none absolute inset-x-2 top-0 bottom-[env(safe-area-inset-bottom)] transition-opacity duration-200 ${index < 0 ? "opacity-0" : ""}`} style={{ filter: "url(#tab-goo)" }}>
-        <div className={`${drop} inset-y-1 duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)]`} style={at}>
+        {/* The pill gets there in 240ms and the trailing drop catches up by 300ms, on the page transitions' curve. */}
+        <div className={`${drop} inset-y-1 duration-[240ms] ease-(--vt-ease)`} style={at}>
           <div className="h-full w-full rounded-xl bg-raised" />
         </div>
-        <div className={`${drop} inset-y-3 duration-[540ms] ease-[cubic-bezier(0.45,0.1,0.1,1)]`} style={at}>
+        <div className={`${drop} inset-y-3 duration-300 ease-(--vt-ease)`} style={at}>
           <div className="mx-auto h-full w-[70%] rounded-xl bg-raised" />
         </div>
       </div>

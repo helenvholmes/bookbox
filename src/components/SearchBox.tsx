@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { cachedIndex, loadIndex } from "@/lib/library-index";
 import { searchBooks, type SearchEntry, type SearchHit } from "@/lib/search";
+import { formatCount } from "@/lib/numbers";
 
 const SHOWN = 8;
 
@@ -141,7 +142,7 @@ export function SearchBox({ value, onSubmit }: Props) {
                 onPointerEnter={() => setActive(shown.length)}
                 className={`block w-full rounded-lg px-3 py-2 text-left text-xs text-muted ${active === shown.length ? "bg-raised text-ink" : ""}`}
               >
-                {hits.length > SHOWN ? `See all ${hits.length} results` : `Show ${hits.length === 1 ? "this" : `these ${hits.length}`} in the library`} ↵
+                {hits.length > SHOWN ? `See all ${formatCount(hits.length)} results` : `Show ${hits.length === 1 ? "this" : `these ${formatCount(hits.length)}`} in the library`} ↵
               </button>
             </>
           )}

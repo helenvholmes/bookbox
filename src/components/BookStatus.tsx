@@ -19,17 +19,18 @@ export function BookStatus({ bookId, shelves, reads, startedOn }: { bookId: numb
 
   return (
     <div className="col-span-2 mt-6 md:col-span-1">
-      <div className="flex gap-2.5">
+      {/* Each button as wide as it was, or narrower where four don't fit (the narrowest phones). */}
+      <div className="grid grid-cols-[repeat(4,minmax(0,4.25rem))] gap-2 min-[360px]:gap-2.5 sm:grid-cols-[repeat(4,minmax(0,4rem))]">
         {STATUSES.map((s) => {
           const on = current.includes(s);
           return (
-            <div key={s} className="flex flex-col items-center gap-1.5">
+            <div key={s} className="flex min-w-0 flex-col items-center gap-1.5">
               <button
                 type="button"
                 aria-pressed={on}
                 aria-label={on ? `Remove from ${shelfLabel(s)}` : `Mark as ${shelfLabel(s)}`}
                 onClick={() => changeStatus(bookId, current.length === 1 && on ? null : s, finishing)}
-                className={`flex h-11 w-[4.25rem] items-center justify-center rounded-lg border transition sm:w-16 ${
+                className={`flex h-11 w-full items-center justify-center rounded-lg border transition active:scale-[0.97] ${
                   on ? "border-ink bg-ink text-paper" : "border-line text-muted hover:border-line-hover hover:text-ink"
                 }`}
               >

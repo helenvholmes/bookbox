@@ -11,7 +11,7 @@ export function formatDuration(ms: number): string {
   return h ? `${h}h${m ? ` ${m}m` : ""}` : `${m}m`;
 }
 
-/** "just now", "5 min ago", "3 hours ago", "2 days ago", from a SQLite UTC datetime. */
+/** "just now", "5 min ago", "3 hours ago", "2 days ago", "over a year ago", from a SQLite UTC datetime. */
 export function ago(sqliteUtc: string, now = Date.now()): string {
   const then = Date.parse(`${sqliteUtc.replace(" ", "T")}Z`);
   const minutes = Math.round((now - then) / 60_000);
@@ -20,5 +20,6 @@ export function ago(sqliteUtc: string, now = Date.now()): string {
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
   const days = Math.round(hours / 24);
+  if (days >= 365) return "over a year ago";
   return `${days} ${days === 1 ? "day" : "days"} ago`;
 }

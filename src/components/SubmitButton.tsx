@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
+import { SwapLabel } from "./SwapLabel";
 
 /**
  * A form's submit button that shows the action is running and can't be pressed again until it
@@ -10,7 +11,7 @@ export function SubmitButton({ children, pending, className = "" }: { children: 
   const status = useFormStatus();
   return (
     <button className={`${className} ${status.pending ? "cursor-progress opacity-60" : ""}`} disabled={status.pending} aria-busy={status.pending}>
-      {status.pending ? pending : children}
+      <SwapLabel on={status.pending} label={children} onLabel={pending} />
     </button>
   );
 }

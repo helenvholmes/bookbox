@@ -40,8 +40,10 @@ export function ListsPicker({ bookId, lists, on }: { bookId: number; lists: { id
               })
             }
           >
-            {pressed ? "✓ " : "+ "}
-            {l.name}
+            <span className="truncate">
+              {pressed ? "✓ " : "+ "}
+              {l.name}
+            </span>
           </button>
         );
       })}
