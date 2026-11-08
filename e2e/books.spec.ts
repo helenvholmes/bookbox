@@ -123,6 +123,25 @@ test("moving a book to another shelf goes straight there", async ({ page }) => {
   expect(await page.evaluate(() => (window as unknown as { seen: string[] }).seen)).toEqual(["Remove from To Read", "Remove from Reading"]);
 });
 
+test("the phone's tab bar and menu are easy to tap", async ({ page }) => {
+  await page.goto("/people");
+  const tabs = page.getByRole("navigation", { name: "Tabs" });
+  await expect(tabs.getByRole("link")).toHaveText(["Library", "Add", "Stats"]);
+  // People and Tags are in the menu, which lights up while you're on one of them.
+  await expect(tabs.getByRole("button", { name: "Menu" })).toHaveClass(/text-ink/);
+
+  const tooSmall = (selector: string) =>
+    page.$$eval(selector, (els) =>
+      els.map((e) => [e.getAttribute("aria-label") || e.textContent?.trim(), e.getBoundingClientRect()] as const).filter(([, r]) => r.width < 40 || r.height < 40).map(([name]) => name),
+    );
+  expect(await tooSmall("nav[aria-label=Tabs] :is(a, button)")).toEqual([]);
+  await tabs.getByRole("button", { name: "Menu" }).click();
+  const menu = page.getByRole("dialog", { name: "Menu" });
+  await expect(menu.getByRole("link", { name: "Tags" })).toBeVisible();
+  await expect(menu.getByRole("link", { name: "People" })).toBeVisible();
+  expect(await tooSmall("dialog[aria-label=Menu] :is(a, button)")).toEqual([]);
+});
+
 test("robots.txt lets crawlers read only the page about BookBox", async ({ request }) => {
   const res = await request.get("/robots.txt");
   expect(res.ok()).toBe(true);
