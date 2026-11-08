@@ -3,16 +3,20 @@
  *
  *   public/icons/icon-{192,512}.png, maskable-512.png   web app manifest
  *   src/app/icon.png, src/app/apple-icon.png             <link rel="icon"> / home screen icon
- *   public/splash/splash-WxH.png                         iOS launch images
+ *   public/splash/splash-WxH.png, splash-WxH-light.png   iOS launch images, dark and light
  */
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
-import { SPLASH_DEVICES, splashFile } from "../src/lib/splash";
+import { SPLASH_DEVICES, SPLASH_SCHEMES, type SplashScheme, splashFile } from "../src/lib/splash";
 
 const ACCENT = "#2b2d32";
 const ACCENT_DARK = "#121315";
-const PAPER = "#111214";
+// The page and text colours of each setting (--paper and --ink in src/app/globals.css).
+const SPLASH_COLORS: Record<SplashScheme, { paper: string; ink: string }> = {
+  dark: { paper: "#111214", ink: "#ececed" },
+  light: { paper: "#f8f8f6", ink: "#1b1c1f" },
+};
 
 // Books standing in a box, on a full-bleed square (iOS and Android apply their own rounding).
 // Everything important sits inside the central 80% so maskable crops are safe.
@@ -56,17 +60,18 @@ function iconSvg({ rounded = false } = {}) {
 </svg>`;
 }
 
-function splashSvg(w: number, h: number) {
+function splashSvg(w: number, h: number, scheme: SplashScheme) {
+  const { paper, ink } = SPLASH_COLORS[scheme];
   const size = Math.round(Math.min(w, h) * 0.28);
   const x = Math.round((w - size) / 2);
   const y = Math.round(h / 2 - size * 0.75);
   const fontSize = Math.round(size * 0.2);
   const icon = iconSvg({ rounded: true }).replace("<svg ", `<svg x="${x}" y="${y}" width="${size}" height="${size}" `);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-  <rect width="${w}" height="${h}" fill="${PAPER}"/>
+  <rect width="${w}" height="${h}" fill="${paper}"/>
   ${icon}
   <text x="${w / 2}" y="${y + size + fontSize * 1.9}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
-        font-weight="400" font-size="${fontSize}" fill="#ececed">BookBox</text>
+        font-weight="400" font-size="${fontSize}" fill="${ink}">BookBox</text>
 </svg>`;
 }
 
@@ -88,8 +93,10 @@ await Promise.all([
 fs.writeFileSync(out("public/icons/icon.svg"), iconSvg({ rounded: true }));
 
 for (const [w, h, r] of SPLASH_DEVICES) {
-  const [pw, ph] = [w * r, h * r];
-  await sharp(Buffer.from(splashSvg(pw, ph))).png({ compressionLevel: 9 }).toFile(out(`public/splash/${splashFile(w, h, r)}`));
+  for (const scheme of SPLASH_SCHEMES) {
+    const [pw, ph] = [w * r, h * r];
+    await sharp(Buffer.from(splashSvg(pw, ph, scheme))).png({ compressionLevel: 9 }).toFile(out(`public/splash/${splashFile(w, h, r, scheme)}`));
+  }
 }
 
-console.log(`Wrote 5 icons and ${SPLASH_DEVICES.length} launch screens.`);
+console.log(`Wrote 5 icons and ${SPLASH_DEVICES.length * SPLASH_SCHEMES.length} launch screens.`);
