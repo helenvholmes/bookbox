@@ -201,9 +201,12 @@ function SidebarLinks({ years: withReads, lists, canSignOut, large = false }: Pr
 /** How long the phone menu takes to slide in or out (its duration-300 class), or to fade with reduced motion (duration-150). */
 const SLIDE_MS = 300;
 const FADE_MS = 150;
-/** A swipe to the right closes the menu once it's dragged this share of its width, or let go faster than this (px/ms). */
+/** A swipe to the right closes the menu once it's dragged this share of its width, or let go faster than this (px/ms).
+ * The same goes for opening it with a swipe in from the right-hand edge. */
 const DISMISS_SHARE = 0.4;
 const DISMISS_SPEED = 0.5;
+/** How close to the screen's right-hand edge a swipe has to start to pull the menu in (px). */
+const EDGE = 24;
 
 /**
  * Opens and closes the phone menu with a slide from the right. It's driven from here rather than
@@ -212,7 +215,8 @@ const DISMISS_SPEED = 0.5;
  * Opening shows the dialog off-screen first, then slides it in; closing slides it out, then closes it.
  *
  * It can also be swiped closed, back the way it came: it follows the finger to the right, and closes when let go far
- * enough or fast enough, or slides back. Up-and-down swipes scroll it as usual.
+ * enough or fast enough, or slides back. Up-and-down swipes scroll it as usual. And it can be pulled open from the
+ * screen's right-hand edge on phones, the same way: see the edge swipe below.
  */
 function useSlidingDialog() {
   const ref = useRef<HTMLDialogElement>(null);
@@ -282,6 +286,93 @@ function useSlidingDialog() {
       e.currentTarget.style.transform = "";
     },
   };
+  // Pulling the menu in from the right-hand edge. Touch events rather than pointer ones: Safari keeps sending these
+  // through a sideways drag, and they let the page be kept from scrolling while the menu follows the finger. Until
+  // it's let go the menu is open without being modal (show, not showModal), so the page under the finger keeps
+  // getting the touch; let go far or fast enough, it becomes the modal menu where it is and slides the rest of the
+  // way, otherwise it slides back out.
+  useEffect(() => {
+    const phone = window.matchMedia("(max-width: 767px)");
+    let g: { x: number; y: number; dx: number; axis: "x" | "y" | null; lastX: number; lastT: number; speed: number } | null = null;
+    // Following the finger: no transition, and shown where it would be as the modal menu.
+    const follow = (d: HTMLDialogElement) => Object.assign(d.style, { transition: "none", opacity: "1", position: "fixed", inset: "0", zIndex: "60" });
+    const letGo = (d: HTMLDialogElement) => Object.assign(d.style, { transition: "", transform: "", opacity: "" });
+    const unpin = (d: HTMLDialogElement) => Object.assign(d.style, { position: "", inset: "", zIndex: "" });
+    const onStart = (e: TouchEvent) => {
+      const d = ref.current;
+      g = null;
+      if (!d || d.open || !phone.matches || e.touches.length !== 1 || document.querySelector("dialog[open]")) return;
+      const t = e.touches[0];
+      if (t.clientX < window.innerWidth - EDGE) return;
+      g = { x: t.clientX, y: t.clientY, dx: 0, axis: null, lastX: t.clientX, lastT: e.timeStamp, speed: 0 };
+    };
+    const onMove = (e: TouchEvent) => {
+      const d = ref.current;
+      if (!g || !d) return;
+      const t = e.touches[0];
+      const dx = t.clientX - g.x;
+      if (!g.axis) {
+        if (Math.hypot(dx, t.clientY - g.y) < 8) return;
+        // Only a swipe inwards, more sideways than up or down; anything else is left to the page.
+        if (dx >= 0 || Math.abs(dx) < Math.abs(t.clientY - g.y)) {
+          g = null;
+          return;
+        }
+        g.axis = "x";
+        window.clearTimeout(closing.current);
+        // Open without being modal, the page still getting the touch. Such a dialog isn't lifted above the page or
+        // pinned to the screen, so it's pinned here; and opening moves focus into it, which can scroll the page.
+        follow(d);
+        d.style.transform = "translate3d(100%,0,0)";
+        const scrolled = window.scrollY;
+        d.show();
+        if (window.scrollY !== scrolled) window.scrollTo(0, scrolled);
+      }
+      e.preventDefault();
+      g.speed = (t.clientX - g.lastX) / Math.max(1, e.timeStamp - g.lastT);
+      g.lastX = t.clientX;
+      g.lastT = e.timeStamp;
+      g.dx = Math.min(0, dx);
+      d.style.transform = `translate3d(${Math.max(0, d.offsetWidth + g.dx)}px,0,0)`;
+    };
+    const onEnd = () => {
+      const d = ref.current;
+      const done = g;
+      g = null;
+      if (!done || done.axis !== "x" || !d) return;
+      const opening = -done.dx > d.offsetWidth * DISMISS_SHARE || done.speed < -DISMISS_SPEED;
+      if (opening) {
+        // From open to modal, where it is: the page goes inert behind it and focus moves in.
+        const scrolled = window.scrollY;
+        d.close();
+        d.showModal();
+        if (window.scrollY !== scrolled) window.scrollTo(0, scrolled);
+        void d.offsetWidth;
+        d.dataset.shown = "true";
+        letGo(d);
+        unpin(d);
+      } else {
+        // Slides back out where it is, then closes.
+        d.dataset.shown = "false";
+        letGo(d);
+        closing.current = window.setTimeout(() => {
+          d.close();
+          unpin(d);
+        }, SLIDE_MS);
+      }
+    };
+    document.addEventListener("touchstart", onStart, { passive: true });
+    document.addEventListener("touchmove", onMove, { passive: false });
+    document.addEventListener("touchend", onEnd);
+    document.addEventListener("touchcancel", onEnd);
+    return () => {
+      document.removeEventListener("touchstart", onStart);
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", onEnd);
+      document.removeEventListener("touchcancel", onEnd);
+    };
+  }, []);
+
   return { ref, open, close, swipe };
 }
 
