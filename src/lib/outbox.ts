@@ -8,15 +8,24 @@ import type { SyncOp, SyncResult } from "./sync-ops";
  * Every edit goes through here, online or not: it's saved first, shown straight away (components
  * lay pending edits over what the server sent), then sent to /api/sync. What doesn't get through
  * stays queued and is retried when the app is next online (see OfflineSupport).
+ *
+ * An edit the server has taken stays laid over the page until the page has been refreshed with the
+ * server's copy (see settle): dropping it any sooner would show the old copy for a moment, so a book
+ * moved from To Read to Reading would flick back to To Read before landing on Reading.
  */
 
 const KEY = "bookbox:outbox:v1";
 export const SYNCED_EVENT = "bookbox:synced";
 
 export type SyncState = "idle" | "syncing" | "offline" | "signed-out";
-type Snapshot = { ops: SyncOp[]; state: SyncState };
+/** `ops` are still to send; `settling` reached the server, but the page doesn't show them yet. */
+type Snapshot = { ops: SyncOp[]; settling: SyncOp[]; state: SyncState };
+/** An edit as laid over the page: `synced` once the server has it. */
+export type ShownOp = SyncOp & { synced?: true };
 
-const EMPTY: Snapshot = { ops: [], state: "idle" };
+const EMPTY: Snapshot = { ops: [], settling: [], state: "idle" };
+// If nothing refreshes the page (say it's left before the refresh), synced edits stop showing after this.
+const SETTLE_AT_MOST = 15_000;
 let snapshot: Snapshot = EMPTY;
 let loaded = false;
 const listeners = new Set<() => void>();
@@ -55,7 +64,7 @@ function set(next: Partial<Snapshot>) {
 function ensureLoaded() {
   if (loaded || typeof window === "undefined") return;
   loaded = true;
-  snapshot = { ops: read(), state: "idle" };
+  snapshot = { ops: read(), settling: [], state: "idle" };
   // Another tab (or the home screen app) changed the queue.
   window.addEventListener("storage", (e) => {
     if (e.key === KEY) set({ ops: read() });
@@ -78,10 +87,19 @@ export function useOutbox(): Snapshot {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
-/** The pending edits for one book, oldest first. */
-export function usePendingOps(bookId: number): SyncOp[] {
-  const { ops } = useOutbox();
-  return useMemo(() => ops.filter((op) => op.bookId === bookId), [ops, bookId]);
+/** The edits for one book to lay over what the server sent, oldest first: synced ones still settling, then those still to send. */
+export function usePendingOps(bookId: number): ShownOp[] {
+  const { ops, settling } = useOutbox();
+  return useMemo(
+    () => [...settling.filter((op) => op.bookId === bookId).map((op) => ({ ...op, synced: true as const })), ...ops.filter((op) => op.bookId === bookId)],
+    [ops, settling, bookId],
+  );
+}
+
+/** Stops laying these synced edits over the page, once it's been refreshed with the server's copy. */
+export function settle(opIds: string[]) {
+  const ids = new Set(opIds);
+  if (snapshot.settling.some((op) => ids.has(op.opId))) set({ settling: snapshot.settling.filter((op) => !ids.has(op.opId)) });
 }
 
 type NewOp = SyncOp extends infer T ? (T extends SyncOp ? Omit<T, "opId" | "at"> : never) : never;
@@ -139,9 +157,14 @@ async function send() {
     // Keep anything queued while this request was in flight.
     const remaining = read().filter((op) => !done.has(op.opId));
     write(remaining);
-    set({ ops: remaining });
+    // What the server took keeps showing until the page catches up; what it turned down goes now.
+    const taken = new Set(applied);
+    const settling = ops.filter((op) => taken.has(op.opId));
+    set({ ops: remaining, settling: [...snapshot.settling, ...settling] });
+    const settleIds = settling.map((op) => op.opId);
+    setTimeout(() => settle(settleIds), SETTLE_AT_MOST);
     const books = [...new Set(ops.filter((op) => done.has(op.opId)).map((op) => op.bookId))];
-    window.dispatchEvent(new CustomEvent(SYNCED_EVENT, { detail: { books } }));
+    window.dispatchEvent(new CustomEvent(SYNCED_EVENT, { detail: { books, settled: settleIds } }));
     if (!done.size) return; // nothing was accepted; don't loop
   }
 }
