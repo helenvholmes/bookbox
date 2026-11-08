@@ -121,7 +121,10 @@ export function GoodreadsImport() {
                 : `Finding covers… ${step.done.toLocaleString()} of ${step.total.toLocaleString()} (${step.found.toLocaleString()} found)`}
             </p>
             <div className="h-1.5 overflow-hidden rounded-full bg-line">
-              <div className="h-full rounded-full bg-ink transition-[width]" style={{ width: `${(step.done / Math.max(1, step.total)) * 100}%` }} />
+              <div
+                className="h-full rounded-full bg-ink transition-[clip-path] duration-200 ease-linear"
+                style={{ clipPath: `inset(0 ${100 - (step.done / Math.max(1, step.total)) * 100}% 0 0 round 9999px)` }}
+              />
             </div>
             <p className="text-xs text-faint">Keep this page open until it&rsquo;s done.</p>
           </div>

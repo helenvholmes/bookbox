@@ -86,7 +86,8 @@ export function YearChart({ rows, highlight }: { rows: Row[]; highlight: number 
             {years.map((r, i) => (
               <span key={r.year} aria-hidden className="flex h-full min-w-0 flex-1 items-end">
                 <span
-                  className={`block w-full rounded-t-[4px] transition-colors ${
+                  // No colour fade: the highlight keeps up with the finger and the arrow keys.
+                  className={`block w-full rounded-t-[4px] ${
                     r.year === highlight ? "bg-ink" : hover === i ? "bg-muted" : "bg-faint"
                   }`}
                   style={{ height: `${(r.books / max) * 100}%`, minHeight: r.books ? 2 : 0 }}

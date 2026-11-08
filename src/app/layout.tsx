@@ -5,8 +5,10 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SPLASH_DEVICES, SPLASH_SCHEMES, splashFile } from "@/lib/splash";
 import "./globals.css";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const newsreader = Newsreader({ variable: "--font-newsreader", subsets: ["latin"], weight: ["400", "500"] });
+// Latin Extended and Vietnamese too, so names like Wiśniewska or Đặng don't switch font partway through. Each
+// subset is its own file, downloaded only by pages that use its letters.
+const inter = Inter({ variable: "--font-inter", subsets: ["latin", "latin-ext", "vietnamese"] });
+const newsreader = Newsreader({ variable: "--font-newsreader", subsets: ["latin", "latin-ext", "vietnamese"], weight: ["400", "500"] });
 
 export const metadata: Metadata = {
   title: { default: "BookBox", template: "%s · BookBox" },
@@ -15,7 +17,8 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "BookBox",
-    statusBarStyle: "black-translucent",
+    // iOS draws its own status bar in the page colour (themeColor below), with dark or light text to suit.
+    statusBarStyle: "default",
     startupImage: splashScreens(),
   },
   formatDetection: { telephone: false },

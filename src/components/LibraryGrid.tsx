@@ -3,6 +3,7 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import type { BookSummary } from "@/lib/books";
 import { BookGrid } from "./BookGrid";
+import { formatCount } from "@/lib/numbers";
 
 const BATCH = 120;
 
@@ -113,7 +114,7 @@ export function LibraryGrid({ initial, total, query, empty, priority }: Props) {
               .
             </>
           ) : (
-            `Loading more… (${books.length} of ${total})`
+            `Loading more… (${formatCount(books.length)} of ${formatCount(total)})`
           )}
         </div>
       )}

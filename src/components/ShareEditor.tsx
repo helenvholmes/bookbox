@@ -6,6 +6,7 @@ import type { ShareSettings } from "@/lib/share";
 import { shownAccent } from "@/lib/share-accent";
 import { ConfirmButton } from "./ConfirmButton";
 import { Toggle } from "./inputs";
+import { SwapLabel } from "./SwapLabel";
 
 type Props = {
   personId: number;
@@ -24,7 +25,7 @@ export function ShareEditor({ personId, first, settings, counts, defaultTitle, a
   const [ratings, setRatings] = useState(settings.show_ratings);
   const [reviews, setReviews] = useState(settings.show_reviews);
   const [accent, setAccent] = useState(settings.accent);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"no" | "yes" | "failed">("no");
   // The server doesn't know which address the app is being viewed at, so this is empty until hydration.
   const origin = useSyncExternalStore(
     () => () => {},
@@ -49,13 +50,20 @@ export function ShareEditor({ personId, first, settings, counts, defaultTitle, a
             <button
               type="button"
               className="btn rounded-full px-4"
-              onClick={async () => {
-                await navigator.clipboard.writeText(url);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
+              onClick={async (e) => {
+                // Copying can be refused (no permission, or an embedded browser): then the link is selected to copy by hand.
+                const input = e.currentTarget.parentElement?.querySelector("input");
+                try {
+                  await navigator.clipboard.writeText(url);
+                  setCopied("yes");
+                  setTimeout(() => setCopied("no"), 1500);
+                } catch {
+                  input?.select();
+                  setCopied("failed");
+                }
               }}
             >
-              {copied ? "Copied" : "Copy"}
+              <SwapLabel on={copied === "yes"} label="Copy" onLabel="Copied" />
             </button>
             {live && (
               <a href={url} target="_blank" rel="noreferrer" className="btn rounded-full px-4">
@@ -63,6 +71,11 @@ export function ShareEditor({ personId, first, settings, counts, defaultTitle, a
               </a>
             )}
           </div>
+          {copied === "failed" && (
+            <p className="text-xs text-muted" role="status">
+              Couldn’t copy it here. The link is selected: press and hold it (or use your keyboard) to copy.
+            </p>
+          )}
           <form action={regenerateShareAction}>
             <input type="hidden" name="person_id" value={personId} />
             <ConfirmButton className="text-xs text-muted underline hover:text-ink" message="Make a new link? The old one will stop working." confirmLabel="New link">
@@ -111,7 +124,7 @@ export function ShareEditor({ personId, first, settings, counts, defaultTitle, a
             <span className="text-sm font-medium">Layout</span>
             <span className="flex gap-2">
               {(["grid", "list"] as const).map((l) => (
-                <label key={l} className="chip cursor-pointer has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-paper">
+                <label key={l} className="chip cursor-pointer has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-muted">
                   <input type="radio" name="layout" value={l} defaultChecked={settings.layout === l} className="sr-only" />
                   {l === "grid" ? "Covers" : "List"}
                 </label>
@@ -128,7 +141,8 @@ export function ShareEditor({ personId, first, settings, counts, defaultTitle, a
           <fieldset className="flex items-center justify-between gap-3 py-3">
             <legend className="sr-only">Accent colour</legend>
             <span className="text-sm font-medium">Accent</span>
-            <span className="flex gap-2">
+            {/* Each swatch is a 40-pixel square to tap around its 24-pixel dot. */}
+            <span className="-mr-2 flex">
               {accents.map((c) => (
                 <button
                   key={c}
@@ -136,9 +150,13 @@ export function ShareEditor({ personId, first, settings, counts, defaultTitle, a
                   aria-label={`Accent ${c}`}
                   aria-pressed={accent === c}
                   onClick={() => setAccent(c)}
-                  className={`size-6 rounded-full ring-offset-2 ring-offset-card ${accent === c ? "ring-2 ring-ink" : ""}`}
-                  style={{ background: shownAccent(c) }}
-                />
+                  className="group flex size-10 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-muted"
+                >
+                  <span
+                    className={`size-6 rounded-full ring-offset-2 ring-offset-card ${accent === c ? "ring-2 ring-ink" : ""}`}
+                    style={{ background: shownAccent(c) }}
+                  />
+                </button>
               ))}
             </span>
           </fieldset>
@@ -146,7 +164,7 @@ export function ShareEditor({ personId, first, settings, counts, defaultTitle, a
 
         <div className="flex items-center gap-3">
           <button className="btn btn-primary rounded-full px-5" disabled={pending}>
-            {pending ? "Saving…" : token ? "Save" : "Create link"}
+            <SwapLabel on={pending} label={token ? "Save" : "Create link"} onLabel="Saving…" />
           </button>
           {state?.savedAt && !pending && (
             <span className="flex items-center gap-1.5 text-sm text-muted" role="status">

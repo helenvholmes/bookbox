@@ -39,7 +39,7 @@ export function ClampedTitle({ title, className = "" }: { title: string; classNa
 
   return (
     <>
-      <p ref={ref} className={`line-clamp-2 ${className}`} onMouseEnter={show} onMouseLeave={() => setAnchor(null)}>
+      <p ref={ref} className={`line-clamp-2 [overflow-wrap:anywhere] ${className}`} onMouseEnter={show} onMouseLeave={() => setAnchor(null)}>
         {title}
       </p>
       {anchor &&

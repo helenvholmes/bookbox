@@ -1,11 +1,12 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { Facets } from "@/lib/books";
 import { RATINGS, ratingText } from "@/lib/sync-ops";
 import { SearchBox } from "./SearchBox";
 import { STATUS_SHELVES } from "./ShelfIcon";
+import { formatCount } from "@/lib/numbers";
 
 type Props = {
   facets: Facets;
@@ -30,6 +31,11 @@ export function FilterBar({ facets, sorts }: Props) {
   }
 
   const shelf = params.get("shelf") ?? "";
+  const tabsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const tab = tabsRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    tab?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [shelf]);
   const active = ["q", "shelf", "year", "tag", "person", "rating", "owned"].some((k) => params.get(k));
 
   return (
@@ -37,8 +43,14 @@ export function FilterBar({ facets, sorts }: Props) {
     <div style={{ viewTransitionName: "filter-bar" }} className={`space-y-3 transition-opacity ${pending ? "opacity-70" : ""}`}>
       <SearchBox value={params.get("q") ?? ""} onSubmit={(q) => update({ q })} />
 
-      {/* Underline tabs, like Oku's "Books | Members". */}
-      <div role="tablist" aria-label="Shelves" className="no-scrollbar -mx-4 flex gap-5 overflow-x-auto border-b border-line px-4">
+      {/* Underline tabs, like Oku's "Books | Members". On a phone they can run past the edge: they fade out there to
+          show there's more, and the chosen one scrolls into view. */}
+      <div
+        ref={tabsRef}
+        role="tablist"
+        aria-label="Shelves"
+        className="no-scrollbar -mx-4 flex gap-5 overflow-x-auto border-b border-line px-4 [mask-image:linear-gradient(to_right,#000_calc(100%-2rem),transparent)]"
+      >
         {[
           { key: "", label: "All", count: facets.total },
           // Reading statuses, plus the list you're looking at (lists are in the sidebar and menu).
@@ -53,22 +65,24 @@ export function FilterBar({ facets, sorts }: Props) {
               role="tab"
               aria-selected={selected}
               onClick={() => update({ shelf: selected || !t.key ? null : t.key })}
-              className={`-mb-px shrink-0 border-b-2 pt-1 pb-2.5 text-[0.8125rem] whitespace-nowrap transition ${
+              // 40 pixels tall to tap; the negative margin keeps the tabs where they were.
+              className={`-mt-1.5 -mb-px shrink-0 border-b-2 pt-2.5 pb-2.5 text-[0.8125rem] whitespace-nowrap transition ${
                 selected ? "border-ink text-ink" : "border-transparent text-faint hover:text-muted"
               }`}
             >
-              {t.label} <span className={t.count === 0 && !selected ? "text-faint/50" : "text-faint"}>{t.count}</span>
+              {t.label} <span className={`tabular-nums ${t.count === 0 && !selected ? "text-faint/50" : "text-faint"}`}>{formatCount(t.count)}</span>
             </button>
           );
         })}
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      {/* Two to a row on phones, with Sort under them, so each has room to say what it's set to. */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <Select label="Year read" value={params.get("year") ?? ""} onChange={(v) => update({ year: v })}>
           <option value="">Any year</option>
           {facets.years.map((y) => (
             <option key={y.year} value={y.year}>
-              {y.year} ({y.count})
+              {y.year} ({formatCount(y.count)})
             </option>
           ))}
           <option value="none">No year</option>
@@ -79,11 +93,11 @@ export function FilterBar({ facets, sorts }: Props) {
             .filter((t) => t.count > 0 || params.get("tag") === String(t.id))
             .map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name} ({t.count})
+                {t.name} ({formatCount(t.count)})
               </option>
             ))}
         </Select>
-        <Select label="Sort" value={params.get("sort") ?? ""} onChange={(v) => update({ sort: v })}>
+        <Select label="Sort" className="col-span-2 sm:col-span-1" value={params.get("sort") ?? ""} onChange={(v) => update({ sort: v })}>
           {Object.entries(sorts).map(([k, label]) => (
             <option key={k} value={k === "recent" ? "" : k}>
               {label}
@@ -154,9 +168,9 @@ export function FilterBar({ facets, sorts }: Props) {
   );
 }
 
-function Select({ label, value, onChange, children }: { label: string; value: string; onChange: (v: string | null) => void; children: React.ReactNode }) {
+function Select({ label, value, onChange, className = "", children }: { label: string; value: string; onChange: (v: string | null) => void; className?: string; children: React.ReactNode }) {
   return (
-    <label className="block min-w-0">
+    <label className={`block min-w-0 ${className}`}>
       <span className="sr-only">{label}</span>
       <select className="field truncate py-2 pr-7 text-[0.8125rem] text-muted" value={value} onChange={(e) => onChange(e.target.value || null)}>
         {children}

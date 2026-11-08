@@ -142,6 +142,58 @@ test("the phone's tab bar and menu are easy to tap", async ({ page }) => {
   expect(await tooSmall("dialog[aria-label=Menu] :is(a, button)")).toEqual([]);
 });
 
+test("removes a read after asking, on a line of its own", async ({ page }) => {
+  await page.goto("/books/new");
+  await page.getByRole("button", { name: "Enter a book by hand instead" }).click();
+  await page.locator("input[name=title]").fill("Katie's Finished Book");
+  await save(page);
+  // Reading it, then finishing it, logs this year's read.
+  await page.getByRole("button", { name: "Mark as Reading", exact: true }).click();
+  await page.getByRole("button", { name: "Mark as Read", exact: true }).click();
+  const remove = page.getByRole("button", { name: /^Remove the \d{4} read$/ });
+  await expect(remove).toBeVisible();
+  const box = await remove.boundingBox();
+  expect(box!.width).toBeGreaterThanOrEqual(40);
+  expect(box!.height).toBeGreaterThanOrEqual(40);
+
+  await remove.click();
+  const question = page.getByRole("alert").filter({ hasText: "Remove this read?" });
+  await expect(question).toBeVisible();
+  // It sits under the read rather than squeezing it.
+  const row = question.locator("xpath=..");
+  const [q, r] = await Promise.all([question.boundingBox(), row.boundingBox()]);
+  expect(q!.width).toBeGreaterThan(r!.width * 0.8);
+  await question.getByRole("button", { name: "Remove" }).click();
+  await expect(page.getByRole("button", { name: /^Remove the \d{4} read$/ })).toHaveCount(0);
+});
+
+test("swiping the phone menu to the right closes it", async ({ page }) => {
+  await page.goto("/library");
+  await page.getByRole("navigation", { name: "Tabs" }).getByRole("button", { name: "Menu" }).click();
+  const menu = page.getByRole("dialog", { name: "Menu" });
+  await expect(menu).toHaveAttribute("data-shown", "true");
+  // Still open a moment later (it once closed itself straight after opening, when the page's first effects ran late).
+  await page.waitForTimeout(500);
+  await expect(menu).toHaveAttribute("data-shown", "true");
+  const swipe = (dx: number) =>
+    menu.evaluate(async (d, dx) => {
+      const fire = (type: string, x: number) => d.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerType: "touch", pointerId: 1, isPrimary: true, clientX: x, clientY: 400 }));
+      fire("pointerdown", 40);
+      for (let i = 1; i <= 6; i++) {
+        await new Promise((r) => setTimeout(r, 60));
+        fire("pointermove", 40 + (dx * i) / 6);
+      }
+      fire("pointerup", 40 + dx);
+    }, dx);
+
+  // A short, slow drag springs back; a long one closes it.
+  await swipe(40);
+  await page.waitForTimeout(400);
+  await expect(menu).toHaveAttribute("data-shown", "true");
+  await swipe(250);
+  await expect(menu).not.toBeVisible();
+});
+
 test("robots.txt lets crawlers read only the page about BookBox", async ({ request }) => {
   const res = await request.get("/robots.txt");
   expect(res.ok()).toBe(true);

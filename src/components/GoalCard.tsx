@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { setGoalAction } from "@/app/(app)/stats/actions";
 import { goalPace } from "@/lib/goal";
+import { SwapLabel } from "./SwapLabel";
 
 /** This year's reading goal: progress, pace, and an inline editor. */
 export function GoalCard({ year, goal, read }: { year: number; goal: number | null; read: number }) {
@@ -59,7 +60,7 @@ export function GoalCard({ year, goal, read }: { year: number; goal: number | nu
             Cancel
           </button>
           <button className="btn btn-primary rounded-full px-4" disabled={pending}>
-            {pending ? "Saving…" : "Save"}
+            <SwapLabel on={pending} label="Save" onLabel="Saving…" />
           </button>
           {state?.error && <p className="basis-full text-xs text-danger">{state.error}</p>}
           {goal && <p className="basis-full text-xs text-faint">Leave it empty to remove the goal.</p>}

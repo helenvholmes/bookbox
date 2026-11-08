@@ -84,7 +84,7 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
         <BookStatus bookId={book.id} shelves={book.shelves} reads={book.reads} startedOn={book.started_on} />
       </header>
 
-      <div className="mt-10 grid gap-10 border-t border-line pt-8 md:grid-cols-[minmax(0,1fr)_17rem]">
+      <div className="mt-10 grid grid-cols-1 gap-10 border-t border-line pt-8 md:grid-cols-[minmax(0,1fr)_17rem]">
         <div className="space-y-9">
           <BookTexts bookId={book.id} review={book.review} quotes={book.quotes} spoiler={book.spoiler} privateNotes={book.private_notes} />
           <TextSection title="Description" text={book.description} />
@@ -125,8 +125,8 @@ export default async function BookPage(props: PageProps<"/books/[id]">) {
               {(book.tags.length > 0 || book.owned || book.on_kindle) && (
                 <div className="flex flex-wrap gap-1.5">
                   {book.tags.map((t) => (
-                    <Link key={t.id} href={`/library?tag=${t.id}`} className="chip hover:text-ink">
-                      {t.name}
+                    <Link key={t.id} href={`/library?tag=${t.id}`} className="chip hover:text-ink" title={t.name}>
+                      <span className="truncate">{t.name}</span>
                     </Link>
                   ))}
                   {book.owned && <span className="chip">Owned</span>}

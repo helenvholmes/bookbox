@@ -33,7 +33,7 @@ export function SharedBooks({ books, layout, srcBase, accent, owner }: Props) {
             <li key={i}>
               <Wrap onOpen={clickable ? () => setOpen(i) : undefined} className="card flex h-full flex-col overflow-hidden text-center">
                 <Cover cover={b.cover} title={b.title} author={b.author} bleed srcBase={srcBase} eager={i < 8} />
-                <div className="flex flex-1 flex-col items-center gap-0.5 px-3 pt-3 pb-3">
+                <div className="flex flex-1 flex-col items-center gap-0.5 px-3 pt-3 pb-3 [overflow-wrap:anywhere]">
                   <p className="text-[0.8125rem] leading-snug">{b.title}</p>
                   {b.author && <p className="text-xs text-muted">{b.author}</p>}
                   {b.rating && <Rating value={b.rating} accent={accent} owner={owner} />}
@@ -53,7 +53,7 @@ export function SharedBooks({ books, layout, srcBase, accent, owner }: Props) {
                 </div>
                 <div className="min-w-0 space-y-1">
                   <p className="display text-lg leading-snug">{b.title}</p>
-                  {b.author && <p className="text-sm text-muted">{b.author}</p>}
+                  {b.author && <p className="text-sm text-muted [overflow-wrap:anywhere]">{b.author}</p>}
                   {b.rating && <Rating value={b.rating} accent={accent} owner={owner} />}
                   {b.review && <p className="line-clamp-2 pt-1 text-[0.8125rem] text-muted">{b.review}</p>}
                 </div>

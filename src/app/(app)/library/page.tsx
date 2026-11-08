@@ -10,6 +10,7 @@ import { ShelfIcon } from "@/components/ShelfIcon";
 import { countMissingCovers, getContextualFacets, getFacets, getTag, listBooks, listBorrowed, SORTS, STATUS, type Filters } from "@/lib/books";
 import { getGoal } from "@/lib/stats";
 import { countDuplicates } from "@/lib/duplicates";
+import { formatCount } from "@/lib/numbers";
 
 /** How many books the page itself renders; the rest load as the grid is scrolled (see LibraryGrid). */
 const FIRST_BATCH = 60;
@@ -79,7 +80,7 @@ export default async function LibraryPage(props: PageProps<"/library">) {
   const tiles = [
     { href: "/library?shelf=Currently%20Reading", icon: <ShelfIcon shelf="Currently Reading" />, value: shelfCount("Currently Reading"), label: "reading now" },
     goal
-      ? { href: "/stats", icon: <ShelfIcon shelf="Read" />, value: `${readThisYear} of ${goal}`, label: `read in ${thisYear}`, progress: Math.min(1, readThisYear / goal) }
+      ? { href: "/stats", icon: <ShelfIcon shelf="Read" />, value: `${formatCount(readThisYear)} of ${formatCount(goal)}`, label: `read in ${thisYear}`, progress: Math.min(1, readThisYear / goal) }
       : { href: `/library?year=${thisYear}`, icon: <ShelfIcon shelf="Read" />, value: readThisYear, label: `read in ${thisYear}` },
     { href: "/library?shelf=To%20Read", icon: <ShelfIcon shelf="To Read" />, value: shelfCount("To Read"), label: "to read" },
     ...(missingCovers > 0
@@ -119,7 +120,7 @@ export default async function LibraryPage(props: PageProps<"/library">) {
               <Link href={t.href} className="card flex h-full min-h-[5.5rem] flex-col justify-between gap-3 p-3 transition hover:border-line-hover">
                 <span className="text-muted">{t.icon}</span>
                 <span className="text-[0.75rem] leading-tight text-muted">
-                  {t.value !== null && <span className="block text-ink">{t.value}</span>}
+                  {t.value !== null && <span className="block text-ink">{typeof t.value === "number" ? formatCount(t.value) : t.value}</span>}
                   {t.label}
                   {"progress" in t && typeof t.progress === "number" && (
                     <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-line" aria-hidden>
@@ -162,7 +163,7 @@ export default async function LibraryPage(props: PageProps<"/library">) {
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="section-title">
-            {heading ? (narrowed ? "Results" : "Books") : filtered ? "Results" : "All books"} <span className="count">{books.length}</span>
+            {heading ? (narrowed ? "Results" : "Books") : filtered ? "Results" : "All books"} <span className="count">{formatCount(books.length)}</span>
           </h2>
           {filters.year && /^\d{4}$/.test(filters.year) && (
             <Link href={`/stats/${filters.year}`} className="text-xs text-muted hover:text-ink">

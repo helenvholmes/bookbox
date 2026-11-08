@@ -138,7 +138,7 @@ export function BarcodeScanner({ onDetected, onClose }: Props) {
 
         <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))]">
           <span className="text-sm text-white/80">Scan a book&rsquo;s barcode</span>
-          <button type="button" onClick={onClose} className="rounded-full border border-white/25 bg-black/40 px-4 py-1.5 text-sm text-white backdrop-blur">
+          <button type="button" onClick={onClose} className="min-h-10 rounded-full border border-white/25 bg-black/40 px-4 py-2 text-sm text-white backdrop-blur">
             Cancel
           </button>
         </div>

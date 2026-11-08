@@ -38,7 +38,7 @@ export function ReadsCard({ bookId, reads: saved, shelves }: { bookId: number; r
               }}
             />
           ) : (
-            <div key={r.clientId ?? r.id} className="flex items-start gap-3 p-4 text-[0.8125rem]">
+            <div key={r.clientId ?? r.id} className="flex flex-wrap items-start gap-3 p-4 text-[0.8125rem]">
               <span className="w-10 shrink-0 text-ink">{r.year}</span>
               <span className="min-w-0 flex-1 text-muted">
                 {r.note || (i === reads.length - 1 ? "First read" : "Re-read")}
@@ -47,13 +47,16 @@ export function ReadsCard({ bookId, reads: saved, shelves }: { bookId: number; r
                   {formatSpan(r.startedOn, r.finishedOn) || "+ Add dates"}
                 </button>
               </span>
+              {/* A 40-pixel square to tap; once tapped, the question takes a line of its own under the read. */}
               <ConfirmButton
-                className="shrink-0 text-faint hover:text-danger"
+                className="-m-2 flex size-10 shrink-0 items-center justify-center text-faint hover:text-danger"
+                armedClassName="basis-full justify-end"
+                label={`Remove the ${r.year} read`}
                 message="Remove this read?"
                 confirmLabel="Remove"
                 onConfirm={() => submit({ kind: "deleteRead", bookId, readId: r.id, clientId: r.id === null ? r.clientId : null })}
               >
-                <span aria-label={`Remove the ${r.year} read`}>×</span>
+                <span aria-hidden>×</span>
               </ConfirmButton>
             </div>
           ),

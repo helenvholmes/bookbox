@@ -124,6 +124,20 @@ body {
   }
 }
 
+@layer base {
+  /* Holding a control doesn't select its label, and holding a tab doesn't pop up the link preview. */
+  button,
+  [role="tab"],
+  [role="slider"],
+  nav[aria-label="Tabs"] a {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  nav[aria-label="Tabs"] a {
+    -webkit-touch-callout: none;
+  }
+}
+
 @layer components {
   /* A quiet surface with a hairline border. */
   .card {
@@ -132,11 +146,13 @@ body {
     background: var(--card);
   }
 
-  /* Serif for titles, light and roomy. */
+  /* Serif for titles, light and roomy. Bigger titles sit tighter: about -0.005em at 16px, -0.018em at 30px and
+     -0.023em at 48px. A long unbroken word wraps rather than running past the edge. */
   .display {
     font-family: var(--font-newsreader), Georgia, serif;
     font-weight: 400;
-    letter-spacing: -0.01em;
+    letter-spacing: calc(0.45px - 0.0325em);
+    overflow-wrap: anywhere;
   }
 
   /* Form controls share one look. */
@@ -173,10 +189,18 @@ body {
     font-size: 0.875rem;
     background: var(--card);
     color: var(--ink);
-    transition: background 0.15s, opacity 0.15s;
+    transition:
+      background 0.15s,
+      opacity 0.15s,
+      transform 0.16s ease-out;
   }
-  .btn:hover {
-    background: var(--raised);
+  /* Presses down a touch as it's pressed, so a tap answers at once. */
+  .btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--muted);
+    outline-offset: 2px;
   }
   .btn:disabled {
     opacity: 0.5;
@@ -186,15 +210,9 @@ body {
     border-color: var(--accent);
     color: var(--accent-ink);
   }
-  .btn-primary:hover {
-    background: var(--accent-hover);
-  }
   .btn-danger {
     color: var(--danger);
     border-color: color-mix(in srgb, var(--danger) 35%, transparent);
-  }
-  .btn-danger:hover {
-    background: color-mix(in srgb, var(--danger) 10%, var(--card));
   }
   /* The final "Delete" in a confirmation. */
   .btn-danger-solid {
@@ -202,14 +220,29 @@ body {
     border-color: var(--danger);
     color: var(--danger-ink);
   }
-  .btn-danger-solid:hover {
-    background: color-mix(in srgb, var(--danger) 85%, var(--paper));
+
+  /* Only where there's a pointer that hovers: after a tap on a phone, a hover colour would stay stuck. */
+  @media (hover: hover) and (pointer: fine) {
+    .btn:hover {
+      background: var(--raised);
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+    .btn-danger:hover {
+      background: color-mix(in srgb, var(--danger) 10%, var(--card));
+    }
+    .btn-danger-solid:hover {
+      background: color-mix(in srgb, var(--danger) 85%, var(--paper));
+    }
   }
 
+  /* A long tag or name is cut short with an ellipsis (put it in a .truncate span) rather than leaving its card. */
   .chip {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
+    max-width: 100%;
     white-space: nowrap;
     border-radius: 0.375rem;
     border: 1px solid var(--line);
@@ -340,12 +373,20 @@ html:active-view-transition-type(nav-back)::view-transition-new(root) {
 /* The tapped book's cover, on its way to the book's page. */
 ::view-transition-group(book-cover) {
   z-index: 50;
-  animation-duration: 420ms;
+  animation-duration: 300ms;
   animation-timing-function: var(--vt-ease);
 }
 ::view-transition-old(book-cover),
 ::view-transition-new(book-cover) {
-  animation-duration: 200ms;
+  animation-duration: 150ms;
+}
+/* Leaving a book for a page with no cover to land on (a tab, search), or arriving at one from such a page: the
+   cover leaves and arrives with the rest of the page rather than hanging over it. */
+::view-transition-old(book-cover):only-child {
+  animation: 90ms ease-out both vt-fade-out;
+}
+::view-transition-new(book-cover):only-child {
+  animation: 160ms ease-out both vt-fade-in;
 }
 
 /* Anchors: no sliding or fading, and above the moving page. */
@@ -405,11 +446,32 @@ html:active-view-transition-type(nav-back)::view-transition-new(root) {
   }
 }
 
+/* With reduced motion, nothing slides, rises or flies: pages still fade from one to the next. */
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
+  ::view-transition-group(*) {
     animation-duration: 0s !important;
     animation-delay: 0s !important;
+  }
+  ::view-transition-old(root),
+  html:active-view-transition-type(nav-forward)::view-transition-old(root),
+  html:active-view-transition-type(nav-back)::view-transition-old(root) {
+    animation: 90ms ease-out both vt-fade-out;
+  }
+  ::view-transition-new(root),
+  html:active-view-transition-type(nav-forward)::view-transition-new(root),
+  html:active-view-transition-type(nav-back)::view-transition-new(root) {
+    animation: 160ms ease-out both vt-fade-in;
+  }
+}
+
+/*
+ * Inputs at 16px or more on touch screens: iOS zooms the page into any smaller one as it's focused. Outside every
+ * layer, so it wins over the text-sm and similar classes that make fields smaller on desktop.
+ */
+@media (pointer: coarse) {
+  input.field,
+  select.field,
+  textarea.field {
+    font-size: 16px;
   }
 }

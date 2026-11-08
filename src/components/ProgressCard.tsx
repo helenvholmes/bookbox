@@ -8,6 +8,7 @@ import { formatDay, todayLocal } from "@/lib/dates";
 import { demoMode } from "@/lib/demo";
 import { submit, usePendingOps } from "@/lib/outbox";
 import { ago, FINISHED_PERCENT, formatDuration } from "@/lib/progress";
+import { formatCount } from "@/lib/numbers";
 
 type Props = {
   bookId: number;
@@ -60,7 +61,7 @@ export function ProgressCard({ bookId, pages: pageCount, onKindle, shelves, read
             <p className="flex flex-wrap items-baseline justify-between gap-x-3 text-[0.8125rem]">
               <span>
                 {Math.round(shown.percent)}%
-                {shown.page !== null && pages ? <span className="text-muted"> · page {shown.page} of {pages}</span> : null}
+                {shown.page !== null && pages ? <span className="text-muted"> · page {formatCount(shown.page)} of {formatCount(pages)}</span> : null}
                 {left !== null && left > 0 && <span className="text-muted"> · {formatDuration(left)} left</span>}
               </span>
               {progress && !shown.pending && <span className="text-xs text-faint">{ago(progress.updated_at)}</span>}

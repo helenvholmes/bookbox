@@ -57,8 +57,9 @@ export function MultiPicker({
       ))}
       <div className="flex flex-wrap gap-1.5">
         {value.map((v) => (
-          <button key={v} type="button" className="chip" aria-pressed="true" onClick={() => onChange(value.filter((x) => x !== v))} aria-label={`Remove ${labelFor(v)}`}>
-            {labelFor(v)} <span aria-hidden>×</span>
+          // Taller to tap than it looks (the ::before), so the row's spacing stays as it is.
+          <button key={v} type="button" className="chip relative before:absolute before:-inset-y-2 before:inset-x-0" aria-pressed="true" onClick={() => onChange(value.filter((x) => x !== v))} aria-label={`Remove ${labelFor(v)}`}>
+            <span className="truncate">{labelFor(v)}</span> <span aria-hidden>×</span>
           </button>
         ))}
       </div>
@@ -163,7 +164,8 @@ export function RatingSlider({
       aria-valuemax={5}
       aria-valuenow={value ?? 0}
       aria-valuetext={value ? `${value} out of 5 stars` : "Not rated"}
-      className="-mx-1 w-fit cursor-pointer touch-pan-y rounded-md px-1 py-1 focus-visible:outline-2 focus-visible:outline-muted"
+      // 40 pixels tall to tap (half stars are small targets); the negative margin keeps it taking the room it did.
+      className="-mx-1 -my-1.5 w-fit cursor-pointer touch-pan-y rounded-md px-1 py-2.5 focus-visible:outline-2 focus-visible:outline-muted"
       onPointerMove={(e) => (e.pointerType === "mouse" || e.buttons) && setPreview(at(e))}
       onPointerLeave={() => setPreview(null)}
       onPointerCancel={() => setPreview(null)}
@@ -200,12 +202,12 @@ export function YearsInput({ name, value, onChange }: { name: string; value: num
       ))}
       <div className="flex flex-wrap items-center gap-1.5">
         {value.map((y) => (
-          <button key={y} type="button" className="chip" aria-pressed="true" onClick={() => onChange(value.filter((x) => x !== y))} aria-label={`Remove ${y}`}>
+          <button key={y} type="button" className="chip relative before:absolute before:-inset-y-2 before:inset-x-0" aria-pressed="true" onClick={() => onChange(value.filter((x) => x !== y))} aria-label={`Remove ${y}`}>
             {y} <span aria-hidden>×</span>
           </button>
         ))}
         {!value.includes(thisYear) && (
-          <button type="button" className="chip" onClick={() => add(thisYear)}>
+          <button type="button" className="chip relative before:absolute before:-inset-y-2 before:inset-x-0" onClick={() => add(thisYear)}>
             + {thisYear}
           </button>
         )}
