@@ -8,6 +8,7 @@ import { deletePersonAction, updatePersonAction, type UpdatePersonState } from "
 import type { Person } from "@/lib/books";
 import { RELATIONSHIPS } from "@/lib/constants";
 import { ConfirmButton } from "./ConfirmButton";
+import { SwapLabel } from "./SwapLabel";
 
 const SHOW_UPDATED_MS = 2000;
 const describe = (relationship: string) => relationship.split(",").filter(Boolean).join(" & ");
@@ -84,9 +85,10 @@ export function PersonHeader({ person, children }: { person: Person; children: R
     <div className="space-y-8 md:space-y-10">
       <BackLink />
       <div>
-        <form action={action} className="flex items-start justify-between gap-4">
+        {/* On phones the buttons go under the fields, so the names have the width to show. */}
+        <form action={action} className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <input type="hidden" name="id" value={person.id} />
-          <header className="min-w-0 flex-1 space-y-2">
+          <header className="w-full min-w-0 flex-1 space-y-2">
             <div className="grid max-w-lg grid-cols-2 gap-2">
               <input name="first" required autoFocus defaultValue={person.first} aria-label="First name" placeholder="First name" className="field display text-xl" />
               <input name="last" defaultValue={person.last} aria-label="Last name" placeholder="Last name" className="field display text-xl" />
@@ -102,13 +104,13 @@ export function PersonHeader({ person, children }: { person: Person; children: R
             </select>
             {state?.error && <p className="text-sm text-danger">{state.error}</p>}
           </header>
-          {/* Lined up with the name fields. */}
-          <div className="flex shrink-0 gap-2 pt-1.5">
+          {/* Lined up with the name fields, beside them. */}
+          <div className="flex shrink-0 gap-2 self-end sm:self-auto sm:pt-1.5">
             <button type="button" className="btn rounded-full px-4" onClick={() => setEditing(false)} disabled={pending}>
               Cancel
             </button>
             <button className="btn btn-primary rounded-full px-4" disabled={pending}>
-              {pending ? "Saving…" : "Save"}
+              <SwapLabel on={pending} label="Save" onLabel="Saving…" />
             </button>
           </div>
         </form>

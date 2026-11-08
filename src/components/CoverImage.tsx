@@ -10,20 +10,33 @@ const FRAME_RATIO = 2 / 3;
  * below) fill its height and are trimmed at the sides, keeping their proportions; taller or
  * narrower ones are shown whole.
  */
-export function CoverImage({ src, eager, priority = false, alwaysFill = false }: { src: string; eager: boolean; priority?: boolean; alwaysFill?: boolean }) {
+export function CoverImage({ src, eager, priority = false, alwaysFill = false, fallback = null }: {
+  src: string;
+  eager: boolean;
+  priority?: boolean;
+  alwaysFill?: boolean;
+  /** Shown instead if the image won't load. */
+  fallback?: React.ReactNode;
+}) {
   const [measured, setFit] = useState<"object-contain" | "object-cover">("object-contain");
-  // A cover that won't load (deleted, or paused at the storage limit) leaves the frame empty, not a broken-image icon.
-  // Only the error event says so: "complete" with no size can't, because Safari reports a lazy image it hasn't
-  // fetched yet that way, and would hide every cover below the fold.
+  // A cover that won't load (deleted, or paused at the storage limit) shows the fallback, not a broken-image icon.
+  // The error event says so, or for an eager image, "complete" with no size when it failed before hydration (see
+  // measure). Not for a lazy image: Safari reports one it hasn't fetched yet that way.
   const [failed, setFailed] = useState(false);
   const fit = alwaysFill ? "object-cover" : measured;
 
   const measure = useCallback((img: HTMLImageElement | null) => {
-    if (!img?.naturalWidth) return;
+    if (!img) return;
+    if (!img.naturalWidth) {
+      // An eager cover that failed before hydration (onError wasn't listening yet). Not a lazy one, which Safari
+      // reports as complete with no size before it's even fetched.
+      if (img.complete && img.loading !== "lazy") setFailed(true);
+      return;
+    }
     setFit(img.naturalWidth / img.naturalHeight > FRAME_RATIO + 0.005 ? "object-cover" : "object-contain");
   }, []);
 
-  if (failed) return null;
+  if (failed) return fallback;
 
   return (
     <img

@@ -82,6 +82,11 @@ async function downscale(file: File, maxWidth = 1200): Promise<File> {
 export function BookForm({ book, options, startScanning = false }: { book?: Book; options: FormOptions; startScanning?: boolean }) {
   const isNew = !book;
   const [state, formAction, saving] = useActionState(saveBookAction, undefined);
+  // An error shows at the top of the form, which can be well above the Save button you tapped: bring it into view.
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (state?.error) errorRef.current?.scrollIntoView({ block: "center" });
+  }, [state]);
   const router = useRouter();
   // Opened from another page: Save (on an edit) and Cancel step back to it, so the form doesn't stay in the history.
   useEffect(() => {
@@ -261,7 +266,11 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
             </button>
           </div>
 
-          {state?.error && <p className="rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger">{state.error}</p>}
+          {state?.error && (
+            <p ref={errorRef} role="alert" className="rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger">
+              {state.error}
+            </p>
+          )}
 
           {book && <input type="hidden" name="id" value={book.id} />}
           <input type="hidden" name="ol_work" value={fields.ol_work} />

@@ -48,7 +48,7 @@ export function BookGrid({
             <div className="flex flex-1 flex-col items-center px-3 pt-3.5 pb-2">
               {caption?.(b) && <p className="mb-0.5 text-[0.6875rem] text-faint">{caption(b)}</p>}
               <ClampedTitle title={b.title} className="text-[0.8125rem] leading-snug" />
-              {b.author && <p className="mt-0.5 text-xs text-muted">{b.author}</p>}
+              {b.author && <p className="mt-0.5 text-xs text-muted [overflow-wrap:anywhere]">{b.author}</p>}
               {/* Pinned to the bottom so stars line up across a row, whatever the title length. */}
               <span className="mt-auto pt-2.5">
                 <Stars rating={b.rating} />

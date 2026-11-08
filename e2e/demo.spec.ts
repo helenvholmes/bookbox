@@ -53,3 +53,11 @@ test("the demo follows the system's light or dark setting", async ({ page }) => 
   await page.emulateMedia({ colorScheme: "dark" });
   expect(await background()).toBe("rgb(17, 18, 20)");
 });
+
+test("a cover that won't load shows the book's spine instead of an empty frame", async ({ page }) => {
+  await page.route("**/covers/middlemarch.webp", (route) => route.abort());
+  await page.goto("/library");
+  const frame = page.locator("[data-cover]").filter({ hasText: "Middlemarch" }).first();
+  await expect(frame).toBeVisible();
+  await expect(frame.locator("img")).toHaveCount(0);
+});

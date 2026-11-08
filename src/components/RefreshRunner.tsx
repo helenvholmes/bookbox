@@ -59,7 +59,8 @@ export function RefreshRunner({ remaining, total }: { remaining: number; total: 
             </button>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-label="Books checked" aria-valuenow={done} aria-valuemin={0} aria-valuemax={goal}>
-            <div className="h-full rounded-full bg-ink transition-[width]" style={{ width: `${pct}%` }} />
+            {/* Grows by uncovering a full-width bar (clip-path), which is cheap to animate where width isn't. */}
+            <div className="h-full rounded-full bg-ink transition-[clip-path] duration-200 ease-linear" style={{ clipPath: `inset(0 ${100 - pct}% 0 0 round 9999px)` }} />
           </div>
           <p className="truncate text-xs text-muted">{current ? `Last: ${current}` : " "}</p>
         </>
