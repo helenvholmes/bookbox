@@ -3,6 +3,7 @@
 import { useActionState, useState, useSyncExternalStore } from "react";
 import { regenerateShareAction, saveShareAction, type ShareState } from "@/app/(app)/people/actions";
 import type { ShareSettings } from "@/lib/share";
+import { shownAccent } from "@/lib/share-accent";
 import { ConfirmButton } from "./ConfirmButton";
 import { Toggle } from "./inputs";
 
@@ -136,7 +137,7 @@ export function ShareEditor({ personId, first, settings, counts, defaultTitle, a
                   aria-pressed={accent === c}
                   onClick={() => setAccent(c)}
                   className={`size-6 rounded-full ring-offset-2 ring-offset-card ${accent === c ? "ring-2 ring-ink" : ""}`}
-                  style={{ background: c }}
+                  style={{ background: shownAccent(c) }}
                 />
               ))}
             </span>

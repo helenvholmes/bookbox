@@ -157,7 +157,7 @@ export function OfflineSupport() {
     // Online, but edits couldn't be sent (the server was unreachable, or the session expired).
     return (
       <div role="status" className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4 md:left-56 pt-[max(0.5rem,env(safe-area-inset-top))]">
-        <p className="card pointer-events-auto flex items-center gap-3 px-4 py-2 text-xs text-muted shadow-xl shadow-black/40">
+        <p className="card pointer-events-auto flex items-center gap-3 px-4 py-2 text-xs text-muted shadow-xl shadow-shadow">
           <span className="size-1.5 rounded-full bg-accent" aria-hidden />
           {changes(waiting)} waiting to sync.
           {outbox.state === "signed-out" ? (
@@ -175,7 +175,7 @@ export function OfflineSupport() {
   }
   return (
     <div role="status" className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4 md:left-56 pt-[max(0.5rem,env(safe-area-inset-top))]">
-      <p className="card pointer-events-auto flex items-center gap-3 px-4 py-2 text-xs text-muted shadow-xl shadow-black/40">
+      <p className="card pointer-events-auto flex items-center gap-3 px-4 py-2 text-xs text-muted shadow-xl shadow-shadow">
         <span className="size-1.5 rounded-full bg-danger" aria-hidden />
         You&rsquo;re offline. Status, ratings, reads and notes still save{waiting ? ` (${changes(waiting)} waiting)` : ""}, and sync when you&rsquo;re back.
         {/* A full page load, so the service worker can answer it. */}

@@ -25,8 +25,12 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#111214",
-  colorScheme: "dark",
+  // The page colour (--paper in globals.css), light or dark with the system.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8f8f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#111214" },
+  ],
+  colorScheme: "light dark",
 };
 
 function splashScreens() {

@@ -47,7 +47,7 @@ export function ClampedTitle({ title, className = "" }: { title: string; classNa
           <span
             role="tooltip"
             style={{ left: anchor.x, top: anchor.y }}
-            className="pointer-events-none fixed z-50 w-max max-w-60 -translate-x-1/2 -translate-y-[calc(100%+0.5rem)] rounded-md border border-line bg-raised px-2.5 py-1.5 text-center text-xs leading-snug text-ink shadow-[0_8px_24px_rgb(0_0_0/0.5)]"
+            className="pointer-events-none fixed z-50 w-max max-w-60 -translate-x-1/2 -translate-y-[calc(100%+0.5rem)] rounded-md border border-line bg-raised px-2.5 py-1.5 text-center text-xs leading-snug text-ink shadow-[0_8px_24px_var(--shadow)]"
           >
             {title}
           </span>,
