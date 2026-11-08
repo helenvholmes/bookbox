@@ -40,7 +40,7 @@ export function BookStatus({ bookId, shelves, reads, startedOn }: { bookId: numb
           );
         })}
       </div>
-      {ops.length > 0 && state !== "syncing" && (
+      {ops.some((op) => !op.synced) && state !== "syncing" && (
         <p className="mt-3 flex items-center gap-1.5 text-xs text-muted" role="status">
           <span className="size-1.5 rounded-full bg-accent" aria-hidden />
           {state === "signed-out" ? "Saved on this device. Sign in again to sync." : "Saved on this device. Syncs when you’re back online."}

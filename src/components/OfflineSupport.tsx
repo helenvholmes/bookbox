@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useOffline } from "next/offline";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { demoMode } from "@/lib/demo";
-import { flush, SYNCED_EVENT, useOutbox } from "@/lib/outbox";
+import { flush, settle, SYNCED_EVENT, useOutbox } from "@/lib/outbox";
 
 // Saved for offline use in the background: the index, these pages, and every cover.
 const OFFLINE_PAGES = ["/library", "/people", "/tags", "/series", "/stats"];
@@ -67,12 +67,23 @@ export function OfflineSupport() {
     return () => clearTimeout(timeout);
   }, [router]);
 
+  // The refresh runs as a transition, so once it's over the page has the server's copy and the
+  // synced edits laid over it can go (src/lib/outbox.ts).
+  const [refreshing, startRefresh] = useTransition();
+  const toSettle = useRef<string[]>([]);
+  useEffect(() => {
+    if (refreshing || !toSettle.current.length) return;
+    settle(toSettle.current);
+    toSettle.current = [];
+  }, [refreshing]);
+
   // Once edits land: show the server's copy, and re-save the affected pages for offline use so a
   // later offline visit doesn't show the old version.
   useEffect(() => {
     const onSynced = (e: Event) => {
-      const { books } = (e as CustomEvent<{ books: number[] }>).detail;
-      router.refresh();
+      const { books, settled } = (e as CustomEvent<{ books: number[]; settled: string[] }>).detail;
+      toSettle.current.push(...settled);
+      startRefresh(() => router.refresh());
       navigator.serviceWorker?.controller?.postMessage({ type: "refresh", urls: ["/library", ...books.map((id) => `/books/${id}`)] });
     };
     window.addEventListener(SYNCED_EVENT, onSynced);

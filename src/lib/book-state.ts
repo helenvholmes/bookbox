@@ -2,7 +2,7 @@
 
 import type { Read } from "./books";
 import { todayLocal } from "./dates";
-import { newId, submit } from "./outbox";
+import { newId, type ShownOp, submit } from "./outbox";
 import { STATUSES, type SyncOp, type TextField } from "./sync-ops";
 
 /**
@@ -32,16 +32,16 @@ export type ShownRead = Omit<Read, "id"> & { id: number | null; pending: boolean
 
 const isRead = (r: ShownRead, ref: { readId: number | null; clientId: string | null }) => (ref.readId !== null ? r.id === ref.readId : r.clientId === ref.clientId);
 
-export function withReads(reads: Read[], ops: SyncOp[]): ShownRead[] {
+export function withReads(reads: Read[], ops: ShownOp[]): ShownRead[] {
   let shown: ShownRead[] = reads.map((r) => ({ ...r, pending: false }));
   for (const op of ops) {
     if (op.kind === "addRead" && !shown.some((r) => r.clientId === op.clientId)) {
-      shown.push({ id: null, clientId: op.clientId, year: op.year, note: op.note, startedOn: op.startedOn ?? null, finishedOn: op.finishedOn ?? null, pending: true });
+      shown.push({ id: null, clientId: op.clientId, year: op.year, note: op.note, startedOn: op.startedOn ?? null, finishedOn: op.finishedOn ?? null, pending: !op.synced });
     } else if (op.kind === "deleteRead") {
       shown = shown.filter((r) => !isRead(r, op));
     } else if (op.kind === "readDates") {
       shown = shown.map((r) =>
-        isRead(r, op) ? { ...r, startedOn: op.startedOn, finishedOn: op.finishedOn, year: op.finishedOn ? Number(op.finishedOn.slice(0, 4)) : r.year, pending: true } : r,
+        isRead(r, op) ? { ...r, startedOn: op.startedOn, finishedOn: op.finishedOn, year: op.finishedOn ? Number(op.finishedOn.slice(0, 4)) : r.year, pending: !op.synced } : r,
       );
     }
   }
@@ -65,9 +65,9 @@ export function withStartedOn(saved: string | null, ops: SyncOp[]): string | nul
 
 export type ShownProgress = { percent: number; page: number | null; source: "manual" | "spotify"; pending: boolean } | null;
 
-export function withProgress(saved: ShownProgress, ops: SyncOp[]): ShownProgress {
+export function withProgress(saved: ShownProgress, ops: ShownOp[]): ShownProgress {
   let p = saved;
-  for (const op of ops) if (op.kind === "progress") p = op.percent === null ? null : { percent: op.percent, page: op.page, source: "manual", pending: true };
+  for (const op of ops) if (op.kind === "progress") p = op.percent === null ? null : { percent: op.percent, page: op.page, source: "manual", pending: !op.synced };
   return p;
 }
 

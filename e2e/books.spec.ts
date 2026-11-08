@@ -93,6 +93,36 @@ test("deletes a book", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Not found" })).toBeVisible();
 });
 
+test("moving a book to another shelf goes straight there", async ({ page }) => {
+  await page.goto("/books/new");
+  await page.getByRole("button", { name: "Enter a book by hand instead" }).click();
+  await page.locator("input[name=title]").fill("Samantha's Shelf Test");
+  await save(page);
+  const synced = () => page.waitForResponse((r) => r.url().endsWith("/api/sync") && r.ok());
+  // New books start on To Read.
+  await expect(page.getByRole("button", { name: "Remove from To Read" })).toBeVisible();
+
+  // Note every shelf the buttons light up from here on, with the page's refresh after the sync slowed
+  // down, so there's time to catch it showing the old shelf again.
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { seen: string[] }).seen = seen;
+    const note = () => {
+      const lit = [...document.querySelectorAll("button[aria-pressed=true]")].map((b) => b.getAttribute("aria-label")).join();
+      if (seen.at(-1) !== lit) seen.push(lit);
+    };
+    note();
+    new MutationObserver(note).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-pressed"] });
+  });
+  await page.route("**/books/*", async (route) => {
+    if (route.request().headers()["rsc"]) await new Promise((r) => setTimeout(r, 1500));
+    await route.fallback();
+  });
+  await Promise.all([synced(), page.getByRole("button", { name: "Mark as Reading" }).click()]);
+  await page.waitForTimeout(2500);
+  expect(await page.evaluate(() => (window as unknown as { seen: string[] }).seen)).toEqual(["Remove from To Read", "Remove from Reading"]);
+});
+
 test("robots.txt lets crawlers read only the page about BookBox", async ({ request }) => {
   const res = await request.get("/robots.txt");
   expect(res.ok()).toBe(true);
