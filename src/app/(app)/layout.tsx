@@ -56,7 +56,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
 /** Holds the desktop sidebar's place until the real one arrives. Phones have no sidebar, and their tab bar floats. */
 function SidebarShell() {
   return (
-    <aside aria-hidden style={{ viewTransitionName: "sidebar" }} className="sticky top-0 hidden h-dvh w-56 shrink-0 border-r border-line bg-[#0e0f11] px-3 py-5 md:block">
+    <aside aria-hidden style={{ viewTransitionName: "sidebar" }} className="sticky top-0 hidden h-dvh w-56 shrink-0 border-r border-line bg-sidebar px-3 py-5 md:block">
       <span className="display px-2.5 text-xl">BookBox</span>
     </aside>
   );

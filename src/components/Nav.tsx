@@ -271,7 +271,7 @@ export function Nav({ years, lists, canSignOut }: Props) {
   return (
     <>
       {/* Desktop: Oku-style sidebar. */}
-      <aside style={{ viewTransitionName: "sidebar" }} className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col gap-6 overflow-y-auto border-r border-line bg-[#0e0f11] px-3 py-5 md:flex">
+      <aside style={{ viewTransitionName: "sidebar" }} className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col gap-6 overflow-y-auto border-r border-line bg-sidebar px-3 py-5 md:flex">
         <SidebarLinks years={years} lists={lists} canSignOut={canSignOut} />
       </aside>
 
@@ -290,7 +290,7 @@ export function Nav({ years, lists, canSignOut }: Props) {
         onClick={(e) => {
           if ((e.target as Element).closest("a")) closeMenu();
         }}
-        className="m-0 h-dvh max-h-none w-full max-w-none [transform:translate3d(100%,0,0)] overflow-y-auto overscroll-contain bg-[#0e0f11] p-0 text-ink transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform backdrop:bg-transparent data-[shown=true]:[transform:translate3d(0,0,0)] motion-reduce:transition-none md:hidden"
+        className="m-0 h-dvh max-h-none w-full max-w-none [transform:translate3d(100%,0,0)] overflow-y-auto overscroll-contain bg-sidebar p-0 text-ink transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform backdrop:bg-transparent data-[shown=true]:[transform:translate3d(0,0,0)] motion-reduce:transition-none md:hidden"
       >
         <button
           type="button"

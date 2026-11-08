@@ -265,8 +265,8 @@ export function Landing({ signedIn }: { signedIn: boolean }) {
 function LibraryPreview() {
   return (
     <div aria-hidden className="relative">
-      <div className="pointer-events-none absolute -inset-8 rounded-[3rem] bg-[radial-gradient(ellipse_at_top,rgba(236,236,237,0.07),transparent_70%)]" />
-      <div className="card relative space-y-6 p-5 shadow-2xl shadow-black/50 sm:p-6">
+      <div className="pointer-events-none absolute -inset-8 rounded-[3rem] bg-[radial-gradient(ellipse_at_top,var(--glow),transparent_70%)]" />
+      <div className="card relative space-y-6 p-5 shadow-2xl shadow-shadow sm:p-6">
         <div>
           <p className="display text-2xl leading-tight">Hello, Helen</p>
           <p className="display text-2xl leading-tight text-faint">It&rsquo;s a good day to read</p>

@@ -43,3 +43,13 @@ test("the demo's robots.txt keeps crawlers out", async ({ request }) => {
   expect(body).toMatch(/Disallow: \/$/m);
   expect(body).not.toMatch(/Allow:/);
 });
+
+test("the demo follows the system's light or dark setting", async ({ page }) => {
+  const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/library");
+  await expect(page.getByText("Dracula").first()).toBeVisible();
+  expect(await background()).toBe("rgb(248, 248, 246)");
+  await page.emulateMedia({ colorScheme: "dark" });
+  expect(await background()).toBe("rgb(17, 18, 20)");
+});
