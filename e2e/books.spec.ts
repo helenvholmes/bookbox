@@ -172,6 +172,9 @@ test("swiping the phone menu to the right closes it", async ({ page }) => {
   await page.getByRole("navigation", { name: "Tabs" }).getByRole("button", { name: "Menu" }).click();
   const menu = page.getByRole("dialog", { name: "Menu" });
   await expect(menu).toHaveAttribute("data-shown", "true");
+  // Still open a moment later (it once closed itself straight after opening, when the page's first effects ran late).
+  await page.waitForTimeout(500);
+  await expect(menu).toHaveAttribute("data-shown", "true");
   const swipe = (dx: number) =>
     menu.evaluate(async (d, dx) => {
       const fire = (type: string, x: number) => d.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerType: "touch", pointerId: 1, isPrimary: true, clientX: x, clientY: 400 }));

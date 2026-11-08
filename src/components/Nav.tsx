@@ -294,7 +294,14 @@ export function Nav({ years, lists, canSignOut }: Props) {
 
   // Close the drawer once something in it is picked (the page or its filters change).
   const location = `${pathname}?${params}`;
-  useEffect(() => closeMenu(), [location, closeMenu]);
+  // Only when the place really changes: the effect also re-runs without that (in development, when React remounts
+  // effects), and closing then would shut a menu that was just opened.
+  const shownLocation = useRef(location);
+  useEffect(() => {
+    if (shownLocation.current === location) return;
+    shownLocation.current = location;
+    closeMenu();
+  }, [location, closeMenu]);
   useEffect(() => notePage(pathname), [pathname]);
   useEffect(() => {
     const place = params.size ? location : pathname;
