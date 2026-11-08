@@ -66,7 +66,7 @@ function useYears(years: Props["years"]) {
   return { current: years.find((y) => y.year === year) ?? { year, count: 0 }, past: years.filter((y) => y.year !== year) };
 }
 
-/** Sidebar rows; `large` is the phone menu, which has the whole screen and fingers to fit. */
+/** Sidebar rows; `large` is the phone menu, which has the whole screen and fingers to fit: everything there is at least 40 pixels square to tap. */
 const item = (active: boolean, large = false) =>
   `flex items-center gap-2.5 rounded-md px-2.5 transition ${large ? "py-2.5 text-base" : "py-1.5 text-[0.8125rem]"} ${active ? "bg-raised text-ink" : "text-muted hover:text-ink"}`;
 
@@ -96,7 +96,7 @@ function SidebarLinks({ years: withReads, lists, canSignOut, large = false }: Pr
 
   return (
     <>
-      <Link href="/library" className="display flex items-center gap-2 px-2.5 text-xl">
+      <Link href="/library" className={`display flex items-center gap-2 px-2.5 text-xl ${large ? "min-h-10" : ""}`}>
         BookBox
       </Link>
       <nav aria-label="Main" className="space-y-0.5">
@@ -149,11 +149,12 @@ function SidebarLinks({ years: withReads, lists, canSignOut, large = false }: Pr
       )}
 
       <div className="space-y-0.5">
-        <div className="flex items-center justify-between px-2.5 pb-1">
-          <Link href="/lists" className="text-xs text-faint hover:text-muted">
+        <div className={`flex items-center justify-between px-2.5 ${large ? "" : "pb-1"}`}>
+          <Link href="/lists" className={`text-xs text-faint hover:text-muted ${large ? "flex min-h-10 min-w-10 items-center" : ""}`}>
             Lists
           </Link>
-          <Link href="/lists" aria-label="Lists: make or edit one" className="text-faint hover:text-ink">
+          {/* In the phone menu, a 40-pixel square to tap, its icon still lined up with the rows' right edge. */}
+          <Link href="/lists" aria-label="Lists: make or edit one" className={`text-faint hover:text-ink ${large ? "-mr-3 flex size-10 items-center justify-center" : ""}`}>
             <Icon d={ICONS.add} className="size-3.5" />
           </Link>
         </div>
@@ -188,7 +189,7 @@ function SidebarLinks({ years: withReads, lists, canSignOut, large = false }: Pr
             }
           />
         )}
-        <a href={SOURCE_URL} target="_blank" rel="noreferrer" className="block px-2.5 pt-3 text-[0.6875rem] text-faint hover:text-muted">
+        <a href={SOURCE_URL} target="_blank" rel="noreferrer" className={`block px-2.5 pt-3 text-[0.6875rem] text-faint hover:text-muted ${large ? "min-h-10" : ""}`}>
           BookBox is open source ↗
         </a>
       </div>
@@ -255,13 +256,12 @@ export function Nav({ years, lists, canSignOut }: Props) {
 
   if (pathname === "/login") return null;
   const onLibrary = pathname === "/library";
-  const inMenu = ["/lists", "/series", "/calendar", "/missing-covers", "/missing-isbns", "/duplicates", "/refresh", "/spotify", "/settings"].some((p) => pathname.startsWith(p));
+  // Pages reached from the Menu tab, which lights up while you're on one.
+  const inMenu = ["/people", "/tags", "/lists", "/series", "/calendar", "/missing-covers", "/missing-isbns", "/duplicates", "/refresh", "/spotify", "/settings"].some((p) => pathname.startsWith(p));
 
   const tabs = [
     { href: "/library", label: "Library", d: ICONS.library, active: onLibrary || (pathname.startsWith("/books/") && pathname !== "/books/new") },
     { href: "/books/new", label: "Add", d: ICONS.add, active: pathname === "/books/new" },
-    { href: "/people", label: "People", d: ICONS.people, active: pathname.startsWith("/people") },
-    { href: "/tags", label: "Tags", d: ICONS.tags, active: pathname.startsWith("/tags") },
     { href: "/stats", label: "Stats", d: ICONS.stats, active: pathname.startsWith("/stats") },
   ];
   const tappedIndex = tapped?.from === location ? tabs.findIndex((t) => t.href === tapped.href) : -1;
@@ -321,7 +321,7 @@ export function Nav({ years, lists, canSignOut }: Props) {
               onClick={() => setTapped({ href: t.href, from: location })}
               // Touching it fetches the whole page (src/components/TouchPrefetch.tsx).
               data-prefetch="full"
-              className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] transition-colors duration-200 ${lit === i ? "text-ink" : "text-muted"}`}
+              className={`flex min-h-10 min-w-10 flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] transition-colors duration-200 ${lit === i ? "text-ink" : "text-muted"}`}
             >
               <Icon d={t.d} className="size-5" />
               {t.label}
@@ -331,7 +331,7 @@ export function Nav({ years, lists, canSignOut }: Props) {
             type="button"
             onClick={openMenu}
             aria-haspopup="dialog"
-            className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] transition-colors duration-200 ${lit === tabs.length ? "text-ink" : "text-muted"}`}
+            className={`flex min-h-10 min-w-10 flex-1 flex-col items-center gap-1 py-2.5 text-[0.6875rem] transition-colors duration-200 ${lit === tabs.length ? "text-ink" : "text-muted"}`}
           >
             <Icon d={ICONS.menu} className="size-5" />
             Menu
