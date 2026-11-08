@@ -312,7 +312,8 @@ export function Nav({ years, lists, canSignOut }: Props) {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
       >
         <TabBlob index={lit} count={tabs.length + 1} />
-        <div className="relative flex">
+        {/* The tabs fill the bar, 8 pixels apart and from its edges, and each lights up across its whole width. */}
+        <div className="relative flex gap-2 px-2">
           {tabs.map((t, i) => (
             <Link
               key={t.href}
@@ -342,23 +343,27 @@ export function Nav({ years, lists, canSignOut }: Props) {
   );
 }
 
+/** The space between tabs, and between the outer tabs and the screen's edges (the tab row's gap-2 and px-2). */
+const TAB_GAP = "0.5rem";
+
 /**
- * The rounded square behind the lit tab's icon and label. Moving to another tab, a second drop trails the pill and the
+ * The rounded rectangle behind the lit tab, as wide as the tab. Moving to another tab, a second drop trails the pill and the
  * gooey filter melts the two together, so it stretches across like liquid and snaps back into shape.
  * Without SVG filters on HTML (some Safari versions) the two drops just overlap into a longer pill.
  */
 function TabBlob({ index, count }: { index: number; count: number }) {
   const drop = "absolute left-0 transition-transform motion-reduce:transition-none";
-  const at = { width: `${100 / count}%`, transform: `translateX(${Math.max(index, 0) * 100}%)` };
+  // One tab's width, stepped along by a tab and a gap (a percentage in translateX is of the drop's own width).
+  const at = { width: `calc((100% - ${count - 1} * ${TAB_GAP}) / ${count})`, transform: `translateX(calc(${Math.max(index, 0)} * (100% + ${TAB_GAP})))` };
   return (
     <>
       <GooeyFilter id="tab-goo" />
-      <div aria-hidden className={`pointer-events-none absolute inset-x-0 top-0 bottom-[env(safe-area-inset-bottom)] transition-opacity duration-200 ${index < 0 ? "opacity-0" : ""}`} style={{ filter: "url(#tab-goo)" }}>
+      <div aria-hidden className={`pointer-events-none absolute inset-x-2 top-0 bottom-[env(safe-area-inset-bottom)] transition-opacity duration-200 ${index < 0 ? "opacity-0" : ""}`} style={{ filter: "url(#tab-goo)" }}>
         <div className={`${drop} inset-y-1 duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)]`} style={at}>
-          <div className="mx-auto h-full w-14 rounded-xl bg-raised" />
+          <div className="h-full w-full rounded-xl bg-raised" />
         </div>
         <div className={`${drop} inset-y-3 duration-[540ms] ease-[cubic-bezier(0.45,0.1,0.1,1)]`} style={at}>
-          <div className="mx-auto h-full w-10 rounded-xl bg-raised" />
+          <div className="mx-auto h-full w-[70%] rounded-xl bg-raised" />
         </div>
       </div>
     </>
