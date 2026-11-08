@@ -194,6 +194,39 @@ test("swiping the phone menu to the right closes it", async ({ page }) => {
   await expect(menu).not.toBeVisible();
 });
 
+test("swiping in from the right-hand edge opens the phone menu", async ({ page }) => {
+  await page.goto("/library");
+  const menu = page.getByRole("dialog", { name: "Menu" });
+  // A swipe of touches from the screen's right-hand edge, `dx` pixels to the left.
+  const edgeSwipe = (dx: number) =>
+    page.evaluate(async (dx) => {
+      const x0 = window.innerWidth - 4;
+      const target = document.elementFromPoint(x0, 400)!;
+      const touch = (x: number) => new Touch({ identifier: 1, target, clientX: x, clientY: 400 });
+      const fire = (type: string, x: number) => {
+        const t = touch(x);
+        target.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches: type === "touchend" ? [] : [t], changedTouches: [t] }));
+      };
+      fire("touchstart", x0);
+      for (let i = 1; i <= 6; i++) {
+        await new Promise((r) => setTimeout(r, 60));
+        fire("touchmove", x0 - (dx * i) / 6);
+      }
+      fire("touchend", x0 - dx);
+    }, dx);
+
+  // A short, slow pull lets it slide back out; a long one brings it all the way in.
+  await edgeSwipe(60);
+  await page.waitForTimeout(500);
+  await expect(menu).not.toBeVisible();
+  await edgeSwipe(250);
+  await expect(menu).toHaveAttribute("data-shown", "true");
+  await expect(menu.getByRole("link", { name: "Tags" })).toBeVisible();
+  // It's the real, modal menu: Escape closes it.
+  await page.keyboard.press("Escape");
+  await expect(menu).not.toBeVisible();
+});
+
 test("robots.txt lets crawlers read only the page about BookBox", async ({ request }) => {
   const res = await request.get("/robots.txt");
   expect(res.ok()).toBe(true);
