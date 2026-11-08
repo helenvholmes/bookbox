@@ -14,4 +14,9 @@ export const SPLASH_DEVICES: [number, number, number][] = [
   [1024, 1366, 2], // iPad Pro 12.9"
 ];
 
-export const splashFile = (w: number, h: number, r: number) => `splash-${w * r}x${h * r}.png`;
+// One of each for the system's light and dark settings, on that setting's page colour (src/app/globals.css).
+export const SPLASH_SCHEMES = ["dark", "light"] as const;
+export type SplashScheme = (typeof SPLASH_SCHEMES)[number];
+
+export const splashFile = (w: number, h: number, r: number, scheme: SplashScheme = "dark") =>
+  `splash-${w * r}x${h * r}${scheme === "light" ? "-light" : ""}.png`;

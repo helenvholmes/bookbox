@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Newsreader } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { SPLASH_DEVICES, splashFile } from "@/lib/splash";
+import { SPLASH_DEVICES, SPLASH_SCHEMES, splashFile } from "@/lib/splash";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -33,11 +33,14 @@ export const viewport: Viewport = {
   colorScheme: "light dark",
 };
 
+// One per device and light or dark setting, so the app opens on the same colour it's about to show.
 function splashScreens() {
-  return SPLASH_DEVICES.map(([w, h, r]) => ({
-    url: `/splash/${splashFile(w, h, r)}`,
-    media: `(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${r}) and (orientation: portrait)`,
-  }));
+  return SPLASH_DEVICES.flatMap(([w, h, r]) =>
+    SPLASH_SCHEMES.map((scheme) => ({
+      url: `/splash/${splashFile(w, h, r, scheme)}`,
+      media: `(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${r}) and (orientation: portrait) and (prefers-color-scheme: ${scheme})`,
+    })),
+  );
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
