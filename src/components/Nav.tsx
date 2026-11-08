@@ -516,11 +516,12 @@ function TabBlob({ index, count }: { index: number; count: number }) {
     <>
       <GooeyFilter id="tab-goo" />
       <div aria-hidden className={`pointer-events-none absolute inset-x-2 top-0 bottom-[env(safe-area-inset-bottom)] transition-opacity duration-200 ${index < 0 ? "opacity-0" : ""}`} style={{ filter: "url(#tab-goo)" }}>
-        {/* The pill gets there in 240ms and the trailing drop catches up by 300ms, on the page transitions' curve. */}
-        <div className={`${drop} inset-y-1 duration-[240ms] ease-(--vt-ease)`} style={at}>
+        {/* The pill gets there in 420ms on the page transitions' curve; the trailing drop starts slower and catches up by
+            540ms. The gap between them is what the filter melts into a stretch, so they need these different timings. */}
+        <div className={`${drop} inset-y-1 duration-[420ms] ease-(--vt-ease)`} style={at}>
           <div className="h-full w-full rounded-xl bg-raised" />
         </div>
-        <div className={`${drop} inset-y-3 duration-300 ease-(--vt-ease)`} style={at}>
+        <div className={`${drop} inset-y-3 duration-[540ms] ease-[cubic-bezier(0.45,0.1,0.1,1)]`} style={at}>
           <div className="mx-auto h-full w-[70%] rounded-xl bg-raised" />
         </div>
       </div>
