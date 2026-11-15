@@ -182,7 +182,7 @@ It uses the same keys file as `push:cloud`, saved as `.env.cloud` (git-ignored) 
 
 ### Home screen assets
 
-`npm run generate:icons` redraws the app icon (defined as SVG in `scripts/generate-icons.mts`) and writes the manifest icons, favicon and iOS launch screens.
+`npm run generate:icons` redraws the app icon (defined as SVG in `scripts/generate-icons.mts`) and writes the manifest icons, favicon and iOS launch screens. The icon's book spines are adapted from [Streamline](https://github.com/webalys-hq/streamline-vectors)'s pixel "archive books" icon, used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 ### The demo
 
