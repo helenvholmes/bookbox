@@ -10,53 +10,57 @@ import path from "node:path";
 import sharp from "sharp";
 import { SPLASH_DEVICES, SPLASH_SCHEMES, type SplashScheme, splashFile } from "../src/lib/splash";
 
-const ACCENT = "#2b2d32";
-const ACCENT_DARK = "#121315";
+const ACCENT = "#1d1e22";
+const ACCENT_DARK = "#0e0f11";
+const INK = "#ececed";
 // The page and text colours of each setting (--paper and --ink in src/app/globals.css).
 const SPLASH_COLORS: Record<SplashScheme, { paper: string; ink: string }> = {
   dark: { paper: "#111214", ink: "#ececed" },
   light: { paper: "#f8f8f6", ink: "#1b1c1f" },
 };
 
-// Books standing in a box, on a full-bleed square (iOS and Android apply their own rounding).
-// Everything important sits inside the central 80% so maskable crops are safe.
+// Pixel-art book spines on a shelf (the tall one smiling), after Streamline's "archive books" pixel icon
+// (streamline-pixel:content-files-archive-books-1, CC BY 4.0, https://github.com/webalys-hq/streamline-vectors).
+// One character per pixel: # is drawn, . is empty.
+const SPINES = [
+  ".....................",
+  "...########..........",
+  "...#......#..........",
+  "...########..........",
+  "...#......####.......",
+  "...#......#..######..",
+  "####......#####...#..",
+  "#..#......#..##...#..",
+  "####.#..#.#..######..",
+  "#..#......#..##...#..",
+  "#..#.#..#.#..###..##.",
+  "#..#..##..#..#.#...#.",
+  "#..#......#..#.#...#.",
+  "#..#......#..#.#...#.",
+  "#..#......#..#.#...#.",
+  "#..#......####.##..##",
+  "#..#......#..#..#...#",
+  "####......#..#..#####",
+  "#..########..#..#...#",
+  "#..#......#..#..#...#",
+  "##############..#####",
+];
+
+// A full-bleed square (iOS and Android apply their own rounding). The glyph is 576/1024 wide, so its
+// corners stay inside the 80% circle that maskable icons are cropped to.
 function iconSvg({ rounded = false } = {}) {
+  const size = 576;
+  const offset = (1024 - size) / 2;
+  const pixels = SPINES.flatMap((row, y) => [...row].map((c, x) => (c === "#" ? `M${x} ${y}h1v1h-1Z` : ""))).join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="${ACCENT}"/>
       <stop offset="1" stop-color="${ACCENT_DARK}"/>
     </linearGradient>
-    <linearGradient id="box" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#44464d"/>
-      <stop offset="1" stop-color="#2a2c31"/>
-    </linearGradient>
   </defs>
   <rect width="1024" height="1024" ${rounded ? 'rx="230"' : ""} fill="url(#bg)"/>
-
-  <!-- back rim of the box -->
-  <rect x="236" y="548" width="552" height="52" rx="14" fill="#000000" opacity="0.5"/>
-
-  <!-- books -->
-  <g>
-    <rect x="290" y="330" width="118" height="300" rx="14" fill="#e9e2d0"/>
-    <rect x="290" y="382" width="118" height="16" fill="#c9c0a8"/>
-    <rect x="290" y="560" width="118" height="16" fill="#c9c0a8"/>
-
-    <rect x="424" y="248" width="138" height="382" rx="14" fill="#f4f4f5"/>
-    <rect x="452" y="312" width="82" height="14" rx="7" fill="#8b8d93" opacity="0.9"/>
-    <rect x="452" y="340" width="56" height="14" rx="7" fill="#8b8d93" opacity="0.5"/>
-
-    <g transform="rotate(11 650 630)">
-      <rect x="590" y="318" width="120" height="312" rx="14" fill="#7a7d85"/>
-      <rect x="590" y="372" width="120" height="14" fill="#62656c"/>
-      <rect x="590" y="400" width="120" height="14" fill="#62656c"/>
-    </g>
-  </g>
-
-  <!-- front of the box -->
-  <path d="M214 580 H810 L786 800 Q782 836 746 836 H278 Q242 836 238 800 Z" fill="url(#box)"/>
-  <rect x="432" y="660" width="160" height="56" rx="14" fill="#ffffff" opacity="0.08"/>
+  <path fill="${INK}" transform="translate(${offset} ${offset}) scale(${size / SPINES.length})" d="${pixels}"/>
 </svg>`;
 }
 
