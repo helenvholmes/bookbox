@@ -24,7 +24,8 @@ jobs:
       - run: npm run lint
 
   test:
-    runs-on: ubuntu-latest
+    # Not ubuntu-latest: Playwright can't install Chromium on Ubuntu 26.04 yet. Move up with Playwright.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
