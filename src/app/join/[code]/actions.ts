@@ -8,6 +8,7 @@ import { hashPassword, MIN_PASSWORD_LENGTH } from "@/lib/passwords";
 import { asLibrary, createLibraryDatabase, deleteLibraryDatabase, type NewDatabase } from "@/lib/provision";
 import { startSession } from "@/lib/session";
 import { saveSettings } from "@/lib/settings";
+import { track } from "@/lib/usage";
 
 /** The error to show, and what was typed (React clears a form after its action). */
 export type JoinState = { error: string; name: string; email: string } | undefined;
@@ -31,6 +32,7 @@ export async function joinAction(code: string, _prev: JoinState, fd: FormData): 
     await inviteUsedBy(code, accountId);
     if (name) await withLibrary(asLibrary(db, accountId), () => saveSettings({ ownerName: name }));
     await startSession(accountId);
+    track("joined", {}, accountId);
   } catch (err) {
     console.error("join", err);
     if (db) await deleteLibraryDatabase(db).catch(() => {});

@@ -416,6 +416,13 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
             Invite family and friends. Each person gets a library of their own, which nobody else can see, you included. They sign in here with their own email
             and password.
           </p>
+          {people.length > 1 && (
+            <p className="text-sm">
+              <Link href="/usage" className="underline">
+                See how they&rsquo;re using BookBox
+              </Link>
+            </p>
+          )}
           <div className="card divide-y divide-line text-sm">
             {people.map((p) => (
               <div key={p.id} className="flex items-baseline justify-between gap-4 px-5 py-3">

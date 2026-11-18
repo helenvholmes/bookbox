@@ -120,7 +120,11 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
   const set = (k: keyof Fields) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setFields((f) => ({ ...f, [k]: e.target.value }));
 
-  function applyLookup(d: OLDetails) {
+  // How a new book's details were found, for usage tracking: a catalog pick (searched or scanned), or typed in.
+  const [via, setVia] = useState<{ catalog: string; scanned: boolean } | null>(null);
+
+  function applyLookup(d: OLDetails, found?: { catalog: string; scanned: boolean }) {
+    if (found) setVia(found);
     const incoming: Record<OLField, string> = {
       title: d.title,
       author: d.author,
@@ -273,6 +277,12 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
           )}
 
           {book && <input type="hidden" name="id" value={book.id} />}
+          {isNew && (
+            <>
+              <input type="hidden" name="added_via" value={via ? (via.scanned ? "scan" : "search") : "manual"} />
+              <input type="hidden" name="added_from" value={via?.catalog ?? ""} />
+            </>
+          )}
           <input type="hidden" name="ol_work" value={fields.ol_work} />
           <input type="hidden" name="ol_edition" value={fields.ol_edition} />
           <input type="hidden" name="cover_url" value={coverUrl ?? ""} />

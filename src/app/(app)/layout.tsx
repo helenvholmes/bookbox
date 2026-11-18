@@ -9,6 +9,9 @@ import { BackgroundSync } from "@/components/BackgroundSync";
 import { authEnabled } from "@/lib/auth";
 import { demoMode } from "@/lib/demo";
 import { getFacets, listLists } from "@/lib/books";
+import { UsageTracker } from "@/components/UsageTracker";
+import { currentAccount } from "@/lib/session";
+import { tracked } from "@/lib/usage";
 
 /**
  * The signed-in app: sidebar (or bottom tabs on phones) around every page. Nothing here waits on
@@ -28,6 +31,11 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <OfflineSupport />
       <BackgroundSync />
       <TouchPrefetch />
+      {authEnabled() && (
+        <Suspense>
+          <Tracker />
+        </Suspense>
+      )}
       {/* Reads the URL's query string, so it needs a Suspense boundary of its own. */}
       <Suspense>
         <PageMotion />
@@ -67,6 +75,11 @@ async function LocalCopyNotice() {
   const { canPull, isStale, lastPulled } = await import("@/lib/pull-cloud");
   if (!canPull() || !isStale()) return null;
   return <LocalCopyBanner pulledAt={lastPulled()} />;
+}
+
+/** Usage tracking for the people the owner invited (see src/lib/usage.ts). Never the owner. */
+async function Tracker() {
+  return tracked(await currentAccount()) ? <UsageTracker /> : null;
 }
 
 async function NavWithYears() {

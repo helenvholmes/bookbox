@@ -8,6 +8,7 @@ import { coverLimitReached, coverUploadsPaused, MAX_COVERS, deleteCover, fetchCo
 import { inventaireByIsbn } from "@/lib/inventaire";
 import { toIsbn13 } from "@/lib/names";
 import { isRating } from "@/lib/sync-ops";
+import { track } from "@/lib/usage";
 
 /** `saved`: an edit was saved and the form steps back to the page it was opened from. */
 export type SaveState = { error?: string; saved?: number } | undefined;
@@ -116,6 +117,10 @@ export async function saveBookAction(_prev: SaveState, fd: FormData): Promise<Sa
     return { error: (err as Error).message || "Couldn't save the book." };
   }
   await applyCover(bookId, cover);
+  if (id === null) {
+    const via = text(fd, "added_via");
+    track("book_added", { via: via === "search" || via === "scan" ? via : "manual", catalog: text(fd, "added_from").slice(0, 20), cover: !!cover });
+  } else track("book_edited", {});
 
   revalidatePath("/", "layout");
   // Leave the form out of the history, so Back goes to the page before it.
@@ -128,6 +133,7 @@ export async function deleteBookAction(fd: FormData) {
   const id = Number(fd.get("id"));
   const cover = await getCoverName(id);
   await deleteBook(id);
+  track("book_deleted", {});
   await deleteCover(cover);
   revalidatePath("/", "layout");
   const back = text(fd, "return_to");
