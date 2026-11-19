@@ -35,6 +35,10 @@ const nextConfig: NextConfig = {
   env: { BOOKBOX_DEMO: demo ? "1" : "" },
   // No "N" badge in the corner during development (build and runtime errors still show).
   devIndicators: false,
+  // Page titles, icons and launch screens always go in the <head>. By default Next.js streams them into the
+  // <body> for browsers (only bots get them in the head), and iOS's Add to Home Screen only looks in the head,
+  // so it showed a letter instead of the BookBox icon and the default launch screen.
+  htmlLimitedBots: /.*/,
   // Standalone output is for self-hosting; Vercel builds its own functions.
   output: process.env.VERCEL ? undefined : "standalone",
   // The database and covers live in DATA_DIR at runtime; never bundle them into the build.
