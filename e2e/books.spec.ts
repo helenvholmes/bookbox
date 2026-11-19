@@ -258,3 +258,14 @@ test("puts the home screen icon in the head for iPhone Safari", async ({ request
     expect(head, url).toContain('rel="apple-touch-startup-image"');
   }
 });
+
+// When Firefox adds BookBox to the home screen, iOS fetches the icon itself, signed out, from the standard address.
+test("serves the home screen icon at /apple-touch-icon.png without signing in", async ({ playwright, baseURL }) => {
+  const signedOut = await playwright.request.newContext({ baseURL });
+  for (const url of ["/apple-touch-icon.png", "/apple-touch-icon-precomposed.png"]) {
+    const res = await signedOut.get(url, { maxRedirects: 0 });
+    expect(res.status(), url).toBe(200);
+    expect(res.headers()["content-type"], url).toBe("image/png");
+  }
+  await signedOut.dispose();
+});
