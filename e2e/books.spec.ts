@@ -246,3 +246,15 @@ test("the CSV export keeps formula-like text as text", async ({ page }) => {
   expect(csv).toContain(`"'=HYPERLINK(""https://example.com"")"`);
   expect(csv).not.toMatch(/,=HYPERLINK|,"=HYPERLINK/);
 });
+
+// iOS's Add to Home Screen only reads the <head>; streamed metadata ends up in the <body> and it shows a letter instead.
+test("puts the home screen icon in the head for iPhone Safari", async ({ request }) => {
+  const iphone = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1";
+  for (const url of ["/library", "/login"]) {
+    const html = await (await request.get(url, { headers: { "User-Agent": iphone } })).text();
+    const head = html.slice(0, html.indexOf("</head>"));
+    expect(head, url).toMatch(/<link rel="apple-touch-icon" href="\/apple-icon\.png/);
+    expect(head, url).toContain('rel="manifest"');
+    expect(head, url).toContain('rel="apple-touch-startup-image"');
+  }
+});
