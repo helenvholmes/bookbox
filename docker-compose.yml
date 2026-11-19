@@ -1,0 +1,25 @@
+# BookBox on your own server. Put the two secrets in a .env file next to this one:
+#
+#   BOOKBOX_PASSWORD=a long passphrase for the first sign-in
+#   BOOKBOX_SECRET=a long random string, e.g. from: openssl rand -base64 32
+#
+# then run `docker compose up -d` and open http://your-server:3000.
+# Your library (the database and covers) is in ./bookbox-data; back that folder up.
+services:
+  bookbox:
+    image: ghcr.io/helenvholmes/bookbox:latest
+    # To build from this checkout instead of pulling the published image:
+    # build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./bookbox-data:/data
+    environment:
+      # Without a password there's no sign-in at all, so it's required here.
+      BOOKBOX_PASSWORD: ${BOOKBOX_PASSWORD:?Set BOOKBOX_PASSWORD in .env}
+      BOOKBOX_SECRET: ${BOOKBOX_SECRET:?Set BOOKBOX_SECRET in .env}
+      # Optional; these can also be entered in the app under Settings.
+      # SPOTIFY_CLIENT_ID: ""
+      # SPOTIFY_CLIENT_SECRET: ""
+      # HARDCOVER_TOKEN: ""
