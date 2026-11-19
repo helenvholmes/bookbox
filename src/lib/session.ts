@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { cache } from "react";
 import { getAccount, type Account } from "./accounts";
 import { authEnabled, readSession, SESSION_COOKIE, SESSION_MAX_AGE, sessionToken } from "./auth";
@@ -44,7 +44,10 @@ export async function startSession(accountId: number, issuedAt = Date.now()) {
   signedOut.delete(accountId); // a password change here applies here straight away
   (await cookies()).set(SESSION_COOKIE, await sessionToken(accountId, issuedAt), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    // HTTPS-only in production, except when the request came over plain http (a home server reached
+    // by its address, say), where a browser would drop a secure cookie and sign-in would never stick.
+    // Next.js fills in x-forwarded-proto itself when no proxy has.
+    secure: process.env.NODE_ENV === "production" && (await headers()).get("x-forwarded-proto")?.split(",")[0].trim() !== "http",
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_MAX_AGE,

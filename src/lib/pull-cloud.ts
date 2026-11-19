@@ -39,7 +39,8 @@ export type PullResult = { tables: Record<string, number>; coversDownloaded: num
 
 /** Whether this computer is set up to pull (it has .env.cloud with the hosted database's keys). */
 export function canPull(): boolean {
-  if (process.env.VERCEL) return false;
+  // The tests set BOOKBOX_NO_PULL: their library is never the real one, and the notice would cover buttons.
+  if (process.env.VERCEL || process.env.BOOKBOX_NO_PULL) return false;
   const env = readCloudEnv();
   return !!(env?.TURSO_DATABASE_URL && env.TURSO_AUTH_TOKEN);
 }

@@ -6,6 +6,22 @@ A personal reading log you host yourself, for free. Track what you're reading, w
 
 BookBox is for one reader per copy: you deploy your own, on your own free accounts, and your library stays yours. It's built with Next.js and SQLite (a local file, or [Turso](https://turso.tech) when hosted).
 
+**[Try the demo](https://demo.bookbox.lol)**: no sign-up, with a sample library that's yours to change for 20 minutes.
+
+Run it on your own server with [Docker](#run-it-with-docker), or [deploy it free on Vercel](#deploy-your-own-free) with no server at all.
+
+![The library: books you're reading, your yearly goal, and search](docs/screenshots/library.webp)
+
+<p>
+  <img src="docs/screenshots/book.webp" alt="A book's page: shelf, review, rating, tags and every read" width="49%">
+  <img src="docs/screenshots/stats.webp" alt="Stats: reading goal, books per year and year in review" width="49%">
+</p>
+
+<p>
+  <img src="docs/screenshots/phone-library.webp" alt="The library on a phone, with the tab bar" width="24%">
+  <img src="docs/screenshots/phone-book.webp" alt="A book's page on a phone" width="24%">
+</p>
+
 ## Features
 
 - **Add books in seconds**: search OpenLibrary by title, author or ISBN, or scan the barcode on the back with your phone's camera. The title, author, description, publisher, year, pages and cover fill in automatically.
@@ -23,6 +39,27 @@ BookBox is for one reader per copy: you deploy your own, on your own free accoun
 - **Import from Goodreads**: bring in your Goodreads export (books, shelves, ratings, reviews and finish dates) from Settings. Books you already have are flagged so you choose which to add, and covers are fetched from OpenLibrary.
 - **Import from Libby**: bring in your Libby timeline export (books you've borrowed, returned and placed holds on) from Settings. Returned books count as read on the day you returned them, unless you mark them as not finished.
 - **Export** your whole library as CSV at any time.
+
+## Run it with Docker
+
+On any machine with Docker (a home server, a NAS, a Raspberry Pi 4 or 5, a VPS), save [docker-compose.yml](docker-compose.yml) in a folder, and next to it a `.env` file with a password and a secret:
+
+```bash
+BOOKBOX_PASSWORD=a long passphrase
+BOOKBOX_SECRET=a long random string, e.g. from: openssl rand -base64 32
+```
+
+Then start it:
+
+```bash
+docker compose up -d
+```
+
+Open `http://your-server:3000` and sign in with your email and that password; the first sign-in creates your account. Your library (the database and covers) is in `./bookbox-data` next to the compose file, so back up that folder. To update, run `docker compose pull && docker compose up -d`.
+
+The image is `ghcr.io/helenvholmes/bookbox` (`latest`, or a version such as `1` or `1.0.0`), for 64-bit Intel/AMD and ARM. It works over plain http on your home network; put it behind a reverse proxy with HTTPS (Caddy, Traefik, Nginx Proxy Manager) before opening it to the internet, as the camera barcode scanner, offline mode and installing to the home screen all need HTTPS. Without Turso or R2 settings, invited family and friends get libraries of their own as files in the same folder. Every setting in the [table below](#environment-variables) works as an environment variable in the compose file.
+
+To build the image yourself instead, clone this repository and run `docker compose up -d --build` with `build: .` in place of the `image:` line.
 
 ## Deploy your own (free)
 
@@ -155,15 +192,19 @@ It uses the same keys file as `push:cloud`, saved as `.env.cloud` (git-ignored) 
 
 ## Hosting elsewhere
 
-Any host with a persistent disk works too (Fly.io, Railway, Render, a VPS), with the database and covers in `DATA_DIR`:
+Any host with a persistent disk works too (Fly.io, Railway, Render, a VPS), with the database and covers in `DATA_DIR`. The [Docker image](#run-it-with-docker) is the easiest way; without it:
 
 ```bash
-npm run build
-cp -R .next/static .next/standalone/.next/static && cp -R public .next/standalone/public
-DATA_DIR=/path/to/data BOOKBOX_PASSWORD=… node .next/standalone/server.js
+npm ci && npm run build
+cp -R .next/static/. .next/standalone/.next/static/ && cp -R public/. .next/standalone/public/
+DATA_DIR=/path/to/data BOOKBOX_PASSWORD=… BOOKBOX_SECRET=… node .next/standalone/server.js
 ```
 
-Always set `BOOKBOX_PASSWORD` on a host others can reach.
+Always set `BOOKBOX_PASSWORD` on a host others can reach: without it there's no sign-in at all.
+
+## How it's made
+
+BookBox is built with the help of [Claude Code](https://claude.com/claude-code), Anthropic's AI coding assistant, directed by its maintainer, who uses it for their own library. Every change runs the [end-to-end tests](#tests) and lint checks on GitHub before it's merged.
 
 ## Feature requests
 
