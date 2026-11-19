@@ -247,6 +247,18 @@ export async function changePasswordAction(_prev: AccountState, fd: FormData): P
   return { savedAt: now };
 }
 
+/** Turns usage sharing on or off for the signed-in person (see src/lib/usage.ts). Off deletes what was recorded. */
+export async function setUsageSharingAction(fd: FormData) {
+  notInDemo();
+  const { currentAccount } = await import("@/lib/session");
+  const { canShareUsage, setSharesUsage } = await import("@/lib/usage");
+  const account = await currentAccount();
+  if (!canShareUsage(account)) return;
+  await setSharesUsage(account.id, fd.get("share") === "on");
+  // The layout adds or removes the tracker.
+  revalidatePath("/", "layout");
+}
+
 export type InviteState = { error?: string; link?: string } | null;
 
 /** The signed-in account when it owns the main library (only the owner manages invites), or null. */

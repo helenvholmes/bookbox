@@ -6,17 +6,45 @@ import { currentAccount } from "./session";
 import type { UsageKind } from "./usage-events";
 
 /**
- * Usage tracking for the people the owner has invited, so the owner can see how BookBox is going for
+ * Usage sharing for the people the owner has invited, so the owner can see how BookBox is going for
  * them: which pages they open, what they add and import (and from where), and where they get stuck
- * (rage clicks, errors). Only the owner sees it, on the Usage page. The owner's own use, the demo,
- * and a copy without accounts record nothing. Events are kept for USAGE_KEEP_DAYS.
+ * (rage clicks, errors). Opt-in: nothing is recorded for anyone until they turn it on in Settings,
+ * and turning it off deletes what was recorded. Only the owner sees it, on the Usage page. The
+ * owner's own use, the demo, and a copy without accounts record nothing. Events are kept for
+ * USAGE_KEEP_DAYS.
  */
 
 export const USAGE_KEEP_DAYS = 180;
 const DAY = 24 * 60 * 60 * 1000;
 
-/** Whether this account's use is recorded: anyone signed in except the owner, and never in the demo. */
-export const tracked = (account: Account | null): account is Account => !!account && !isOwner(account) && !demoMode();
+/** Whether this account is offered usage sharing in Settings: anyone signed in except the owner, and never in the demo. */
+export const canShareUsage = (account: Account | null): account is Account => !!account && !isOwner(account) && !demoMode();
+
+/** Whether this account has opted in to sharing its usage. */
+export async function sharesUsage(accountId: number): Promise<boolean> {
+  return !!(await accountsDb.get("SELECT 1 AS one FROM usage_consent WHERE account_id = ?", accountId))?.one;
+}
+
+/** Whether this account's use is recorded: it can share usage and has opted in. */
+export async function tracked(account: Account | null): Promise<boolean> {
+  return canShareUsage(account) && (await sharesUsage(account.id));
+}
+
+/** Opts in, or opts out and deletes everything recorded for the account. */
+export async function setSharesUsage(accountId: number, on: boolean) {
+  if (on) {
+    await accountsDb.run("INSERT INTO usage_consent (account_id, opted_in_at) VALUES (?, ?) ON CONFLICT (account_id) DO NOTHING", accountId, Date.now());
+  } else {
+    await accountsDb.run("DELETE FROM usage_consent WHERE account_id = ?", accountId);
+    await accountsDb.run("DELETE FROM usage_events WHERE account_id = ?", accountId);
+  }
+}
+
+/** When each account that shares its usage opted in. */
+export async function usageConsents(): Promise<Map<number, number>> {
+  const rows = await accountsDb.all("SELECT account_id, opted_in_at FROM usage_consent");
+  return new Map(rows.map((r) => [Number(r.account_id), Number(r.opted_in_at)]));
+}
 
 export type UsageEvent = { kind: UsageKind; path?: string; detail?: Record<string, unknown>; at?: number };
 
@@ -50,7 +78,7 @@ export function track(kind: UsageKind, detail: Record<string, unknown> = {}, acc
       } else {
         account = await currentAccount();
       }
-      if (tracked(account)) await recordEvents(account.id, [{ kind, detail }]);
+      if (account && (await tracked(account))) await recordEvents(account.id, [{ kind, detail }]);
     } catch (err) {
       console.error("usage", err);
     }
@@ -61,10 +89,18 @@ export function track(kind: UsageKind, detail: Record<string, unknown> = {}, acc
 
 export type StoredEvent = { accountId: number; at: number; kind: UsageKind; path: string; detail: Record<string, unknown> };
 
-/** The last `days` days' events, newest first, and the time they were read at. */
+/**
+ * The last `days` days' events, newest first, and the time they were read at. Only from people who
+ * share their usage, and only since they opted in (anything older was recorded before opting in existed).
+ */
 export async function recentEvents(days: number): Promise<{ events: StoredEvent[]; now: number }> {
   const now = Date.now();
-  const rows = await accountsDb.all("SELECT account_id, at, kind, path, detail FROM usage_events WHERE at >= ? ORDER BY at DESC LIMIT 50000", now - days * DAY);
+  const rows = await accountsDb.all(
+    `SELECT e.account_id, e.at, e.kind, e.path, e.detail FROM usage_events e
+     JOIN usage_consent c ON c.account_id = e.account_id AND e.at >= c.opted_in_at
+     WHERE e.at >= ? ORDER BY e.at DESC LIMIT 50000`,
+    now - days * DAY,
+  );
   const events = rows.map((r) => {
     let detail: Record<string, unknown> = {};
     try {

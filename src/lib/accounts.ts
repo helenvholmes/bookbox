@@ -57,8 +57,15 @@ CREATE TABLE IF NOT EXISTS storage_usage (
   PRIMARY KEY (period, store, op)
 );
 
--- What people other than the owner do in BookBox (see usage.ts), for the owner's Usage page: pages
--- opened, books added and imported, rage clicks and errors. Kept for USAGE_KEEP_DAYS.
+-- Who has chosen, in Settings, to share their usage with the owner (see usage.ts). Nobody is in it
+-- until they opt in themselves; opting out removes the row and their events.
+CREATE TABLE IF NOT EXISTS usage_consent (
+  account_id    INTEGER PRIMARY KEY,
+  opted_in_at   INTEGER NOT NULL
+);
+
+-- What people who opted in do in BookBox (see usage.ts), for the owner's Usage page: pages opened,
+-- books added and imported, rage clicks and errors. Kept for USAGE_KEEP_DAYS.
 CREATE TABLE IF NOT EXISTS usage_events (
   id          INTEGER PRIMARY KEY,
   account_id  INTEGER NOT NULL,

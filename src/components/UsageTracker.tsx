@@ -14,7 +14,7 @@ const MAX_ERRORS = 5; // per page load, so a loop that throws can't flood the ta
 
 /**
  * Reports what someone does to /api/usage (see src/lib/usage.ts): the pages they open, rage
- * clicks, and errors. Only rendered for people other than the owner. Events are queued and sent
+ * clicks, and errors. Only rendered for people who opted in, in Settings (never the owner). Events are queued and sent
  * every few seconds and when the page is hidden.
  */
 export function UsageTracker() {
@@ -108,11 +108,18 @@ export function UsageTracker() {
   return null;
 }
 
-/** What was clicked, in a few words: "button “Save”", "a “Library”", "img". Never what's typed in a field. */
+/**
+ * What was clicked, in a few words: "button “Save”", "a /books/…", "img". Links give where they go
+ * rather than their text, which is often a book's title. Never what's typed in a field.
+ */
 function describe(target: EventTarget | null): string {
   if (!(target instanceof Element)) return "";
   const el = target.closest("button, a, [role=button], [role=tab], label, summary, input, select, textarea") ?? target;
   const tag = el.tagName.toLowerCase();
+  if (el instanceof HTMLAnchorElement && !el.getAttribute("aria-label")) {
+    const url = new URL(el.href || "/", location.href);
+    return url.origin === location.origin ? `a ${url.pathname.replace(/\/\d+(?=\/|$)/g, "/…").replace(/^\/(people|s|join)\/[^/]+/, "/$1/…")}` : "a (another site)";
+  }
   const typed = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement;
   const name =
     el.getAttribute("aria-label") ||
