@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { trackInBrowser } from "@/lib/usage-events";
 
 /**
  * A page that failed to load (a database hiccup, a lookup that threw): the sidebar stays, and the
  * page can be tried again without losing your place. The error is in the server's logs by its digest.
  */
 export default function PageError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
-  useEffect(() => console.error(error), [error]);
+  useEffect(() => {
+    console.error(error);
+    trackInBrowser("page_error", { message: error.message, digest: error.digest ?? "" });
+  }, [error]);
 
   return (
     <div className="space-y-4 py-16 text-center" role="alert">

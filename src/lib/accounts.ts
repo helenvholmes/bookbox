@@ -57,6 +57,19 @@ CREATE TABLE IF NOT EXISTS storage_usage (
   PRIMARY KEY (period, store, op)
 );
 
+-- What people other than the owner do in BookBox (see usage.ts), for the owner's Usage page: pages
+-- opened, books added and imported, rage clicks and errors. Kept for USAGE_KEEP_DAYS.
+CREATE TABLE IF NOT EXISTS usage_events (
+  id          INTEGER PRIMARY KEY,
+  account_id  INTEGER NOT NULL,
+  at          INTEGER NOT NULL,            -- ms since the epoch
+  kind        TEXT NOT NULL,
+  path        TEXT NOT NULL DEFAULT '',    -- the page it happened on
+  detail      TEXT NOT NULL DEFAULT '{}'   -- JSON, depending on kind
+);
+CREATE INDEX IF NOT EXISTS usage_events_at ON usage_events(at);
+CREATE INDEX IF NOT EXISTS usage_events_account ON usage_events(account_id, at);
+
 -- Failed sign-ins per network address (hashed, never stored as-is), to slow down password guessing.
 CREATE TABLE IF NOT EXISTS login_failures (
   key      TEXT PRIMARY KEY,

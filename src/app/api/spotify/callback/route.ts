@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { connectSpotify, STATE_COOKIE, syncSpotify } from "@/lib/spotify";
+import { track } from "@/lib/usage";
 
 /** Where Spotify sends you back after you approve (or decline) the connection. */
 export async function GET(req: NextRequest) {
@@ -19,6 +20,7 @@ export async function GET(req: NextRequest) {
   try {
     await connectSpotify(code, origin);
     await syncSpotify(true).catch(() => {});
+    track("connect", { service: "spotify" });
   } catch {
     return back("connect");
   }

@@ -6,6 +6,7 @@ import { checkSetupPassword } from "@/lib/auth";
 import { lockedOutFor, recordFailure } from "@/lib/login-limit";
 import { hashPassword, verifyPassword } from "@/lib/passwords";
 import { endSession, startSession } from "@/lib/session";
+import { track } from "@/lib/usage";
 
 // Checked against when there's no such account, so a wrong email takes as long as a wrong password.
 let decoy: Promise<string> | undefined;
@@ -38,6 +39,7 @@ export async function loginAction(_prev: LoginState, fd: FormData): Promise<Logi
   // Failures aren't cleared on success: someone with an account of their own could otherwise sign
   // into it between guesses at someone else's password, and never be locked out.
   await startSession(accountId);
+  track("sign_in", {}, accountId);
   redirect(sameSitePath(String(fd.get("next") ?? "")), RedirectType.replace);
 }
 

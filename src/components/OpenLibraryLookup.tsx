@@ -12,7 +12,8 @@ const SOURCE_NAMES: Record<Source, string> = { openlibrary: "OpenLibrary", loc: 
 type Props = {
   initialQuery?: string;
   autoSearch?: boolean;
-  onPick: (details: OLDetails) => void;
+  /** `via`: how the book was found (for usage tracking): which catalog, and whether its barcode was scanned. */
+  onPick: (details: OLDetails, via: { catalog: Source; scanned: boolean }) => void;
   onCancel?: () => void;
   /** Open the camera straight away (the "Scan a barcode" tile). */
   startScanning?: boolean;
@@ -31,9 +32,12 @@ export function OpenLibraryLookup({ initialQuery = "", autoSearch = false, onPic
   const [existing, setExisting] = useState<{ id: number; title: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const searchId = useRef(0);
+  // Whether the results on screen came from scanning a barcode.
+  const scanned = useRef(false);
 
   function search(q: string) {
     if (!q.trim()) return;
+    scanned.current = false;
     setStatus("searching");
     setError(null);
     setExisting(null);
@@ -43,6 +47,7 @@ export function OpenLibraryLookup({ initialQuery = "", autoSearch = false, onPic
   /** A scanned ISBN: warn if it's already in the library, otherwise fill the form with the match. */
   async function onScanned(isbn: string) {
     setScanning(false);
+    scanned.current = true;
     setQuery(isbn);
     setStatus("searching");
     setError(null);
@@ -97,8 +102,9 @@ export function OpenLibraryLookup({ initialQuery = "", autoSearch = false, onPic
   }
 
   async function pick(r: LookupResult) {
+    const via = { catalog: r.source, scanned: scanned.current };
     // The other catalogs' results already carry everything they know.
-    if (r.details) return onPick(r.details);
+    if (r.details) return onPick(r.details, via);
     setPicking(r.work);
     setStatus("loading");
     setError(null);
@@ -121,7 +127,7 @@ export function OpenLibraryLookup({ initialQuery = "", autoSearch = false, onPic
         pages: details.pages ?? r.pages,
         publish_year: details.publish_year ?? r.year,
         coverUrl: details.coverUrl || r.coverUrl,
-      });
+      }, via);
     } catch (err) {
       setError((err as Error).message || "Couldn't load that book.");
     } finally {

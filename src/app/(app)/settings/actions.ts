@@ -6,6 +6,7 @@ import { cleanGoodreadsBook, fetchImportedCovers, findMatches, importGoodreadsBo
 import { cleanLibbyBook, type LibbyBook } from "@/lib/libby";
 import { fetchLibbyCovers, importLibbyBooks } from "@/lib/libby-import";
 import { saveSettings } from "@/lib/settings";
+import { track } from "@/lib/usage";
 
 export type SettingsState = { savedAt?: number } | null;
 
@@ -54,6 +55,7 @@ export async function saveHardcoverTokenAction(_prev: HardcoverTokenState, fd: F
     return { error: e instanceof HardcoverError ? e.message : "Couldn’t reach Hardcover to check the token. Try again in a minute." };
   }
   await saveHardcoverToken(token);
+  track("connect", { service: "hardcover" });
   revalidatePath("/", "layout");
   return null;
 }
@@ -74,6 +76,7 @@ export async function connectLibbyAction(_prev: LibbyConnectState, fd: FormData)
   const code = String(fd.get("code") ?? "").replace(/\D/g, "");
   try {
     await connectLibby(code, cleanTimeZone(fd.get("time_zone")));
+    track("connect", { service: "libby" });
   } catch (e) {
     return { error: e instanceof LibbyError ? e.message : "Couldn’t connect to Libby. Try again in a minute." };
   } finally {
@@ -109,6 +112,7 @@ export async function createApiKeyAction(_prev: ApiKeyState, fd: FormData): Prom
   const parsed = parseOrigins(String(fd.get("origins") ?? ""));
   if ("error" in parsed) return { error: parsed.error };
   const key = await createApiKey(name, parsed.origins);
+  track("api_key", {});
   revalidatePath("/settings");
   return { key, name };
 }
@@ -143,13 +147,17 @@ export async function previewGoodreadsAction(csv: string): Promise<{ books?: Goo
   const parsed = parseGoodreadsCsv(csv);
   if (typeof parsed === "string") return { error: parsed };
   if (!parsed.length) return { error: "There are no books in that file." };
-  return { books: await findMatches(parsed) };
+  const matched = await findMatches(parsed);
+  track("import_preview", { source: "goodreads", books: matched.length });
+  return { books: matched };
 }
 
 export async function importGoodreadsAction(books: unknown[]): Promise<{ id: number; isbn13: string | null }[]> {
   notInDemo();
   const clean = (Array.isArray(books) ? books.slice(0, 50) : []).map(cleanGoodreadsBook).filter((b): b is GoodreadsBook => b !== null);
-  return importGoodreadsBooks(clean);
+  const added = await importGoodreadsBooks(clean);
+  track("import", { source: "goodreads", books: added.length });
+  return added;
 }
 
 export async function goodreadsCoversAction(books: { id: number; isbn13: string }[]): Promise<number> {
@@ -170,13 +178,17 @@ export async function previewLibbyAction(books: unknown[]): Promise<{ books?: Li
   if (!Array.isArray(books) || books.length > 20_000) return { error: "That file is too big." };
   const clean = books.map(cleanLibbyBook).filter((b): b is LibbyBook => b !== null);
   if (!clean.length) return { error: "There are no books in that file." };
-  return { books: await findMatches(clean) };
+  const matched = await findMatches(clean);
+  track("import_preview", { source: "libby", books: matched.length });
+  return { books: matched };
 }
 
 export async function importLibbyAction(books: unknown[]): Promise<{ id: number; isbn13: string | null; coverUrl: string | null }[]> {
   notInDemo();
   const clean = (Array.isArray(books) ? books.slice(0, 50) : []).map(cleanLibbyBook).filter((b): b is LibbyBook => b !== null);
-  return importLibbyBooks(clean);
+  const added = await importLibbyBooks(clean);
+  track("import", { source: "libby", books: added.length });
+  return added;
 }
 
 export async function libbyCoversAction(books: { id: number; isbn13: string | null; coverUrl: string | null }[]): Promise<number> {
