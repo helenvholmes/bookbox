@@ -1,0 +1,16 @@
+# Kept out of the image: your library, secrets, and anything rebuilt inside it.
+.git
+.next
+node_modules
+data
+.env*
+!.env.example
+.vercel
+e2e/.data
+e2e/.data-demo
+test-results
+playwright-report
+*.tsbuildinfo
+Dockerfile
+docker-compose.yml
+
