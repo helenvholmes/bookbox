@@ -14,6 +14,8 @@ const env = { ...process.env, DATA_DIR: data, NODE_OPTIONS: `--import ${path.joi
 // A local library with no sign-in, whatever .env.local says (set here, these win over it). Covers go to
 // R2 as on the hosted site, with made-up keys: catalog-stub.mjs answers for R2 from memory.
 for (const k of ["BOOKBOX_PASSWORD", "BOOKBOX_SECRET", "VERCEL", "TURSO_AUTH_TOKEN", "TURSO_API_TOKEN", "ACCOUNTS_DATABASE_URL", "BLOB_READ_WRITE_TOKEN"]) env[k] = "";
+// No "Pull latest" notice, even on a computer with .env.cloud.
+env.BOOKBOX_NO_PULL = "1";
 env.TURSO_DATABASE_URL = `file:${path.join(data, "bookbox.db")}`;
 Object.assign(env, { R2_ACCOUNT_ID: "e2e", R2_ACCESS_KEY_ID: "e2e", R2_SECRET_ACCESS_KEY: "e2e", R2_BUCKET: "covers" });
 

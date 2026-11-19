@@ -10,7 +10,8 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # Pinned: Playwright doesn't support ubuntu-latest (26.04) yet.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -24,7 +25,8 @@ jobs:
       - run: npm run lint
 
   test:
-    runs-on: ubuntu-latest
+    # Pinned: Playwright doesn't support ubuntu-latest (26.04) yet.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
