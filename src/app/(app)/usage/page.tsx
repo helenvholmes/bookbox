@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { isOwner, listAccounts } from "@/lib/accounts";
 import { currentAccount } from "@/lib/session";
-import { recentEvents, USAGE_KEEP_DAYS, type StoredEvent } from "@/lib/usage";
+import { recentEvents, usageConsents, USAGE_KEEP_DAYS, type StoredEvent } from "@/lib/usage";
 
 export const metadata = { title: "Usage" };
 
@@ -39,7 +39,7 @@ export default async function UsagePage(props: PageProps<"/usage">) {
 
   const sp = await props.searchParams;
   const days = WINDOWS.includes(Number(sp.days)) ? Number(sp.days) : 30;
-  const [accounts, { events, now }] = await Promise.all([listAccounts(), recentEvents(days)]);
+  const [accounts, { events, now }, consents] = await Promise.all([listAccounts(), recentEvents(days), usageConsents()]);
   const people = accounts.filter((a) => !a.owner);
   const email = new Map(accounts.map((a) => [a.id, a.email]));
   const who = (id: number) => email.get(id) ?? `Account ${id} (deleted)`;
@@ -58,6 +58,7 @@ export default async function UsagePage(props: PageProps<"/usage">) {
       const opens = evs.filter((e) => e.kind === "open");
       return {
         ...p,
+        sharing: consents.has(p.id),
         lastSeen: evs[0]?.at ?? null,
         activeDays: new Set(evs.map((e) => new Date(e.at).toISOString().slice(0, 10))).size,
         pages: count("page"),
@@ -71,7 +72,8 @@ export default async function UsagePage(props: PageProps<"/usage">) {
         desktop: opens.some((e) => e.detail.phone === false),
       };
     })
-    .sort((a, b) => (b.lastSeen ?? 0) - (a.lastSeen ?? 0));
+    .sort((a, b) => Number(b.sharing) - Number(a.sharing) || (b.lastSeen ?? 0) - (a.lastSeen ?? 0));
+  const sharingCount = rows.filter((r) => r.sharing).length;
 
   const total = (kind: string) => events.filter((e) => e.kind === kind).length;
   const importedTotal = events.filter((e) => e.kind === "import").reduce((n, e) => n + num(e.detail.books), 0);
@@ -112,8 +114,6 @@ export default async function UsagePage(props: PageProps<"/usage">) {
     pages.set(pageName(e.path), p);
   }
 
-  const active = rows.filter((r) => r.lastSeen !== null).length;
-
   return (
     <div className="space-y-10 pb-6">
       <div className="space-y-6">
@@ -123,7 +123,8 @@ export default async function UsagePage(props: PageProps<"/usage">) {
         <header>
           <h1 className="display text-3xl">Usage</h1>
           <p className="mt-1 text-sm text-muted">
-            How the people you&rsquo;ve invited use BookBox. Only you can see this, and your own use isn&rsquo;t recorded. Times are UTC.
+            How the people you&rsquo;ve invited use BookBox, for those who&rsquo;ve chosen to share it in their Settings (it&rsquo;s off until they
+            turn it on). Only you can see this, and your own use isn&rsquo;t recorded. Times are UTC.
           </p>
         </header>
         <nav aria-label="Time window" className="flex flex-wrap gap-2">
@@ -136,7 +137,7 @@ export default async function UsagePage(props: PageProps<"/usage">) {
       </div>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Tile label="Active" value={`${active} of ${people.length}`} />
+        <Tile label="Sharing" value={`${sharingCount} of ${people.length}`} />
         <Tile label="Books added" value={total("book_added")} />
         <Tile label="Books imported" value={importedTotal} />
         <Tile label="Rage clicks" value={total("rage_click")} alert={total("rage_click") > 0} />
@@ -155,7 +156,9 @@ export default async function UsagePage(props: PageProps<"/usage">) {
               <li key={r.id} className="space-y-2 px-5 py-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <span className="min-w-0 truncate font-medium">{r.email}</span>
-                  <span className="text-xs text-muted">{r.lastSeen ? `Seen ${ago(r.lastSeen, now)}` : `Not seen in ${days} days`}</span>
+                  <span className="text-xs text-muted">
+                    {!r.sharing ? "Not sharing" : r.lastSeen ? `Seen ${ago(r.lastSeen, now)}` : `Not seen in ${days} days`}
+                  </span>
                 </div>
                 {r.lastSeen && (
                   <dl className="flex flex-wrap gap-x-5 gap-y-1 text-muted">

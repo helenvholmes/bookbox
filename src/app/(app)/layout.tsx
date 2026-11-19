@@ -77,9 +77,9 @@ async function LocalCopyNotice() {
   return <LocalCopyBanner pulledAt={lastPulled()} />;
 }
 
-/** Usage tracking for the people the owner invited (see src/lib/usage.ts). Never the owner. */
+/** Usage tracking for invited people who opted in, in Settings (see src/lib/usage.ts). Never the owner. */
 async function Tracker() {
-  return tracked(await currentAccount()) ? <UsageTracker /> : null;
+  return (await tracked(await currentAccount())) ? <UsageTracker /> : null;
 }
 
 async function NavWithYears() {

@@ -25,7 +25,8 @@ import { currentAccount } from "@/lib/session";
 import { getSettings } from "@/lib/settings";
 import { callbackUrl, getSpotifyAccount, spotifyCredentials } from "@/lib/spotify";
 import { disconnectAction, syncNowAction } from "../spotify/actions";
-import { revokeInviteAction } from "./actions";
+import { canShareUsage, sharesUsage, USAGE_KEEP_DAYS } from "@/lib/usage";
+import { revokeInviteAction, setUsageSharingAction } from "./actions";
 import { deleteApiKeyAction, disconnectLibbyAction, removeHardcoverTokenAction, removeSpotifyKeysAction, syncLibbyNowAction } from "./actions";
 
 export const metadata = { title: "Settings" };
@@ -97,6 +98,8 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
   // Without accounts (a copy on your own computer) you're the owner of the only library.
   const siteOwner = !account || isOwner(account);
   const [people, invites] = account && siteOwner ? await Promise.all([listAccounts(), openInvites()]) : [[], []];
+  const offerSharing = canShareUsage(account);
+  const sharing = offerSharing && (await sharesUsage(account.id));
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
   const message = typeof sp.spotify === "string" ? SPOTIFY_MESSAGES[sp.spotify] : undefined;
@@ -452,6 +455,50 @@ export default async function SettingsPage(props: PageProps<"/settings">) {
             ))}
             <div className="p-5">
               <InviteForm />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {offerSharing && (
+        <section id="usage" className="max-w-xl scroll-mt-8 space-y-3">
+          <h2 className="section-title">Share your usage</h2>
+          <p className="text-sm text-muted">
+            BookBox is new, and sharing how you use it helps the person who invited you see what&rsquo;s working and what&rsquo;s confusing. It&rsquo;s off
+            unless you turn it on, and only they can see it.
+          </p>
+          <div className="card divide-y divide-line text-sm">
+            <div className="space-y-3 p-5">
+              <h3 className="font-medium">What&rsquo;s shared</h3>
+              <ul className="list-disc space-y-1.5 pl-5 text-muted">
+                <li>The pages you open, and whether you&rsquo;re on a phone, a computer or the home screen app</li>
+                <li>Clicking the same spot over and over, which usually means something didn&rsquo;t respond: the page, and the button&rsquo;s label or where the link goes</li>
+                <li>Errors, and pages that don&rsquo;t load</li>
+                <li>Adding, editing, deleting and importing books: how a book was found (search, barcode or typed in), and how many came from Goodreads or Libby</li>
+                <li>Connecting Spotify, Libby or Hardcover, and signing in</li>
+              </ul>
+              <h3 className="pt-1 font-medium">What isn&rsquo;t</h3>
+              <p className="text-muted">
+                Anything you type, and what&rsquo;s in your library: no titles, ratings, reviews, quotes or notes. Your library stays private either way.
+              </p>
+              <p className="text-muted">What&rsquo;s shared is kept for {USAGE_KEEP_DAYS} days. Turning sharing off deletes all of it.</p>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-4 p-5">
+              <p>{sharing ? "You’re sharing your usage. Thank you!" : "You’re not sharing your usage."}</p>
+              <form action={setUsageSharingAction}>
+                {sharing ? (
+                  <ConfirmButton className="btn rounded-full px-4" message="Stop sharing your usage? Everything shared so far is deleted." confirmLabel="Stop sharing">
+                    Stop sharing
+                  </ConfirmButton>
+                ) : (
+                  <>
+                    <input type="hidden" name="share" value="on" />
+                    <SubmitButton className="btn btn-primary rounded-full px-4" pending="Turning on…">
+                      Share my usage
+                    </SubmitButton>
+                  </>
+                )}
+              </form>
             </div>
           </div>
         </section>

@@ -7,12 +7,12 @@ const clip = (v: unknown, n: number) => (typeof v === "string" ? v.slice(0, n) :
 
 /**
  * Usage events from the browser (UsageTracker): page views, rage clicks and errors. Signed-in only
- * (the proxy answers 401 without a session), and only kept for people other than the owner.
+ * (the proxy answers 401 without a session), and only kept for people who opted in (see usage.ts).
  * Sent with sendBeacon, so the answer isn't read.
  */
 export async function POST(req: Request) {
   const account = await currentAccount();
-  if (!tracked(account)) return new Response(null, { status: 204 });
+  if (!account || !(await tracked(account))) return new Response(null, { status: 204 });
   const body = (await req.json().catch(() => null)) as { events?: unknown } | null;
   if (!body || !Array.isArray(body.events)) return Response.json({ error: "Expected { events: [...] }" }, { status: 400 });
 
