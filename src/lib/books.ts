@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { cache } from "react";
 import { db, deleteBookRows, transaction } from "./db";
 import { searchBooks, type SearchEntry } from "./search";
-import { TEXT_FIELDS, type TextField } from "./sync-ops";
+import { TEXT_FIELDS, type ReadingFormat, type TextField } from "./sync-ops";
 import { authorSort, slugify } from "./names";
 
 export type Named = { id: number; name: string };
@@ -817,6 +817,20 @@ export async function setManualProgress(bookId: number, percent: number | null, 
          duration_ms = NULL, updated_at = excluded.updated_at`,
     )
     .run(bookId, Math.max(0, Math.min(100, percent)), page);
+}
+
+/** Logs that you read the book on `day`, replacing anything already logged for it that day. */
+export async function logReadingDay(bookId: number, day: string, format: ReadingFormat, minutes: number) {
+  await db
+    .prepare(
+      `INSERT INTO reading_days (book_id, day, format, minutes) VALUES (?, ?, ?, ?)
+       ON CONFLICT(book_id, day) DO UPDATE SET format = excluded.format, minutes = excluded.minutes`,
+    )
+    .run(bookId, day, format, minutes);
+}
+
+export async function unlogReadingDay(bookId: number, day: string) {
+  await db.prepare("DELETE FROM reading_days WHERE book_id = ? AND day = ?").run(bookId, day);
 }
 
 export async function setRating(bookId: number, rating: number | null) {

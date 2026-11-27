@@ -91,6 +91,7 @@ export async function seedDemo(client: Client) {
       { sql: "UPDATE book_reads SET year = year + ? WHERE finished_on IS NULL", args: [years] },
       { sql: "UPDATE books SET started_on = date(started_on, ?) WHERE started_on IS NOT NULL", args: [days] },
       { sql: "UPDATE books SET due_date = date(due_date, ?) WHERE due_date IS NOT NULL", args: [days] },
+      { sql: "UPDATE reading_days SET day = date(day, ?)", args: [days] },
       { sql: "UPDATE loans SET lent_on = date(lent_on, ?), returned_on = date(returned_on, ?)", args: [days, days] },
       // Through a year no goal has, so moving one onto another's year never collides.
       { sql: "UPDATE goals SET year = year + ? + 100000", args: [years] },

@@ -1,27 +1,47 @@
 import "server-only";
 import { connection } from "next/server";
 import { db } from "./db";
+import type { ReadingFormat } from "./sync-ops";
 
-/** A stretch of days a book was being read. `end` is null for a book you're still reading (it runs to today). */
-export type ReadingSpan = { bookId: number; title: string; author: string; cover: string | null; start: string; end: string | null };
+/** A day you said you read a book. */
+export type ReadingDay = { bookId: number; title: string; author: string; cover: string | null; day: string; format: ReadingFormat; minutes: number };
+
+/** A book offered when logging a day, with the format it's most likely read in. */
+export type LogChoice = { bookId: number; title: string; author: string; cover: string | null; format: ReadingFormat; current: boolean };
+
+/** Every day you logged reading, oldest first. Only these are on the calendar. */
+export async function readingDays(): Promise<ReadingDay[]> {
+  await connection();
+  return (await db
+    .prepare(
+      `SELECT b.id AS bookId, b.title, b.author, b.cover, d.day, d.format, d.minutes
+       FROM reading_days d JOIN books b ON b.id = d.book_id
+       ORDER BY d.day, b.title`,
+    )
+    .all()) as ReadingDay[];
+}
 
 /**
- * Every read with days, plus the books being read now. A read with only one of its days is a
- * single day. Older reads have only a year, so they aren't on the calendar.
+ * The books you'd log a day for: Currently Reading (most recently started first), then the others
+ * logged in the last couple of months. Each suggests the format you logged it in last, or digital
+ * for a Kindle or Libby book.
  */
-export async function readingSpans(): Promise<ReadingSpan[]> {
+export async function logChoices(): Promise<LogChoice[]> {
   await connection();
   const rows = (await db
     .prepare(
-      `SELECT b.id AS bookId, b.title, b.author, b.cover, coalesce(r.started_on, r.finished_on) AS start, coalesce(r.finished_on, r.started_on) AS "end"
-       FROM book_reads r JOIN books b ON b.id = r.book_id
-       WHERE r.started_on IS NOT NULL OR r.finished_on IS NOT NULL
-       UNION ALL
-       SELECT b.id, b.title, b.author, b.cover, b.started_on, NULL FROM books b
-       WHERE b.started_on IS NOT NULL
-         AND EXISTS (SELECT 1 FROM book_shelves bs JOIN shelves s ON s.id = bs.shelf_id WHERE bs.book_id = b.id AND s.name = 'Currently Reading')
-       ORDER BY start`,
+      `SELECT b.id AS bookId, b.title, b.author, b.cover,
+         coalesce(
+           (SELECT d.format FROM reading_days d WHERE d.book_id = b.id ORDER BY d.day DESC LIMIT 1),
+           CASE WHEN b.on_kindle = 1 OR EXISTS (SELECT 1 FROM libby_titles lt WHERE lt.book_id = b.id) THEN 'digital' ELSE 'physical' END
+         ) AS format,
+         EXISTS (SELECT 1 FROM book_shelves bs JOIN shelves s ON s.id = bs.shelf_id WHERE bs.book_id = b.id AND s.name = 'Currently Reading') AS current,
+         (SELECT max(d.day) FROM reading_days d WHERE d.book_id = b.id) AS lastLogged
+       FROM books b
+       WHERE EXISTS (SELECT 1 FROM book_shelves bs JOIN shelves s ON s.id = bs.shelf_id WHERE bs.book_id = b.id AND s.name = 'Currently Reading')
+          OR EXISTS (SELECT 1 FROM reading_days d WHERE d.book_id = b.id AND d.day >= date('now', '-60 days'))
+       ORDER BY current DESC, coalesce(b.started_on, '') DESC, lastLogged DESC, b.title`,
     )
-    .all()) as ReadingSpan[];
-  return rows;
+    .all()) as (Omit<LogChoice, "current"> & { current: number })[];
+  return rows.map(({ bookId, title, author, cover, format, current }) => ({ bookId, title, author, cover, format, current: current === 1 }));
 }

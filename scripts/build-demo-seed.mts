@@ -54,6 +54,7 @@ const TABLES: [table: string, scrub?: Scrub][] = [
   ],
   ["recommendations"],
   ["loans"],
+  ["reading_days"],
   ["book_progress", (r) => ({ ...r, source: "manual", position_ms: null, duration_ms: null })],
   ["author_genders"],
   ["cover_skipped"],

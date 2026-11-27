@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
-import type { ReadingSpan } from "@/lib/calendar";
-import { formatDay, formatSpan, todayLocal } from "@/lib/dates";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import type { LogChoice, ReadingDay } from "@/lib/calendar";
+import { formatDay, todayLocal } from "@/lib/dates";
+import { submit, useOutbox } from "@/lib/outbox";
+import { isMinutes, type ReadingFormat } from "@/lib/sync-ops";
 import { Cover } from "./Cover";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const FORMAT_LABEL: Record<ReadingFormat, string> = { physical: "Physical", digital: "Digital" };
 const noSubscribe = () => () => {};
 const today = () => todayLocal();
 
@@ -19,15 +22,49 @@ function shiftMonth(month: string, by: number) {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}`;
 }
 
+/** "45 min", "1 hr", "2 hr 10 min". */
+export function formatMinutes(total: number) {
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return [h && `${h} hr`, (m || !h) && `${m} min`].filter(Boolean).join(" ");
+}
+
+type Book = { bookId: number; title: string; author: string; cover: string | null };
+
 /**
- * A month of days, each showing the cover of the book you were reading that day (after Fable's
- * reading calendar). When books overlap, the one started most recently shows, with a count of the
- * others; tap a day to see them all. Today is the device's day, so it's worked out in the browser.
+ * The days you logged, with edits still on their way to the server laid over them, so a day you
+ * log shows straight away (and offline).
  */
-export function ReadingCalendar({ spans, month: chosen }: { spans: ReadingSpan[]; month: string | null }) {
+function useShownDays(days: ReadingDay[], choices: LogChoice[]) {
+  const { ops, settling } = useOutbox();
+  return useMemo(() => {
+    const books = new Map<number, Book>();
+    for (const b of [...days, ...choices]) books.set(b.bookId, b);
+    const shown = new Map(days.map((d) => [`${d.bookId}|${d.day}`, d]));
+    for (const op of [...settling, ...ops]) {
+      if (op.kind !== "logDay" && op.kind !== "unlogDay") continue;
+      const key = `${op.bookId}|${op.day}`;
+      if (op.kind === "unlogDay") shown.delete(key);
+      else {
+        const book = books.get(op.bookId);
+        if (book) shown.set(key, { ...book, day: op.day, format: op.format, minutes: op.minutes });
+      }
+    }
+    return [...shown.values()];
+  }, [days, choices, ops, settling]);
+}
+
+/**
+ * A month of the days you said you read, each showing the cover of what you read (after Fable's
+ * reading calendar). When you read more than one book in a day, the one you read longest shows,
+ * with a count of the others. Tap a day to see them, or to log what you read. Today is the
+ * device's day, so it's worked out in the browser.
+ */
+export function ReadingCalendar({ days: logged, choices, month: chosen }: { days: ReadingDay[]; choices: LogChoice[]; month: string | null }) {
   const now = useSyncExternalStore(noSubscribe, today, () => null);
   const month = chosen ?? now?.slice(0, 7) ?? null;
   const [selected, setSelected] = useState<string | null>(null);
+  const shown = useShownDays(logged, choices);
 
   if (!month) return <div className="aspect-[7/6] rounded-md bg-card" aria-hidden />;
 
@@ -36,18 +73,15 @@ export function ReadingCalendar({ spans, month: chosen }: { spans: ReadingSpan[]
   const daysInMonth = new Date(Date.UTC(year, m, 0)).getUTCDate();
   const offset = first.getUTCDay();
   const days = Array.from({ length: daysInMonth }, (_, i) => `${month}-${pad(i + 1)}`);
-  const end = (s: ReadingSpan) => s.end ?? now ?? s.start;
-  const on = (day: string) =>
-    spans
-      .filter((s) => s.start <= day && day <= end(s))
-      .sort((a, b) => b.start.localeCompare(a.start))
-      // A book read twice in one stretch of days only shows once.
-      .filter((s, i, all) => all.findIndex((o) => o.bookId === s.bookId) === i);
+  const on = (day: string) => shown.filter((d) => d.day === day).sort((a, b) => b.minutes - a.minutes || a.title.localeCompare(b.title));
 
-  const inMonth = new Map(spans.filter((s) => s.start <= days.at(-1)! && end(s) >= days[0]).map((s) => [s.bookId, s]));
-  const finishedInMonth = spans.filter((s) => s.end && s.end.startsWith(month)).length;
+  const thisMonth = shown.filter((d) => d.day.startsWith(month));
+  const daysRead = new Set(thisMonth.map((d) => d.day)).size;
+  const booksRead = new Set(thisMonth.map((d) => d.bookId)).size;
+  const minutes = thisMonth.reduce((sum, d) => sum + d.minutes, 0);
   const label = first.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
-  const selectedBooks = selected?.startsWith(month) ? on(selected) : [];
+  // Today is open to start with, ready to log.
+  const open = selected?.startsWith(month) ? selected : now?.startsWith(month) ? now : null;
 
   return (
     <div className="max-w-3xl space-y-5">
@@ -55,9 +89,9 @@ export function ReadingCalendar({ spans, month: chosen }: { spans: ReadingSpan[]
         <div>
           <h2 className="display text-2xl">{label}</h2>
           <p className="text-[0.8125rem] text-muted">
-            {inMonth.size === 0
+            {daysRead === 0
               ? "Nothing logged"
-              : `${inMonth.size} ${inMonth.size === 1 ? "book" : "books"}${finishedInMonth ? ` · ${finishedInMonth} finished` : ""}`}
+              : `${daysRead} ${daysRead === 1 ? "day" : "days"} · ${booksRead} ${booksRead === 1 ? "book" : "books"} · ${formatMinutes(minutes)}`}
           </p>
         </div>
         <nav aria-label="Months" className="flex items-center gap-2">
@@ -94,12 +128,12 @@ export function ReadingCalendar({ spans, month: chosen }: { spans: ReadingSpan[]
             <button
               key={day}
               type="button"
-              onClick={() => setSelected(selected === day ? null : day)}
-              aria-pressed={selected === day}
-              aria-label={`${formatDay(day)}${books.length ? `: ${books.map((b) => b.title).join(", ")}` : ""}`}
+              onClick={() => setSelected(day)}
+              aria-pressed={open === day}
+              aria-label={`${formatDay(day)}${books.length ? `: ${books.map((b) => `${b.title}, ${formatMinutes(b.minutes)}`).join("; ")}` : ""}`}
               className={`relative aspect-[2/3] overflow-hidden rounded-sm text-left transition ${
                 top ? "" : "border border-line hover:border-line-hover"
-              } ${isToday ? "ring-1 ring-ink ring-offset-1 ring-offset-paper" : ""} ${selected === day ? "outline outline-1 outline-muted" : ""}`}
+              } ${isToday ? "ring-1 ring-ink ring-offset-1 ring-offset-paper" : ""} ${open === day ? "outline outline-1 outline-muted" : ""}`}
             >
               {top && (
                 <div className="pointer-events-none absolute inset-0 [&_span]:hidden">
@@ -121,31 +155,138 @@ export function ReadingCalendar({ spans, month: chosen }: { spans: ReadingSpan[]
         })}
       </div>
 
-      {selected?.startsWith(month) && (
-        <section className="space-y-3" aria-live="polite">
-          <h3 className="section-title">{formatDay(selected, true)}</h3>
-          {selectedBooks.length === 0 ? (
-            <p className="text-[0.8125rem] text-muted">Nothing logged that day.</p>
-          ) : (
-            <ul className="card divide-y divide-line">
-              {selectedBooks.map((b) => (
-                <li key={b.bookId}>
-                  <Link href={`/books/${b.bookId}`} className="flex items-center gap-3 p-3 hover:bg-raised">
-                    <div className="w-9 shrink-0">
-                      <Cover cover={b.cover} title={b.title} className="rounded-sm" />
-                    </div>
-                    <span className="min-w-0 flex-1 text-[0.8125rem]">
-                      <span className="block truncate text-ink">{b.title}</span>
-                      <span className="block truncate text-muted">{b.author}</span>
-                    </span>
-                    <span className="shrink-0 text-xs text-faint">{b.end ? formatSpan(b.start, b.end) : formatSpan(b.start, null)}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
+      {open && <DayPanel key={open} day={open} entries={on(open)} choices={choices} canLog={!!now && open <= now} />}
     </div>
+  );
+}
+
+/** What you read on one day, and a form to log more (or change what's there). */
+function DayPanel({ day, entries, choices, canLog }: { day: string; entries: ReadingDay[]; choices: LogChoice[]; canLog: boolean }) {
+  // The books to pick from: the usual ones, plus any already logged this day.
+  const options = [...choices, ...entries.filter((e) => !choices.some((c) => c.bookId === e.bookId)).map((e) => ({ ...e, current: false }))];
+  const unlogged = options.find((o) => !entries.some((e) => e.bookId === o.bookId));
+  const [bookId, setBookId] = useState<number | null>(entries.length ? null : (unlogged?.bookId ?? null));
+  const [format, setFormat] = useState<ReadingFormat>(unlogged?.format ?? "physical");
+  const [minutes, setMinutes] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const editing = bookId !== null && entries.some((e) => e.bookId === bookId);
+
+  function pick(id: number) {
+    setBookId(id);
+    setError(null);
+    const entry = entries.find((e) => e.bookId === id);
+    setFormat(entry?.format ?? options.find((o) => o.bookId === id)?.format ?? "physical");
+    setMinutes(entry ? String(entry.minutes) : "");
+  }
+
+  return (
+    <section className="space-y-3" aria-live="polite">
+      <h3 className="section-title">{formatDay(day, true)}</h3>
+      {entries.length === 0 ? (
+        <p className="text-[0.8125rem] text-muted">Nothing logged that day.</p>
+      ) : (
+        <ul className="card divide-y divide-line">
+          {entries.map((e) => (
+            <li key={e.bookId} className="flex items-center gap-3 p-3">
+              <Link href={`/books/${e.bookId}`} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80">
+                <div className="w-9 shrink-0">
+                  <Cover cover={e.cover} title={e.title} className="rounded-sm" />
+                </div>
+                <span className="min-w-0 flex-1 text-[0.8125rem]">
+                  <span className="block truncate text-ink">{e.title}</span>
+                  <span className="block truncate text-muted">
+                    {FORMAT_LABEL[e.format]} · {formatMinutes(e.minutes)}
+                  </span>
+                </span>
+              </Link>
+              <button type="button" className="min-h-10 shrink-0 px-1.5 text-xs text-faint hover:text-ink" onClick={() => pick(e.bookId)} aria-label={`Edit ${e.title}`}>
+                Edit
+              </button>
+              <button
+                type="button"
+                className="min-h-10 shrink-0 px-1.5 text-xs text-faint hover:text-danger"
+                onClick={() => {
+                  submit({ kind: "unlogDay", bookId: e.bookId, day });
+                  if (bookId === e.bookId) setBookId(null);
+                }}
+                aria-label={`Remove ${e.title}`}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {canLog &&
+        (options.length === 0 ? (
+          <p className="text-[0.8125rem] text-faint">Move a book to Currently Reading to log reading it.</p>
+        ) : bookId === null ? (
+          <button type="button" className="btn rounded-full px-3 text-xs" onClick={() => pick(unlogged?.bookId ?? options[0].bookId)}>
+            + Log reading
+          </button>
+        ) : (
+          <form
+            className="card space-y-3 p-3"
+            aria-label="Log reading"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const n = Number(minutes.trim());
+              if (!isMinutes(n)) return setError("Enter the minutes you read, from 1 to 1440.");
+              submit({ kind: "logDay", bookId, day, format, minutes: n });
+              setBookId(null);
+              setMinutes("");
+            }}
+          >
+            <label className="block text-[0.8125rem] text-muted">
+              <span className="mb-1 block">Book</span>
+              <span className="relative block">
+                <select className="field appearance-none truncate pr-9 text-sm" value={bookId} onChange={(e) => pick(Number(e.target.value))}>
+                  {options.map((o) => (
+                    <option key={o.bookId} value={o.bookId}>
+                      {o.title}
+                      {o.author ? ` — ${o.author}` : ""}
+                    </option>
+                  ))}
+                </select>
+                {/* The browser's own arrow sits against the edge; this one is inset like the text. */}
+                <svg aria-hidden viewBox="0 0 16 16" className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted">
+                  <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </label>
+            <div className="flex flex-wrap items-end gap-4">
+              <div role="group" aria-label="Format" className="flex gap-1.5">
+                {(["physical", "digital"] as const).map((f) => (
+                  <button key={f} type="button" className="chip relative before:absolute before:-inset-y-2 before:inset-x-0" aria-pressed={format === f} onClick={() => setFormat(f)}>
+                    {FORMAT_LABEL[f]}
+                  </button>
+                ))}
+              </div>
+              <label className="flex items-center gap-2 text-[0.8125rem] text-muted">
+                <input
+                  inputMode="numeric"
+                  value={minutes}
+                  onChange={(e) => {
+                    setMinutes(e.target.value);
+                    setError(null);
+                  }}
+                  aria-label="Minutes read"
+                  placeholder="30"
+                  className="field h-7 w-16 rounded-md px-2 py-0 text-xs"
+                />
+                minutes
+              </label>
+            </div>
+            {error && <p className="text-xs text-danger">{error}</p>}
+            <div className="flex gap-2">
+              <button type="button" className="btn rounded-full px-3 text-xs" onClick={() => setBookId(null)}>
+                Cancel
+              </button>
+              <button className="btn btn-primary rounded-full px-3 text-xs">{editing ? "Save" : "Log"}</button>
+            </div>
+          </form>
+        ))}
+    </section>
   );
 }

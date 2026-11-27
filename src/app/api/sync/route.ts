@@ -1,5 +1,5 @@
 import { revalidatePath } from "next/cache";
-import { addRead, deleteRead, setManualProgress, setRating, setReadDates, setStartedOn, setStatus, setText } from "@/lib/books";
+import { addRead, deleteRead, logReadingDay, setManualProgress, setRating, setReadDates, setStartedOn, setStatus, setText, unlogReadingDay } from "@/lib/books";
 import { db } from "@/lib/db";
 import { isValidOp, type SyncResult } from "@/lib/sync-ops";
 
@@ -31,6 +31,8 @@ export async function POST(req: Request) {
       else if (op.kind === "deleteRead") await deleteRead(op.readId !== null ? { id: op.readId } : { clientId: op.clientId! });
       else if (op.kind === "readDates") await setReadDates(op.readId !== null ? { id: op.readId } : { clientId: op.clientId! }, op.startedOn, op.finishedOn);
       else if (op.kind === "startedOn") await setStartedOn(op.bookId, op.date);
+      else if (op.kind === "logDay") await logReadingDay(op.bookId, op.day, op.format, op.minutes);
+      else if (op.kind === "unlogDay") await unlogReadingDay(op.bookId, op.day);
     }
     result.applied.push(op.opId);
   }

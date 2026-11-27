@@ -269,3 +269,45 @@ test("serves the home screen icon at /apple-touch-icon.png without signing in", 
   }
   await signedOut.dispose();
 });
+
+test("logs a day's reading on the calendar, and only the days you log", async ({ page }) => {
+  await page.goto("/books/new");
+  await page.getByRole("button", { name: "Enter a book by hand instead" }).click();
+  await page.locator("input[name=title]").fill("Samantha's Reading Log");
+  await save(page);
+  const synced = () => page.waitForResponse((r) => r.url().endsWith("/api/sync") && r.ok());
+  await Promise.all([synced(), page.getByRole("button", { name: "Mark as Reading", exact: true }).click()]);
+
+  // Reading a book doesn't put it on the calendar by itself.
+  await page.goto("/calendar");
+  const today = page.getByRole("button", { pressed: true, name: /^[A-Z][a-z]{2} \d{1,2}\b/ });
+  await expect(today).not.toHaveAccessibleName(/Samantha's Reading Log/);
+
+  // Today is open, ready to log the book being read.
+  const form = page.getByRole("form", { name: "Log reading" });
+  await expect(form.getByRole("combobox")).toHaveText(/Samantha's Reading Log/);
+  await form.getByRole("button", { name: "Digital" }).click();
+  await form.getByLabel("Minutes read").fill("0");
+  await form.getByRole("button", { name: "Log" }).click();
+  await expect(form.getByText(/Enter the minutes you read/)).toBeVisible();
+  await form.getByLabel("Minutes read").fill("25");
+  await Promise.all([synced(), form.getByRole("button", { name: "Log" }).click()]);
+  await expect(page.getByText("Digital · 25 min")).toBeVisible();
+  await expect(today).toHaveAccessibleName(/Samantha's Reading Log, 25 min/);
+  await expect(page.getByText(/^1 day · 1 book · 25 min$/)).toBeVisible();
+
+  // It's saved, and can be changed.
+  await page.reload();
+  await expect(page.getByText("Digital · 25 min")).toBeVisible();
+  await page.getByRole("button", { name: "Edit Samantha's Reading Log" }).click();
+  await expect(form.getByRole("button", { name: "Digital" })).toHaveAttribute("aria-pressed", "true");
+  await form.getByRole("button", { name: "Physical" }).click();
+  await form.getByLabel("Minutes read").fill("90");
+  await Promise.all([synced(), form.getByRole("button", { name: "Save" }).click()]);
+  await expect(page.getByText("Physical · 1 hr 30 min")).toBeVisible();
+
+  await Promise.all([synced(), page.getByRole("button", { name: "Remove Samantha's Reading Log" }).click()]);
+  await expect(page.getByText("Nothing logged that day.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Nothing logged that day.")).toBeVisible();
+});

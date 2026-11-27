@@ -26,7 +26,16 @@ export type SyncOp = Base &
     | { kind: "startedOn"; date: string | null }
     /** Progress by hand: a percentage, and the page it came from if entered as one. Null clears it. */
     | { kind: "progress"; percent: number | null; page: number | null }
+    /** You read the book on `day`: in print or on a screen, for this many minutes. Replaces that day's log. */
+    | { kind: "logDay"; day: string; format: ReadingFormat; minutes: number }
+    /** Takes the book off `day`. */
+    | { kind: "unlogDay"; day: string }
   );
+
+export const READING_FORMATS = ["physical", "digital"] as const;
+export type ReadingFormat = (typeof READING_FORMATS)[number];
+/** Minutes read in a day: a whole number, from one to the whole day. */
+export const isMinutes = (m: unknown): m is number => Number.isInteger(m) && (m as number) >= 1 && (m as number) <= 1440;
 
 export type SyncResult = { applied: string[]; rejected: string[] };
 
@@ -78,6 +87,10 @@ export function isValidOp(op: unknown): op is SyncOp {
       return readRef(o) && dayOrNull(o.startedOn) && dayOrNull(o.finishedOn) && inOrder(o.startedOn, o.finishedOn);
     case "startedOn":
       return dayOrNull(o.date);
+    case "logDay":
+      return isDay(o.day) && (READING_FORMATS as readonly unknown[]).includes(o.format) && isMinutes(o.minutes);
+    case "unlogDay":
+      return isDay(o.day);
     default:
       return false;
   }

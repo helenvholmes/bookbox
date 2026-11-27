@@ -251,6 +251,17 @@ CREATE TABLE IF NOT EXISTS libby_titles (
   state    TEXT NOT NULL CHECK (state IN ('loan', 'hold', 'gone'))
 );
 CREATE INDEX IF NOT EXISTS libby_titles_book ON libby_titles(book_id);
+
+-- The days you said you read a book (YYYY-MM-DD, the device's day): in print or on a screen, and for
+-- how long. These are what the calendar shows.
+CREATE TABLE IF NOT EXISTS reading_days (
+  book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  day     TEXT NOT NULL,
+  format  TEXT NOT NULL CHECK (format IN ('physical', 'digital')),
+  minutes INTEGER NOT NULL CHECK (minutes > 0 AND minutes <= 1440),
+  PRIMARY KEY (book_id, day)
+);
+CREATE INDEX IF NOT EXISTS reading_days_day ON reading_days(day);
 `;
 
 // Columns added after the first release. Added in place so existing databases keep their data.
@@ -523,6 +534,7 @@ const BOOK_CHILDREN = [
   "book_progress",
   "spotify_links",
   "loans",
+  "reading_days",
 ];
 
 export async function deleteBookRows(id: number) {
