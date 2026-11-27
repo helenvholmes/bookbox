@@ -340,13 +340,16 @@ test("adds a person only once when Add person is pressed again while it saves", 
 
 test("imports a Goodreads export only once when Import is pressed again while it runs", async ({ page }) => {
   await page.goto("/settings");
-  await page.locator("#goodreads-file").setInputFiles({
-    name: "goodreads_library_export.csv",
-    mimeType: "text/csv",
-    buffer: Buffer.from("Title,Author,Exclusive Shelf\nImported Just Once,Samantha Reyes,to-read\n"),
-  });
   const add = page.getByRole("button", { name: "Import 1 book" });
-  await expect(add).toBeVisible();
+  // A file picked before the page's scripts are running goes unnoticed (slow CI machines), so pick it again until it's read.
+  await expect(async () => {
+    await page.locator("#goodreads-file").setInputFiles({
+      name: "goodreads_library_export.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from("Title,Author,Exclusive Shelf\nImported Just Once,Samantha Reyes,to-read\n"),
+    });
+    await expect(add).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 30_000 });
 
   await page.route("**/settings", async (route) => {
     if (route.request().method() === "POST") await new Promise((r) => setTimeout(r, 1500));
