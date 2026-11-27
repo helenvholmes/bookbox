@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createPersonAction } from "@/app/(app)/people/actions";
 import { RelationshipChoices } from "./RelationshipChoices";
+import { SubmitButton } from "./SubmitButton";
 
 /** Header button that opens the new-person form in place. */
 export function AddPersonButton() {
@@ -20,7 +21,9 @@ export function AddPersonButton() {
             <input name="last" placeholder="Last name" aria-label="Last name" autoComplete="off" className="field" />
           </div>
           <RelationshipChoices selected={[]} />
-          <button className="btn btn-primary">Add person</button>
+          <SubmitButton className="btn btn-primary" pending="Adding…">
+            Add person
+          </SubmitButton>
         </form>
       )}
     </>

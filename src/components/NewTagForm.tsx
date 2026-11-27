@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { createTagAction, type CreateTagState } from "@/app/(app)/tags/actions";
+import { SubmitButton } from "./SubmitButton";
 
 /** The name field that "+ Add tag" opens under the Tags page's tabs (src/components/CollectionHeader.tsx). */
 export function NewTagForm({ onClose }: { onClose: () => void }) {
@@ -17,9 +18,9 @@ export function NewTagForm({ onClose }: { onClose: () => void }) {
       <button type="button" className="btn rounded-full px-4" onClick={onClose} disabled={pending}>
         Cancel
       </button>
-      <button className="btn btn-primary rounded-full px-4" disabled={pending}>
-        {pending ? "Adding…" : "Add"}
-      </button>
+      <SubmitButton className="btn btn-primary rounded-full px-4" pending="Adding…">
+        Add
+      </SubmitButton>
       {state?.error && <p className="basis-full text-sm text-danger">{state.error}</p>}
     </form>
   );

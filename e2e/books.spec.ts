@@ -311,3 +311,55 @@ test("logs a day's reading on the calendar, and only the days you log", async ({
   await page.reload();
   await expect(page.getByText("Nothing logged that day.")).toBeVisible();
 });
+
+test("adds a person only once when Add person is pressed again while it saves", async ({ page }) => {
+  await page.goto("/people");
+  await page.getByRole("button", { name: "+ Add person" }).click();
+  await page.getByLabel("First name").fill("Katie");
+  await page.getByLabel("Last name").fill("Twice");
+
+  // Slow the save down, so the extra presses land while it's still running.
+  await page.route("**/people", async (route) => {
+    if (route.request().method() === "POST") await new Promise((r) => setTimeout(r, 1500));
+    await route.continue();
+  });
+  const add = page.getByRole("button", { name: "Add person", exact: true });
+  // Three presses in one go, quicker than anyone could tap.
+  await add.evaluate((button: HTMLButtonElement) => {
+    button.click();
+    button.click();
+    button.click();
+  });
+  await expect(page.getByRole("button", { name: "Adding…" })).toBeDisabled();
+  await expect(page).toHaveURL(/\/people\/katie-twice/);
+
+  await page.unroute("**/people");
+  await page.goto("/people");
+  await expect(page.getByRole("link", { name: /Katie Twice/ })).toHaveCount(1);
+});
+
+test("imports a Goodreads export only once when Import is pressed again while it runs", async ({ page }) => {
+  await page.goto("/settings");
+  await page.locator("#goodreads-file").setInputFiles({
+    name: "goodreads_library_export.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("Title,Author,Exclusive Shelf\nImported Just Once,Samantha Reyes,to-read\n"),
+  });
+  const add = page.getByRole("button", { name: "Import 1 book" });
+  await expect(add).toBeVisible();
+
+  await page.route("**/settings", async (route) => {
+    if (route.request().method() === "POST") await new Promise((r) => setTimeout(r, 1500));
+    await route.continue();
+  });
+  await add.evaluate((button: HTMLButtonElement) => {
+    button.click();
+    button.click();
+    button.click();
+  });
+  await expect(page.getByText("Added 1 book")).toBeVisible();
+  await page.unroute("**/settings");
+
+  const csv = await (await page.request.get("/export/books.csv")).text();
+  expect(csv.split("Imported Just Once").length - 1).toBe(1);
+});

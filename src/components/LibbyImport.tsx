@@ -60,7 +60,20 @@ export function LibbyImport() {
     }
   }
 
+  // Set as soon as Import is pressed, before the button is gone, so a second press can't import everything twice.
+  const importing = useRef(false);
+
   async function run(books: LibbyBook[]) {
+    if (importing.current) return;
+    importing.current = true;
+    try {
+      await importBooks(books);
+    } finally {
+      importing.current = false;
+    }
+  }
+
+  async function importBooks(books: LibbyBook[]) {
     setError(null);
     const added: Added[] = [];
     try {

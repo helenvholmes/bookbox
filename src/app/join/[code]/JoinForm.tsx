@@ -2,9 +2,10 @@
 
 import { useActionState } from "react";
 import { joinAction } from "./actions";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export function JoinForm({ code }: { code: string }) {
-  const [state, action, pending] = useActionState(joinAction.bind(null, code), undefined);
+  const [state, action] = useActionState(joinAction.bind(null, code), undefined);
   return (
     <form action={action} className="space-y-3">
       <input name="name" defaultValue={state?.name} autoComplete="given-name" placeholder="Your first name" aria-label="Your first name" className="field" />
@@ -16,9 +17,9 @@ export function JoinForm({ code }: { code: string }) {
           {state.error}
         </p>
       )}
-      <button className="btn btn-primary w-full py-3" disabled={pending}>
-        {pending ? "Setting up your library…" : "Create my library"}
-      </button>
+      <SubmitButton className="btn btn-primary w-full py-3" pending="Setting up your library…">
+        Create my library
+      </SubmitButton>
     </form>
   );
 }

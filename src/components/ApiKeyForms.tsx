@@ -2,10 +2,11 @@
 
 import { useActionState, useState } from "react";
 import { createApiKeyAction, saveApiKeyOriginsAction, type ApiKeyOriginsState, type ApiKeyState } from "@/app/(app)/settings/actions";
+import { SubmitButton } from "./SubmitButton";
 
 /** Makes a key for another app. The key is shown here once, then only its first characters. */
 export function NewApiKeyForm() {
-  const [state, action, pending] = useActionState(createApiKeyAction, null as ApiKeyState);
+  const [state, action] = useActionState(createApiKeyAction, null as ApiKeyState);
   const [copied, setCopied] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string | null>(null);
 
@@ -40,9 +41,9 @@ export function NewApiKeyForm() {
       </label>
       <OriginsField />
       {state?.error && <p className="text-xs text-danger">{state.error}</p>}
-      <button className="btn rounded-full px-4" disabled={pending}>
-        {pending ? "Making…" : "Make a key"}
-      </button>
+      <SubmitButton className="btn rounded-full px-4" pending="Making…">
+        Make a key
+      </SubmitButton>
     </form>
   );
 }

@@ -3,6 +3,7 @@ import { Cover } from "@/components/Cover";
 import { Stars } from "@/components/Stars";
 import { findDuplicates } from "@/lib/duplicates";
 import { notDuplicatesAction } from "./actions";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export const metadata = { title: "Duplicates" };
 
@@ -31,7 +32,9 @@ export default async function DuplicatesPage() {
               {g.books.map((b) => (
                 <input key={b.id} type="hidden" name="id" value={b.id} />
               ))}
-              <button className="text-sm font-medium text-accent">Not duplicates</button>
+              <SubmitButton className="text-sm font-medium text-accent" pending="Saving…">
+                Not duplicates
+              </SubmitButton>
             </form>
           </div>
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

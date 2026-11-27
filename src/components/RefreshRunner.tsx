@@ -17,7 +17,12 @@ export function RefreshRunner({ remaining, total }: { remaining: number; total: 
   const [error, setError] = useState(false);
   const stop = useRef(false);
 
+  // Set at the press, before the buttons are swapped for the progress bar, so a quick second press doesn't start a second run.
+  const started = useRef(false);
+
   async function run(recheck: boolean) {
+    if (started.current) return;
+    started.current = true;
     stop.current = false;
     setRunning(true);
     setError(false);
@@ -38,6 +43,7 @@ export function RefreshRunner({ remaining, total }: { remaining: number; total: 
     } catch {
       setError(true);
     }
+    started.current = false;
     setRunning(false);
     setCurrent(null);
     router.refresh();

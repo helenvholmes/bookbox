@@ -95,7 +95,9 @@ export default async function SpotifyPage() {
                     </form>
                     <form action={ignoreAction}>
                       <input type="hidden" name="audiobook_id" value={r.audiobook.id} />
-                      <button className="text-xs text-faint hover:text-muted">Leave this one alone</button>
+                      <SubmitButton className="text-xs text-faint hover:text-muted" pending="Saving…">
+                        Leave this one alone
+                      </SubmitButton>
                     </form>
                   </div>
                 </div>
@@ -122,7 +124,9 @@ export default async function SpotifyPage() {
                 </div>
                 <form action={unlinkAction}>
                   <input type="hidden" name="book_id" value={r.linked!.bookId} />
-                  <button className="text-xs text-faint hover:text-danger">Unlink</button>
+                  <SubmitButton className="text-xs text-faint hover:text-danger" pending="Unlinking…">
+                    Unlink
+                  </SubmitButton>
                 </form>
               </li>
             ))}
@@ -145,7 +149,9 @@ export default async function SpotifyPage() {
                 </div>
                 <form action={restoreAction}>
                   <input type="hidden" name="audiobook_id" value={r.audiobook.id} />
-                  <button className="text-xs text-faint hover:text-ink">Restore</button>
+                  <SubmitButton className="text-xs text-faint hover:text-ink" pending="Restoring…">
+                    Restore
+                  </SubmitButton>
                 </form>
               </li>
             ))}

@@ -8,6 +8,7 @@ import { getSeries } from "@/lib/books";
 import { demoMode } from "@/lib/demo";
 import { HardcoverError, hardcoverSeries, hardcoverToken, missingFromLibrary } from "@/lib/hardcover";
 import { renameSeriesAction } from "../actions";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export async function generateMetadata(props: PageProps<"/series/[id]">): Promise<Metadata> {
   const data = await getSeries(Number((await props.params).id));
@@ -38,7 +39,9 @@ export default async function SeriesDetailPage(props: PageProps<"/series/[id]">)
         <form action={renameSeriesAction} className="mt-2 flex gap-2">
           <input type="hidden" name="id" value={series.id} />
           <input name="name" required defaultValue={series.name} aria-label="Series name" className="field w-72 text-sm" />
-          <button className="btn rounded-full px-4">Save</button>
+          <SubmitButton className="btn rounded-full px-4" pending="Saving…">
+            Save
+          </SubmitButton>
         </form>
       </details>
       <BookGrid books={books} priority caption={(b) => (position.get(b.id) != null ? `Book ${position.get(b.id)}` : null)} />

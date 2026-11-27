@@ -2,23 +2,47 @@
 
 import { useFormStatus } from "react-dom";
 import { SwapLabel } from "./SwapLabel";
+import { useSubmitOnce } from "./useSubmitOnce";
 
 /**
  * A form's submit button that shows the action is running and can't be pressed again until it
- * finishes. For actions slow enough that an unchanged button looks like a missed tap. It keeps the
+ * finishes, so a second tap doesn't submit twice (and, say, add the same person twice). It keeps the
  * width of its longer label, so what's beside it doesn't shift; `keepWidth={false}` for a text link,
  * where room saved for the other label would show as a gap.
+ *
+ * When a form has several submit buttons told apart by `name` and `value`, they're all disabled
+ * while it runs, but only the one that was pressed shows its `pending` label.
  */
-export function SubmitButton({ children, pending, className = "", keepWidth = true }: {
+export function SubmitButton({
+  children,
+  pending,
+  className = "",
+  keepWidth = true,
+  name,
+  value,
+  disabled = false,
+}: {
   children: React.ReactNode;
   pending: string;
   className?: string;
   keepWidth?: boolean;
+  name?: string;
+  value?: string;
+  disabled?: boolean;
 }) {
   const status = useFormStatus();
+  const { ref } = useSubmitOnce();
+  const pressed = status.pending && (!name || status.data?.get(name) === value);
   return (
-    <button className={`${className} ${status.pending ? "cursor-progress opacity-60" : ""}`} disabled={status.pending} aria-busy={status.pending}>
-      {keepWidth ? <SwapLabel on={status.pending} label={children} onLabel={pending} /> : status.pending ? pending : children}
+    <button
+      ref={ref}
+      className={`${className} ${status.pending ? "cursor-progress opacity-60" : ""}`}
+      name={name}
+      value={value}
+      disabled={disabled || status.pending}
+      aria-busy={pressed}
+    >
+      {keepWidth ? <SwapLabel on={pressed} label={children} onLabel={pending} /> : pressed ? pending : children}
     </button>
   );
 }
