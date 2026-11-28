@@ -23,7 +23,6 @@ export default async function SharedListPage(props: PageProps<"/s/[token]">) {
   const [data, owner] = (await withShareLibrary(token, () => Promise.all([getSharedList(token), ownerName()]))) ?? [null, null];
   if (!data) notFound();
   const { settings, forThem, fromThem, title } = data;
-  const srcBase = `/s/${token}/c`;
   const accent = shownAccent(settings.accent);
 
   return (
@@ -41,7 +40,7 @@ export default async function SharedListPage(props: PageProps<"/s/[token]">) {
         {forThem.length === 0 ? (
           <p className="py-16 text-center text-muted">No books on this list yet.</p>
         ) : (
-          <SharedBooks books={forThem} layout={settings.layout} srcBase={srcBase} accent={accent} owner={owner} />
+          <SharedBooks books={forThem} layout={settings.layout} token={token} accent={accent} owner={owner} reviews={settings.show_reviews} />
         )}
       </div>
 
@@ -56,7 +55,7 @@ export default async function SharedListPage(props: PageProps<"/s/[token]">) {
               {settings.show_ratings || settings.show_reviews ? ", and what I thought of them" : ""}
             </p>
           </div>
-          <SharedBooks books={fromThem} layout={settings.layout} srcBase={srcBase} accent={accent} owner={owner} />
+          <SharedBooks books={fromThem} layout={settings.layout} token={token} accent={accent} owner={owner} reviews={settings.show_reviews} />
         </section>
       )}
 

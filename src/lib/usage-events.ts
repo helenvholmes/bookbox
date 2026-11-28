@@ -18,8 +18,8 @@ export type ServerKind =
 
 export type UsageKind = ClientKind | ServerKind;
 
-/** Where an added book's details came from: a pick from a catalog search, a scanned barcode, or typed in. */
-export type AddedVia = "search" | "scan" | "manual";
+/** Where an added book's details came from: a pick from a catalog search, a scanned barcode, a share page, or typed in. */
+export type AddedVia = "search" | "scan" | "share" | "manual";
 
 /** The browser's name for the event it hands the tracker, so components needn't import it. */
 export const USAGE_EVENT = "bookbox:usage";

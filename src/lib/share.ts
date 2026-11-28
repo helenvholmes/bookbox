@@ -1,8 +1,9 @@
 import "server-only";
 import crypto from "node:crypto";
 import { connection } from "next/server";
+import { readCover } from "./covers";
 import { db } from "./db";
-import { shareTokenGone, shareTokenMade } from "./owners";
+import { shareTokenGone, shareTokenMade, withShareLibrary } from "./owners";
 
 export const ACCENTS = ["#ececed", "#e9b872", "#e58f8f", "#9bc59d", "#8fb8e5", "#b9a3e3"] as const;
 
@@ -74,14 +75,20 @@ export async function regenerateShareToken(personId: number): Promise<string> {
 }
 
 export type SharedBook = {
+  /** For opening the book in the add-book form; only books on the link can be opened that way. */
+  id: number;
   title: string;
   author: string;
   cover: string | null;
   rating: number | null;
   review: string;
-  /** Book details for the review dialog; only filled in when reviews are shown. */
-  details: { description: string; publisher: string; publish_year: number | null; pages: number | null; additional_authors: string; series: string | null } | null;
+  /** The catalog details shown when the book is opened (never notes, spoilers or anything of yours). */
+  details: { description: string; publisher: string; publish_year: number | null; pages: number | null; additional_authors: string; series: string | null };
 };
+
+// A book on a share link: given to the person, or recommended by them when the page shows those too.
+const ON_LINK = `JOIN recommendations r ON r.person_id = sp.person_id AND (r.kind = 'for' OR (r.kind = 'by' AND sp.show_theirs = 1))
+  JOIN books b ON b.id = r.book_id`;
 
 /** The public view of a share link: only what the settings allow, and never notes or spoilers. */
 export async function getSharedList(token: string) {
@@ -99,33 +106,74 @@ export async function getSharedList(token: string) {
     (
       (await db
         .prepare(
-          `SELECT b.title, b.author, b.cover, b.rating, b.review, b.description, b.publisher, b.publish_year, b.pages, b.additional_authors,
+          `SELECT b.id, b.title, b.author, b.cover, b.rating, b.review, b.description, b.publisher, b.publish_year, b.pages, b.additional_authors,
              (SELECT s.name || coalesce(' #' || rtrim(rtrim(bs.position, '0'), '.'), '') FROM book_series bs JOIN series s ON s.id = bs.series_id
                 WHERE bs.book_id = b.id) AS series
            FROM books b JOIN recommendations r ON r.book_id = b.id
            WHERE r.person_id = ? AND r.kind = ? ORDER BY b.author_sort COLLATE NOCASE, b.title COLLATE NOCASE`,
         )
-        .all(row.person_id, kind)) as (Omit<SharedBook, "details"> & NonNullable<SharedBook["details"]>)[]
+        .all(row.person_id, kind)) as (Omit<SharedBook, "details"> & SharedBook["details"])[]
     ).map((b) => ({
+      id: b.id,
       title: b.title,
       author: b.author,
       cover: b.cover,
       rating: settings.show_ratings ? b.rating : null,
       review: settings.show_reviews ? b.review : "",
-      details: settings.show_reviews
-        ? { description: b.description, publisher: b.publisher, publish_year: b.publish_year, pages: b.pages, additional_authors: b.additional_authors, series: b.series }
-        : null,
+      details: { description: b.description, publisher: b.publisher, publish_year: b.publish_year, pages: b.pages, additional_authors: b.additional_authors, series: b.series },
     }));
   const [forThem, fromThem] = await Promise.all([books("for"), settings.show_theirs ? books("by") : Promise.resolve([])]);
   return { settings, first: row.first, title: settings.title || defaultTitle(row.first), forThem, fromThem };
+}
+
+/** A shared book's catalog details, to fill in the add-book form for someone saving it to their own library. */
+export type SharedRecord = {
+  title: string;
+  author: string;
+  author_original: string;
+  additional_authors: string;
+  isbn13: string | null;
+  description: string;
+  publisher: string;
+  publish_year: number | null;
+  pages: number | null;
+  ol_work: string | null;
+  ol_edition: string | null;
+  cover: string | null;
+  series_name: string | null;
+  series_position: number | null;
+};
+
+/** A book on a share link, with only its catalog details (no rating, review, notes, shelves or tags). Run in the link's library. */
+export async function getSharedRecord(token: string, bookId: number): Promise<SharedRecord | null> {
+  await connection();
+  if (!/^[\w-]{10,40}$/.test(token) || !Number.isSafeInteger(bookId)) return null;
+  const row = (await db
+    .prepare(
+      `SELECT b.title, b.author, b.author_original, b.additional_authors, b.isbn13, b.description, b.publisher, b.publish_year, b.pages,
+         b.ol_work, b.ol_edition, b.cover,
+         (SELECT s.name FROM book_series bs JOIN series s ON s.id = bs.series_id WHERE bs.book_id = b.id) AS series_name,
+         (SELECT bs.position FROM book_series bs WHERE bs.book_id = b.id) AS series_position
+       FROM share_pages sp ${ON_LINK} WHERE sp.token = ? AND sp.enabled = 1 AND b.id = ? LIMIT 1`,
+    )
+    .get(token, bookId)) as SharedRecord | undefined;
+  return row ?? null;
+}
+
+/** The cover of a book on a share link, read from the link's library, for saving a copy of the book. */
+export async function sharedCoverBytes(token: string, bookId: number): Promise<Buffer | null> {
+  return withShareLibrary(token, async () => {
+    const record = await getSharedRecord(token, bookId);
+    const body = record?.cover ? await readCover(record.cover) : null;
+    return body ? Buffer.from(await new Response(body).arrayBuffer()) : null;
+  });
 }
 
 /** Whether a cover file belongs to a book on this share link (so the public route serves nothing else). */
 export async function coverIsShared(token: string, file: string): Promise<boolean> {
   return !!(await db
     .prepare(
-      `SELECT 1 FROM share_pages sp JOIN recommendations r ON r.person_id = sp.person_id AND (r.kind = 'for' OR (r.kind = 'by' AND sp.show_theirs = 1))
-       JOIN books b ON b.id = r.book_id WHERE sp.token = ? AND sp.enabled = 1 AND b.cover = ?`,
+      `SELECT 1 FROM share_pages sp ${ON_LINK} WHERE sp.token = ? AND sp.enabled = 1 AND b.cover = ?`,
     )
     .get(token, file));
 }

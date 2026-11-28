@@ -366,3 +366,50 @@ test("imports a Goodreads export only once when Import is pressed again while it
   const csv = await (await page.request.get("/export/books.csv")).text();
   expect(csv.split("Imported Just Once").length - 1).toBe(1);
 });
+
+test("a book on a share page opens in the add-book form, to save to your own library", async ({ page }) => {
+  await page.goto("/people");
+  await page.getByRole("button", { name: "+ Add person" }).click();
+  await page.getByLabel("First name").fill("Samantha");
+  await page.getByLabel("Last name").fill("Shared");
+  await page.getByRole("button", { name: "Add person", exact: true }).click();
+  await expect(page).toHaveURL(/\/people\/samantha-shared/);
+
+  // A book for Samantha, with a cover and a review of mine.
+  await search(page, "lighthouse keeper");
+  await page.getByRole("button", { name: /The Lighthouse Keeper/ }).click();
+  await expect(page.locator("input[name=title]")).toHaveValue("The Lighthouse Keeper");
+  await page.locator("textarea[name=review]").fill("Loved the storm chapters.");
+  await page.getByRole("combobox", { name: "Add recommend to" }).fill("Samantha");
+  await page.getByRole("combobox", { name: "Add recommend to" }).press("Enter");
+  await save(page);
+  const original = page.url();
+
+  await page.goto("/people/samantha-shared/share");
+  await page.getByRole("button", { name: "Create link" }).click();
+  const link = page.getByLabel("Share link");
+  await expect(link).toHaveValue(/\/s\/[\w-]+$/);
+  await page.goto(await link.inputValue());
+
+  // Reviews are off on this link, but the book still opens, with a button to add it.
+  await page.getByRole("button", { name: /The Lighthouse Keeper/ }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: "The Lighthouse Keeper" })).toBeVisible();
+  await expect(dialog.getByText("Loved the storm chapters.")).toHaveCount(0);
+  await dialog.getByRole("link", { name: "Add to my library" }).click();
+
+  // The form is filled in from the shared book, without the review.
+  await expect(page).toHaveURL(/\/books\/new\?share=/);
+  await expect(page.locator("input[name=title]")).toHaveValue("The Lighthouse Keeper");
+  await expect(page.locator("input[name=author]")).toHaveValue("Katie Marsh");
+  await expect(page.locator("input[name=isbn13]")).toHaveValue("9780000000019");
+  await expect(page.locator("input[name=publisher]")).toHaveValue("Harbor Press");
+  await expect(page.locator("textarea[name=review]")).toHaveValue("");
+  await save(page);
+
+  expect(page.url()).not.toBe(original);
+  await expect(page.getByRole("heading", { name: "The Lighthouse Keeper" })).toBeVisible();
+  const cover = page.locator("img[src*='/covers/']").first();
+  await expect(cover).toBeVisible();
+  await expect.poll(() => loaded(cover)).toBe(true);
+});

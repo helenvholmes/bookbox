@@ -7,6 +7,7 @@ import { isDay } from "@/lib/dates";
 import { coverLimitReached, coverUploadsPaused, MAX_COVERS, deleteCover, fetchCover, isUsableImage, saveCover } from "@/lib/covers";
 import { inventaireByIsbn } from "@/lib/inventaire";
 import { toIsbn13 } from "@/lib/names";
+import { sharedCoverBytes } from "@/lib/share";
 import { isRating } from "@/lib/sync-ops";
 import { track } from "@/lib/usage";
 
@@ -76,10 +77,16 @@ type CoverChange = { set: Buffer } | { remove: true } | null;
 async function readCoverChange(fd: FormData): Promise<CoverChange | string> {
   const file = fd.get("cover_file");
   const url = text(fd, "cover_url");
+  const roomForCover = async () =>
+    (await coverUploadsPaused())
+      ? "New covers are paused until the next billing period, to stay within the free storage tier. See Settings."
+      : (await coverLimitReached())
+        ? `Your library has ${MAX_COVERS.toLocaleString("en-US")} covers, as many as it can keep. Remove some to add more.`
+        : null;
   if (file instanceof File && file.size > 0) {
     if (file.size > 9.5 * 1024 * 1024) return "That image is too big (10 MB max).";
-    if (await coverUploadsPaused()) return "New covers are paused until the next billing period, to stay within the free storage tier. See Settings.";
-    if (await coverLimitReached()) return `Your library has ${MAX_COVERS.toLocaleString("en-US")} covers, as many as it can keep. Remove some to add more.`;
+    const full = await roomForCover();
+    if (full) return full;
     const data = Buffer.from(await file.arrayBuffer());
     return (await isUsableImage(data)) ? { set: data } : "That image couldn't be used as a cover.";
   }
@@ -88,7 +95,15 @@ async function readCoverChange(fd: FormData): Promise<CoverChange | string> {
     // A missing OpenLibrary cover isn't worth failing the save over.
     return data ? { set: data } : null;
   }
-  return fd.get("cover_remove") === "1" ? { remove: true } : null;
+  if (fd.get("cover_remove") === "1") return { remove: true };
+  // A new book opened from a share page keeps the cover it was shared with, copied from that library.
+  const shareToken = text(fd, "share_token");
+  const shareBook = int(fd, "share_book");
+  if (!text(fd, "id") && shareToken && shareBook !== null && !(await roomForCover())) {
+    const data = await sharedCoverBytes(shareToken, shareBook).catch(() => null);
+    return data && (await isUsableImage(data)) ? { set: data } : null;
+  }
+  return null;
 }
 
 async function applyCover(bookId: number, change: CoverChange) {
@@ -119,7 +134,7 @@ export async function saveBookAction(_prev: SaveState, fd: FormData): Promise<Sa
   await applyCover(bookId, cover);
   if (id === null) {
     const via = text(fd, "added_via");
-    track("book_added", { via: via === "search" || via === "scan" ? via : "manual", catalog: text(fd, "added_from").slice(0, 20), cover: !!cover });
+    track("book_added", { via: text(fd, "share_token") ? "share" : via === "search" || via === "scan" ? via : "manual", catalog: text(fd, "added_from").slice(0, 20), cover: !!cover });
   } else track("book_edited", {});
 
   revalidatePath("/", "layout");

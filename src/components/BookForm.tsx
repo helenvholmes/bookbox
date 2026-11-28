@@ -9,6 +9,7 @@ import type { Book } from "@/lib/books";
 import { hasPageBefore } from "@/lib/history";
 import { toIsbn13 } from "@/lib/names";
 import type { OLDetails } from "@/lib/openlibrary";
+import type { SharedRecord } from "@/lib/share";
 import { Cover } from "./Cover";
 import { EditionCovers } from "./EditionCovers";
 import { LookupCover } from "./LookupCover";
@@ -43,6 +44,25 @@ type Fields = {
 // The OpenLibrary fields a lookup can fill in.
 const OL_FIELDS = ["title", "author", "additional_authors", "isbn13", "description", "publisher", "publish_year", "pages"] as const;
 type OLField = (typeof OL_FIELDS)[number];
+
+/** A book opened from someone's share page, to save to your own library. */
+export type FromShare = { token: string; bookId: number; record: SharedRecord };
+
+function sharedFields(r: SharedRecord): Fields {
+  return {
+    ...initialFields(),
+    title: r.title,
+    author: r.author,
+    additional_authors: r.additional_authors,
+    isbn13: r.isbn13 ?? "",
+    description: r.description,
+    publisher: r.publisher,
+    publish_year: r.publish_year?.toString() ?? "",
+    pages: r.pages?.toString() ?? "",
+    ol_work: r.ol_work ?? "",
+    ol_edition: r.ol_edition ?? "",
+  };
+}
 
 function initialFields(book?: Book): Fields {
   return {
@@ -80,8 +100,19 @@ async function downscale(file: File, maxWidth = 1200): Promise<File> {
   }
 }
 
-export function BookForm({ book, options, startScanning = false }: { book?: Book; options: FormOptions; startScanning?: boolean }) {
+export function BookForm({
+  book,
+  options,
+  startScanning = false,
+  fromShare,
+}: {
+  book?: Book;
+  options: FormOptions;
+  startScanning?: boolean;
+  fromShare?: FromShare;
+}) {
   const isNew = !book;
+  const shared = book ? undefined : fromShare?.record;
   const [state, formAction] = useActionState(saveBookAction, undefined);
   // An error shows at the top of the form, which can be well above the Save button you tapped: bring it into view.
   const errorRef = useRef<HTMLParagraphElement>(null);
@@ -93,7 +124,7 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
   useEffect(() => {
     if (state?.saved) router.back();
   }, [state?.saved, router]);
-  const [fields, setFields] = useState<Fields>(() => initialFields(book));
+  const [fields, setFields] = useState<Fields>(() => (shared ? sharedFields(shared) : initialFields(book)));
   const [rating, setRating] = useState<number | null>(book?.rating ?? null);
   const [years, setYears] = useState<number[]>(book?.years ?? []);
   const [shelves, setShelves] = useState<string[]>(book?.shelves ?? ["To Read"]);
@@ -112,7 +143,10 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
   const [editionsOpen, setEditionsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [lookupOpen, setLookupOpen] = useState(isNew);
+  // The shared book's cover, copied from the library that shared it on save, unless another is picked.
+  const sharedCover = !book && fromShare?.record.cover ? `/s/${fromShare.token}/c/${fromShare.record.cover}` : null;
+
+  const [lookupOpen, setLookupOpen] = useState(isNew && !shared);
   const [suggestions, setSuggestions] = useState<Partial<Record<OLField, string>>>({});
   const [lookupNote, setLookupNote] = useState<string | null>(null);
 
@@ -152,7 +186,7 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
     setFields(next);
     setSuggestions(differing);
 
-    const hasCover = (!!book?.cover && !removeCover) || !!filePreview || !!coverUrl;
+    const hasCover = ((!!book?.cover || !!sharedCover) && !removeCover) || !!filePreview || !!coverUrl;
     if (d.coverUrl && !hasCover) {
       setCoverUrl(d.coverUrl);
       setRemoveCover(false);
@@ -197,7 +231,7 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
   const lookupQuery = fields.isbn13 || [fields.title, fields.author].filter(Boolean).join(" ");
   const showForm = !isNew || !lookupOpen || fields.title;
 
-  const coverPreview = filePreview ?? coverUrl ?? null;
+  const coverPreview = filePreview ?? coverUrl ?? (removeCover ? null : sharedCover);
   const hasSavedCover = !!book?.cover && !removeCover;
 
   function suggestion(k: OLField) {
@@ -288,6 +322,12 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
           <input type="hidden" name="ol_edition" value={fields.ol_edition} />
           <input type="hidden" name="cover_url" value={coverUrl ?? ""} />
           <input type="hidden" name="cover_remove" value={removeCover ? "1" : ""} />
+          {fromShare && !book && (
+            <>
+              <input type="hidden" name="share_token" value={fromShare.token} />
+              <input type="hidden" name="share_book" value={fromShare.bookId} />
+            </>
+          )}
 
           <section className="card p-4">
             {lookupOpen && (!isNew || fields.title) ? (
@@ -391,7 +431,7 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
           {text("additional_authors", "Additional authors", { hint: "Co-authors, translators, illustrators" })}
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium">Author in original script</span>
-            <input name="author_original" defaultValue={book?.author_original ?? ""} placeholder="e.g. 村上春樹" className="field" />
+            <input name="author_original" defaultValue={book?.author_original ?? shared?.author_original ?? ""} placeholder="e.g. 村上春樹" className="field" />
             <span className="mt-1 block text-xs text-muted">Shown under the author&rsquo;s name, and searchable.</span>
           </label>
 
@@ -401,7 +441,7 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
               <input
                 name="series_name"
                 list="series-options"
-                defaultValue={book?.series?.name ?? ""}
+                defaultValue={book?.series?.name ?? shared?.series_name ?? ""}
                 placeholder="e.g. Shades of Magic"
                 autoComplete="off"
                 className="field"
@@ -414,7 +454,7 @@ export function BookForm({ book, options, startScanning = false }: { book?: Book
             </label>
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium">Book #</span>
-              <input name="series_position" inputMode="decimal" defaultValue={book?.series?.position ?? ""} placeholder="1" className="field" />
+              <input name="series_position" inputMode="decimal" defaultValue={book?.series?.position ?? shared?.series_position ?? ""} placeholder="1" className="field" />
             </label>
           </div>
 

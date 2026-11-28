@@ -5,16 +5,22 @@ import type { SharedBook } from "@/lib/share";
 import { Cover } from "./Cover";
 import { Stars } from "./Stars";
 
-/** `owner` is the library owner's name for "Helen's review", or null for neutral wording. */
-type Props = { books: SharedBook[]; layout: "grid" | "list"; srcBase: string; accent: string; owner: string | null };
+/**
+ * `owner` is the library owner's name for "Katie's review", or null for neutral wording. `token` is the share
+ * link's, for opening a book in the add-book form; `reviews` is whether the link shows reviews.
+ */
+type Props = { books: SharedBook[]; layout: "grid" | "list"; token: string; accent: string; owner: string | null; reviews: boolean };
 
 const theirReview = (owner: string | null) => (owner ? `${owner}\u2019s review` : "Review");
 
-/** The books on a share page. When reviews are shown, each book opens a dialog with its details and the review. */
-export function SharedBooks({ books, layout, srcBase, accent, owner }: Props) {
+/**
+ * The books on a share page. Each opens a dialog with its details (and the review, when reviews are shown),
+ * and a button that opens it in the add-book form, to save to your own library.
+ */
+export function SharedBooks({ books, layout, token, accent, owner, reviews }: Props) {
   const [open, setOpen] = useState<number | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const clickable = books.some((b) => b.details);
+  const srcBase = `/s/${token}/c`;
 
   useEffect(() => {
     const d = dialogRef.current;
@@ -31,7 +37,7 @@ export function SharedBooks({ books, layout, srcBase, accent, owner }: Props) {
         <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4">
           {books.map((b, i) => (
             <li key={i}>
-              <Wrap onOpen={clickable ? () => setOpen(i) : undefined} className="card flex h-full flex-col overflow-hidden text-center">
+              <Wrap onOpen={() => setOpen(i)} className="card flex h-full flex-col overflow-hidden text-center">
                 <Cover cover={b.cover} title={b.title} author={b.author} bleed srcBase={srcBase} eager={i < 8} />
                 <div className="flex flex-1 flex-col items-center gap-0.5 px-3 pt-3 pb-3 [overflow-wrap:anywhere]">
                   <p className="text-[0.8125rem] leading-snug">{b.title}</p>
@@ -47,7 +53,7 @@ export function SharedBooks({ books, layout, srcBase, accent, owner }: Props) {
         <ul className="divide-y divide-line border-y border-line">
           {books.map((b, i) => (
             <li key={i}>
-              <Wrap onOpen={clickable ? () => setOpen(i) : undefined} className="flex gap-4 rounded-md py-4 text-left">
+              <Wrap onOpen={() => setOpen(i)} className="flex gap-4 rounded-md py-4 text-left">
                 <div className="w-16 shrink-0">
                   <Cover cover={b.cover} title={b.title} author={b.author} srcBase={srcBase} eager={i < 8} className="rounded-sm" />
                 </div>
@@ -82,8 +88,8 @@ export function SharedBooks({ books, layout, srcBase, accent, owner }: Props) {
                   {book.title}
                 </h2>
                 {book.author && <p className="text-sm text-muted">by {book.author}</p>}
-                {book.details?.additional_authors && <p className="text-xs text-faint">with {book.details.additional_authors}</p>}
-                {book.details?.series && <p className="text-xs text-muted">{book.details.series}</p>}
+                {book.details.additional_authors && <p className="text-xs text-faint">with {book.details.additional_authors}</p>}
+                {book.details.series && <p className="text-xs text-muted">{book.details.series}</p>}
                 {book.rating && <Rating value={book.rating} accent={accent} owner={owner} size="h-4" />}
               </div>
               <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="-mt-2 -mr-2 flex size-9 shrink-0 items-center justify-center rounded-full text-muted hover:bg-raised hover:text-ink">
@@ -93,22 +99,28 @@ export function SharedBooks({ books, layout, srcBase, accent, owner }: Props) {
               </button>
             </div>
 
-            <section className="mt-7 space-y-2">
-              <h3 className="flex items-center gap-2 text-sm">
-                <span className="size-1.5 rounded-full" style={{ background: accent }} aria-hidden />
-                {theirReview(owner)}
-              </h3>
-              {book.review ? <p className="prose-text text-[0.9375rem] text-ink/90">{book.review}</p> : <p className="text-sm text-faint">No review yet.</p>}
-            </section>
+            <a href={`/books/new?share=${encodeURIComponent(token)}&book=${book.id}`} className="btn btn-primary mt-6 rounded-full px-5">
+              Add to my library
+            </a>
 
-            {book.details?.description && (
+            {reviews && (
+              <section className="mt-7 space-y-2">
+                <h3 className="flex items-center gap-2 text-sm">
+                  <span className="size-1.5 rounded-full" style={{ background: accent }} aria-hidden />
+                  {theirReview(owner)}
+                </h3>
+                {book.review ? <p className="prose-text text-[0.9375rem] text-ink/90">{book.review}</p> : <p className="text-sm text-faint">No review yet.</p>}
+              </section>
+            )}
+
+            {book.details.description && (
               <section className="mt-7 space-y-2">
                 <h3 className="text-sm text-muted">About the book</h3>
                 <p className="prose-text text-muted">{book.details.description}</p>
               </section>
             )}
 
-            {book.details && (book.details.publisher || book.details.publish_year || book.details.pages) && (
+            {(book.details.publisher || book.details.publish_year || book.details.pages) && (
               <dl className="mt-7 grid grid-cols-3 gap-3 border-t border-line pt-5 text-xs">
                 {book.details.publish_year && (
                   <div>
@@ -137,14 +149,12 @@ export function SharedBooks({ books, layout, srcBase, accent, owner }: Props) {
   );
 }
 
-/** A button that opens the dialog when reviews are on; otherwise a plain box. */
-function Wrap({ onOpen, className, children }: { onOpen?: () => void; className: string; children: React.ReactNode }) {
-  return onOpen ? (
+/** A button that opens the book's dialog. */
+function Wrap({ onOpen, className, children }: { onOpen: () => void; className: string; children: React.ReactNode }) {
+  return (
     <button type="button" onClick={onOpen} className={`${className} w-full transition hover:border-line-hover focus-visible:outline-2 focus-visible:outline-ink`} aria-haspopup="dialog">
       {children}
     </button>
-  ) : (
-    <div className={className}>{children}</div>
   );
 }
 
