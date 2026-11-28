@@ -13,6 +13,7 @@
     "generate:icons": "tsx scripts/generate-icons.mts",
     "push:cloud": "tsx scripts/push-to-cloud.mts",
     "pull:cloud": "tsx scripts/pull-from-cloud.mts",
+    "openlibrary:batch": "tsx scripts/openlibrary-batch.mts",
     "test": "playwright test"
   },
   "dependencies": {
